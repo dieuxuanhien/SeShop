@@ -1,0 +1,510 @@
+@startuml
+skinparam classAttributeIconSize 0
+hide circle
+
+package "Identity & Access" {
+  class User {
+    +id: bigint
+    +username: string
+    +email: string
+    +phoneNumber: string
+    +passwordHash: string
+    +userType: UserType
+    +status: UserStatus
+    +createdAt: datetime
+    +updatedAt: datetime
+  }
+
+  enum UserType {
+    ADMIN
+    STAFF
+    CUSTOMER
+  }
+
+  enum UserStatus {
+    ACTIVE
+    INACTIVE
+    LOCKED
+  }
+
+  class Role {
+    +id: bigint
+    +name: string
+    +description: string
+    +status: string
+    +createdAt: datetime
+    +updatedAt: datetime
+  }
+
+  class Permission {
+    +id: bigint
+    +code: string
+    +description: string
+  }
+
+  class StaffRoleAssignment {
+    +id: bigint
+    +staffUserId: bigint
+    +assignedBy: bigint
+    +assignedAt: datetime
+    +revokedAt: datetime
+  }
+
+  class RolePermission {
+    +createdAt: datetime
+  }
+
+  class AuditLog {
+    +id: bigint
+    +action: string
+    +targetType: string
+    +targetId: string
+    +metadataJson: json
+    +createdAt: datetime
+  }
+}
+
+package "Catalog" {
+  class Category {
+    +id: bigint
+    +name: string
+    +description: string
+  }
+
+  class Product {
+    +id: bigint
+    +name: string
+    +brand: string
+    +description: text
+    +status: string
+    +createdAt: datetime
+    +updatedAt: datetime
+  }
+
+  class ProductVariant {
+    +id: bigint
+    +productId: bigint
+    +skuCode: string
+    +size: string
+    +color: string
+    +price: decimal
+    +status: string
+    +createdAt: datetime
+    +updatedAt: datetime
+  }
+
+  class ProductImage {
+    +id: bigint
+    +productId: bigint
+    +variantId: bigint
+    +url: string
+    +sortOrder: int
+    +isInstagramReady: boolean
+    +createdAt: datetime
+  }
+
+  class ProductCategory {
+    +productId: bigint
+    +categoryId: bigint
+  }
+}
+
+package "Inventory" {
+  class Location {
+    +id: bigint
+    +code: string
+    +displayName: string
+    +locationType: string
+    +status: string
+  }
+
+  class InventoryBalance {
+    +id: bigint
+    +variantId: bigint
+    +locationId: bigint
+    +onHandQty: int
+    +reservedQty: int
+    +availableQty: int
+    +updatedAt: datetime
+  }
+
+  class InventoryTransfer {
+    +id: bigint
+    +sourceLocationId: bigint
+    +destinationLocationId: bigint
+    +status: string
+    +createdBy: bigint
+    +createdAt: datetime
+    +completedAt: datetime
+  }
+
+  class InventoryTransferItem {
+    +id: bigint
+    +transferId: bigint
+    +variantId: bigint
+    +qty: int
+    +receivedQty: int
+    +damagedQty: int
+  }
+
+  class CycleCount {
+    +id: bigint
+    +locationId: bigint
+    +status: string
+    +startedBy: bigint
+    +approvedBy: bigint
+    +startedAt: datetime
+    +approvedAt: datetime
+  }
+
+  class CycleCountItem {
+    +id: bigint
+    +cycleCountId: bigint
+    +variantId: bigint
+    +systemQty: int
+    +countedQty: int
+    +varianceQty: int
+    +reasonCode: string
+  }
+
+  class Supplier {
+    +id: bigint
+    +name: string
+    +taxCode: string
+    +phone: string
+    +email: string
+    +address: string
+    +status: string
+  }
+
+  class PurchaseOrder {
+    +id: bigint
+    +poNumber: string
+    +supplierId: bigint
+    +destinationLocationId: bigint
+    +status: string
+    +createdBy: bigint
+    +approvedBy: bigint
+    +createdAt: datetime
+    +approvedAt: datetime
+  }
+
+  class PurchaseOrderItem {
+    +id: bigint
+    +purchaseOrderId: bigint
+    +variantId: bigint
+    +orderedQty: int
+    +unitCost: decimal
+  }
+
+  class GoodsReceipt {
+    +id: bigint
+    +purchaseOrderId: bigint
+    +receivedBy: bigint
+    +receivedAt: datetime
+    +status: string
+  }
+
+  class GoodsReceiptItem {
+    +id: bigint
+    +goodsReceiptId: bigint
+    +variantId: bigint
+    +receivedQty: int
+    +damagedQty: int
+  }
+}
+
+package "Sales" {
+  class Cart {
+    +id: bigint
+    +customerUserId: bigint
+    +status: string
+    +createdAt: datetime
+    +updatedAt: datetime
+  }
+
+  class CartItem {
+    +id: bigint
+    +cartId: bigint
+    +variantId: bigint
+    +qty: int
+  }
+
+  class Order {
+    +id: bigint
+    +orderNumber: string
+    +customerUserId: bigint
+    +status: string
+    +paymentStatus: string
+    +shipmentStatus: string
+    +totalAmount: decimal
+    +currency: string
+    +createdAt: datetime
+    +updatedAt: datetime
+  }
+
+  class OrderItem {
+    +id: bigint
+    +orderId: bigint
+    +variantId: bigint
+    +qty: int
+    +unitPrice: decimal
+    +discountAmount: decimal
+  }
+
+  class OrderAllocation {
+    +id: bigint
+    +orderItemId: bigint
+    +locationId: bigint
+    +allocatedQty: int
+    +status: string
+    +createdAt: datetime
+  }
+
+  class Shipment {
+    +id: bigint
+    +carrier: string
+    +trackingNumber: string
+    +status: string
+    +shippedAt: datetime
+    +deliveredAt: datetime
+  }
+
+  class Payment {
+    +id: bigint
+    +orderId: bigint
+    +provider: string
+    +method: enum
+    +status: string
+    +amount: decimal
+    +createdAt: datetime
+    +updatedAt: datetime
+  }
+
+  class DiscountCode {
+    +id: bigint
+    +code: string
+    +discountType: string
+    +discountValue: decimal
+    +minSpend: decimal
+    +status: string
+  }
+
+  class DiscountRedemption {
+    +id: bigint
+    +discountCodeId: bigint
+    +orderId: bigint
+    +customerUserId: bigint
+    +redeemedAt: datetime
+  }
+
+  class ReturnRequest {
+    +id: bigint
+    +orderId: bigint
+    +customerUserId: bigint
+    +reason: string
+    +status: string
+    +requestedAt: datetime
+    +approvedBy: bigint
+    +approvedAt: datetime
+  }
+
+  class ReturnItem {
+    +id: bigint
+    +returnRequestId: bigint
+    +orderItemId: bigint
+    +qty: int
+    +disposition: string
+    +inspectedBy: bigint
+    +inspectedAt: datetime
+  }
+
+  class Refund {
+    +id: bigint
+    +orderId: bigint
+    +paymentId: bigint
+    +returnRequestId: bigint
+    +amount: decimal
+    +status: string
+    +createdAt: datetime
+    +updatedAt: datetime
+  }
+
+  class Exchange {
+    +id: bigint
+    +returnItemId: bigint
+    +replacementVariantId: bigint
+    +replacementOrderId: bigint
+    +status: string
+    +createdAt: datetime
+  }
+
+  class Review {
+    +id: bigint
+    +orderItemId: bigint
+    +customerUserId: bigint
+    +rating: int
+    +comment: text
+    +imageUrl: string
+    +status: string
+    +createdAt: datetime
+  }
+
+  class POSShift {
+    +id: bigint
+    +locationId: bigint
+    +cashierUserId: bigint
+    +openedAt: datetime
+    +closedAt: datetime
+    +status: string
+  }
+
+  class POSReceipt {
+    +id: bigint
+    +shiftId: bigint
+    +locationId: bigint
+    +cashierUserId: bigint
+    +customerUserId: bigint
+    +totalAmount: decimal
+    +paymentMethod: enum
+    +createdAt: datetime
+  }
+
+  class POSReceiptItem {
+    +id: bigint
+    +receiptId: bigint
+    +variantId: bigint
+    +qty: int
+    +unitPrice: decimal
+  }
+
+  class CashReconciliation {
+    +id: bigint
+    +shiftId: bigint
+    +expectedCash: decimal
+    +actualCash: decimal
+    +varianceAmount: decimal
+    +reason: string
+    +approvedBy: bigint
+    +approvedAt: datetime
+  }
+
+  class TaxInvoice {
+    +id: bigint
+    +invoiceNumber: string
+    +orderId: bigint
+    +posReceiptId: bigint
+    +customerUserId: bigint
+    +taxRate: decimal
+    +subtotalAmount: decimal
+    +taxAmount: decimal
+    +totalAmount: decimal
+    +issuedAt: datetime
+  }
+
+  class InvoiceAdjustmentNote {
+    +id: bigint
+    +originalInvoiceId: bigint
+    +adjustmentNumber: string
+    +reason: string
+    +deltaAmount: decimal
+    +createdBy: bigint
+    +createdAt: datetime
+  }
+}
+
+package "Social" {
+  class InstagramConnection {
+    +id: bigint
+    +userId: bigint
+    +accountId: string
+    +tokenEncrypted: string
+    +refreshTokenEncrypted: string
+    +tokenExpiresAt: datetime
+    +status: string
+    +updatedAt: datetime
+  }
+
+  class InstagramDraft {
+    +id: bigint
+    +createdBy: bigint
+    +productId: bigint
+    +caption: text
+    +hashtags: text
+    +mediaOrderJson: json
+    +status: string
+    +createdAt: datetime
+    +updatedAt: datetime
+  }
+}
+
+User "1" -- "0..*" StaffRoleAssignment : staff
+Role "1" -- "0..*" StaffRoleAssignment
+Role "1" -- "0..*" RolePermission
+Permission "1" -- "0..*" RolePermission
+User "1" -- "0..*" AuditLog : actor
+
+Product "1" -- "1..*" ProductVariant
+Product "1" -- "0..*" ProductImage
+Product "1" -- "0..*" ProductCategory
+Category "1" -- "0..*" ProductCategory
+
+Location "1" -- "0..*" InventoryBalance
+ProductVariant "1" -- "0..*" InventoryBalance
+InventoryTransfer "1" -- "1..*" InventoryTransferItem
+ProductVariant "1" -- "0..*" InventoryTransferItem
+Location "1" -- "0..*" InventoryTransfer : source
+Location "1" -- "0..*" InventoryTransfer : destination
+Location "1" -- "0..*" CycleCount
+CycleCount "1" -- "1..*" CycleCountItem
+ProductVariant "1" -- "0..*" CycleCountItem
+Supplier "1" -- "0..*" PurchaseOrder
+Location "1" -- "0..*" PurchaseOrder
+PurchaseOrder "1" -- "1..*" PurchaseOrderItem
+ProductVariant "1" -- "0..*" PurchaseOrderItem
+PurchaseOrder "1" -- "0..*" GoodsReceipt
+GoodsReceipt "1" -- "1..*" GoodsReceiptItem
+ProductVariant "1" -- "0..*" GoodsReceiptItem
+
+User "1" -- "0..*" Cart : owns
+Cart "1" -- "1..*" CartItem
+ProductVariant "1" -- "0..*" CartItem
+
+User "1" -- "0..*" Order : customer
+Order "1" -- "1..*" OrderItem
+ProductVariant "1" -- "0..*" OrderItem
+OrderItem "1" -- "0..*" OrderAllocation
+Location "1" -- "0..*" OrderAllocation
+Order "1" -- "0..*" Shipment
+Order "1" -- "0..*" Payment
+DiscountCode "1" -- "0..*" DiscountRedemption
+DiscountRedemption "1" -- "1" Order
+User "1" -- "0..*" DiscountRedemption : redeemer
+Order "1" -- "0..*" ReturnRequest
+ReturnRequest "1" -- "1..*" ReturnItem
+OrderItem "1" -- "0..*" ReturnItem
+Order "1" -- "0..*" Refund
+Payment "1" -- "0..*" Refund
+ReturnRequest "1" -- "0..*" Refund
+ReturnItem "1" -- "0..*" Exchange
+ProductVariant "1" -- "0..*" Exchange : replacement
+Order "1" -- "0..*" Exchange : replacementOrder
+OrderItem "1" -- "0..*" Review
+User "1" -- "0..*" Review : author
+
+Location "1" -- "0..*" POSShift
+User "1" -- "0..*" POSShift : cashier
+POSShift "1" -- "0..*" POSReceipt
+POSReceipt "1" -- "1..*" POSReceiptItem
+ProductVariant "1" -- "0..*" POSReceiptItem
+POSShift "1" -- "0..*" CashReconciliation
+Order "1" -- "0..*" TaxInvoice
+POSReceipt "1" -- "0..*" TaxInvoice
+User "1" -- "0..*" TaxInvoice : billedTo
+TaxInvoice "1" -- "0..*" InvoiceAdjustmentNote
+
+User "1" -- "0..*" InstagramConnection
+User "1" -- "0..*" InstagramDraft
+Product "1" -- "0..*" InstagramDraft
+
+@enduml

@@ -1,0 +1,1 @@
+[<u>https://www.figma.com/file/gZIcbEKIVEPPcNeKKKNf6R/TechMarket?type=design&node-id=42%3A339&mode=design&t=0r6gyejMYxBtmbmz-1</u>](https://www.figma.com/file/gZIcbEKIVEPPcNeKKKNf6R/TechMarket?type=design&node-id=42%3A339&mode=design&t=0r6gyejMYxBtmbmz-1)

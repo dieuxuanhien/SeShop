@@ -1,0 +1,94 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #f7f7f7
+  BorderColor #333333
+}
+
+actor "Super Admin" as SuperAdmin
+actor "Authorized Staff" as Staff
+actor Customer
+actor Supplier
+actor "Payment Gateway" as PaymentGateway
+actor "Shipping Provider" as ShippingProvider
+actor "Instagram API" as InstagramAPI
+
+rectangle "SESHOP Omnichannel Platform" {
+  usecase "Register / Sign in" as UC_Auth
+  usecase "Browse products\nand variants" as UC_Browse
+  usecase "AI recommendation\nchat" as UC_AI
+  usecase "Checkout and pay" as UC_Checkout
+  usecase "Track shipment" as UC_Track
+  usecase "Leave review\nwith image" as UC_Review
+  usecase "View stock by\nlocation" as UC_ViewStock
+
+  usecase "Create custom role" as UC_RoleCreate
+  usecase "Assign permission\nto role" as UC_RolePerm
+  usecase "Assign/Revoke role\nfor staff" as UC_UserRole
+  usecase "View audit logs" as UC_Audit
+
+  usecase "Add product and SKUs" as UC_Product
+  usecase "Adjust inventory" as UC_Adjust
+  usecase "Transfer stock\nbetween locations" as UC_Transfer
+  usecase "Cycle count and\nreconciliation" as UC_Cycle
+  usecase "Allocate online order\nto location" as UC_Allocate
+  usecase "Create purchase order" as UC_PO
+  usecase "Receive inbound goods" as UC_GRN
+
+  usecase "Process POS sale" as UC_POS
+  usecase "POS shift close and\ncash reconciliation" as UC_POSClose
+  usecase "Return intake and\nexchange" as UC_Return
+  usecase "Process refund" as UC_Refund
+  usecase "Generate tax invoice\nand adjustment note" as UC_Invoice
+
+  usecase "Manage discount codes" as UC_Discount
+  usecase "Compose Instagram draft" as UC_IGDraft
+
+  usecase "Authorize payment" as UC_PaymentGateway
+  usecase "Create shipment\nand tracking" as UC_ShipmentGateway
+  usecase "Publish post manually" as UC_IGPublish
+}
+
+Customer --> UC_Auth
+Customer --> UC_Browse
+Customer --> UC_AI
+Customer --> UC_Checkout
+Customer --> UC_Track
+Customer --> UC_Review
+Customer --> UC_ViewStock
+
+SuperAdmin --> UC_RoleCreate
+SuperAdmin --> UC_RolePerm
+SuperAdmin --> UC_UserRole
+SuperAdmin --> UC_Audit
+SuperAdmin --> UC_Transfer
+SuperAdmin --> UC_Invoice
+
+Staff --> UC_Product
+Staff --> UC_Adjust
+Staff --> UC_Transfer
+Staff --> UC_Cycle
+Staff --> UC_PO
+Staff --> UC_GRN
+Staff --> UC_Allocate
+Staff --> UC_POS
+Staff --> UC_POSClose
+Staff --> UC_Return
+Staff --> UC_Refund
+Staff --> UC_Discount
+Staff --> UC_IGDraft
+
+Supplier --> UC_PO
+Supplier --> UC_GRN
+
+UC_Checkout .> UC_PaymentGateway : <<include>>
+UC_Checkout .> UC_ShipmentGateway : <<include>>
+UC_Return .> UC_Refund : <<include>>
+UC_POSClose .> UC_Invoice : <<include>>
+UC_IGDraft .> UC_IGPublish : <<extend>>
+
+PaymentGateway --> UC_PaymentGateway
+ShippingProvider --> UC_ShipmentGateway
+InstagramAPI --> UC_IGPublish
+@enduml

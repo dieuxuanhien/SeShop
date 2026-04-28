@@ -1,0 +1,40 @@
+@startuml
+|Authorized Staff|
+start
+:Open inventory transfer screen;
+:Select source and destination location;
+:Input variants and quantities;
+:Submit transfer request;
+
+|SESHOP System|
+:Validate permission and quantity;
+if (Permission valid?) then (yes)
+  if (Enough stock at source?) then (yes)
+    :Create transfer with status PENDING_APPROVAL;
+    :Write audit log;
+
+    |Super Admin|
+    :Review transfer request;
+    if (Approve transfer?) then (yes)
+      |SESHOP System|
+      :Mark transfer as APPROVED;
+      :Deduct on-hand qty at source;
+      :Increase in-transit qty;
+      :Notify destination location;
+      :When destination confirms receipt;
+      :Increase on-hand qty at destination;
+      :Complete transfer;
+      :Write audit log;
+    else (no)
+      |SESHOP System|
+      :Mark transfer as REJECTED;
+      :Notify requester;
+    endif
+  else (no)
+    :Reject request with insufficient stock message;
+  endif
+else (no)
+  :Reject with unauthorized message;
+endif
+stop
+@enduml

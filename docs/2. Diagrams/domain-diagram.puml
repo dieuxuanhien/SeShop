@@ -1,0 +1,156 @@
+@startuml
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+rectangle "Customer" as customer
+rectangle "Super Admin" as admin
+rectangle "Authorized Staff" as staff
+rectangle "Supplier" as supplier
+
+package "SESHOP Domain" {
+  package "Identity & RBAC" {
+    [User Account]
+    [Role]
+    [Permission]
+    [Staff Role Assignment]
+    [Audit Log]
+  }
+
+  package "Catalog" {
+    [Product]
+    [Product Variant]
+    [Category]
+    [Product Category Mapping]
+    [Media Asset]
+  }
+
+  package "Inventory" {
+    [Location]
+    [Inventory Balance]
+    [Inventory Transfer]
+    [Inventory Transfer Item]
+    [Cycle Count]
+    [Cycle Count Item]
+    [Supplier]
+    [Purchase Order]
+    [Purchase Order Item]
+    [Goods Receipt]
+    [Goods Receipt Item]
+  }
+
+  package "Commerce" {
+    [Cart]
+    [Cart Item]
+    [Order]
+    [Order Item]
+    [Order Allocation]
+    [Shipment]
+    [Payment]
+    [Discount Code]
+    [Discount Redemption]
+  }
+
+  package "POS & Returns" {
+    [POS Shift]
+    [POS Receipt]
+    [POS Receipt Item]
+    [Cash Reconciliation]
+    [Return Request]
+    [Return Item]
+    [Refund]
+    [Exchange]
+    [Tax Invoice]
+    [Invoice Adjustment Note]
+  }
+
+  package "Engagement" {
+    [AI Recommendation]
+    [Review]
+    [Instagram Connection]
+    [Instagram Draft]
+  }
+}
+
+cloud "Payment Gateway" as pg
+cloud "Shipping Provider" as sp
+cloud "Instagram API" as ig
+
+customer --> [User Account]
+customer --> [Cart]
+customer --> [Order]
+customer --> [AI Recommendation]
+customer --> [Review]
+
+staff --> [Product]
+staff --> [Inventory Transfer]
+staff --> [Cycle Count]
+staff --> [Purchase Order]
+staff --> [Goods Receipt]
+staff --> [POS Receipt]
+staff --> [POS Shift]
+staff --> [Return Request]
+staff --> [Instagram Draft]
+
+admin --> [Role]
+admin --> [Permission]
+admin --> [Staff Role Assignment]
+admin --> [Audit Log]
+admin --> [Inventory Transfer]
+admin --> [Tax Invoice]
+
+supplier --> [Supplier]
+supplier --> [Purchase Order]
+
+[Product] --> [Product Variant]
+[Product] --> [Product Category Mapping]
+[Category] --> [Product Category Mapping]
+[Product Variant] --> [Inventory Balance]
+[Location] --> [Inventory Balance]
+[Inventory Transfer] --> [Inventory Transfer Item]
+[Product Variant] --> [Inventory Transfer Item]
+[Cycle Count] --> [Cycle Count Item]
+[Product Variant] --> [Cycle Count Item]
+[Supplier] --> [Purchase Order]
+[Purchase Order] --> [Purchase Order Item]
+[Product Variant] --> [Purchase Order Item]
+[Purchase Order] --> [Goods Receipt]
+[Goods Receipt] --> [Goods Receipt Item]
+[Product Variant] --> [Goods Receipt Item]
+
+[Cart] --> [Cart Item]
+[Product Variant] --> [Cart Item]
+[Order] --> [Order Item]
+[Product Variant] --> [Order Item]
+[Order] --> [Order Allocation]
+[Order Item] --> [Order Allocation]
+[Order] --> [Shipment]
+[Order] --> [Payment]
+[Discount Code] --> [Discount Redemption]
+[Discount Redemption] --> [Order]
+[Order] --> [Return Request]
+[Return Request] --> [Return Item]
+[Order Item] --> [Return Item]
+[Return Request] --> [Refund]
+[Return Item] --> [Exchange]
+[Order] --> [Refund]
+[Payment] --> [Refund]
+[POS Shift] --> [POS Receipt]
+[POS Receipt] --> [POS Receipt Item]
+[Product Variant] --> [POS Receipt Item]
+[POS Shift] --> [Cash Reconciliation]
+[POS Receipt] --> [Tax Invoice]
+[Order] --> [Tax Invoice]
+[Tax Invoice] --> [Invoice Adjustment Note]
+
+[Order Item] --> [Review]
+[User Account] --> [Review]
+
+[Payment] --> pg
+[Shipment] --> sp
+[Instagram Draft] --> ig
+
+[Role] --> [Permission]
+[User Account] --> [Staff Role Assignment]
+[Role] --> [Staff Role Assignment]
+[User Account] --> [Audit Log]
+@enduml

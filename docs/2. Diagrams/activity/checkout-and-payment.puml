@@ -1,0 +1,46 @@
+@startuml
+|Customer|
+start
+:Open product detail;
+:Add variant to cart;
+:Proceed to checkout;
+:Enter shipping information;
+:Select payment method;
+
+|SESHOP System|
+:Validate cart and stock availability;
+if (Stock available?) then (yes)
+  :Create pending order;
+  if (Payment method is online?) then (yes)
+    :Create payment request;
+
+    |Payment Gateway|
+    :Authorize transaction;
+    if (Payment success?) then (yes)
+      |SESHOP System|
+      :Mark payment as COMPLETED;
+      :Reserve and deduct inventory;
+      :Create shipment request;
+      :Send order confirmation;
+    else (no)
+      |SESHOP System|
+      :Mark payment as FAILED;
+      :Cancel pending order;
+      :Show payment failed message;
+      stop
+    endif
+  else (no)
+    :Set payment method = COD;
+    :Reserve inventory;
+    :Create shipment request;
+    :Send order confirmation;
+  endif
+else (no)
+  :Show out-of-stock message;
+  stop
+endif
+
+|Customer|
+:View order created notification;
+stop
+@enduml

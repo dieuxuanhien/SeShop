@@ -1,0 +1,38 @@
+@startuml
+actor Customer
+participant "Storefront UI" as UI
+participant "Order Service" as OS
+participant "Inventory Service" as IS
+participant "Payment Service" as PS
+participant "Payment Gateway" as PG
+participant "Shipment Service" as SS
+database "SESHOP DB" as DB
+
+Customer -> UI: Click Checkout
+UI -> OS: createPendingOrder(cart, shipping, paymentMethod)
+OS -> IS: validateAndReserveStock(items)
+IS -> DB: select/update inventory_balances
+DB --> IS: stock reserved
+IS --> OS: reserveSuccess
+
+OS -> PS: createPayment(orderId, amount)
+PS -> PG: authorize(amount, callbackUrl)
+PG --> PS: authorizationResult
+
+alt payment success
+  PS -> DB: update payments(status=COMPLETED)
+  PS --> OS: paymentCompleted
+  OS -> DB: update orders(status=CONFIRMED)
+  OS -> SS: createShipment(orderId)
+  SS -> DB: insert shipments
+  OS --> UI: orderConfirmed(orderNumber)
+  UI --> Customer: Show success and tracking
+else payment failed
+  PS -> DB: update payments(status=FAILED)
+  OS -> IS: releaseReservation(items)
+  IS -> DB: rollback reserved_qty
+  OS -> DB: update orders(status=CANCELLED)
+  OS --> UI: paymentFailed(message)
+  UI --> Customer: Show payment failed
+end
+@enduml
