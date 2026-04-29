@@ -3,15 +3,13 @@ actor Staff
 participant "Social Compose UI" as UI
 participant "Marketing Service" as MS
 participant "Catalog Service" as CS
-participant "Instagram Connector" as IGC
-participant "Instagram API" as IGA
 database "SESHOP DB" as DB
 
 Staff -> UI: Create Instagram draft(product)
 UI -> MS: generateDraft(productId)
 MS -> CS: getProductMedia(productId)
 CS --> MS: media + product metadata
-MS -> DB: insert instagram_drafts(status=DRAFT)
+MS -> DB: insert instagram_drafts(status=NEW)
 DB --> MS: draftId
 MS --> UI: showDraft(caption, hashtags, mediaOrder)
 
@@ -20,19 +18,6 @@ UI -> MS: saveDraft(draftId, caption, mediaOrder)
 MS -> DB: update instagram_drafts
 DB --> MS: updated
 
-opt Publish now
-  Staff -> UI: Publish draft
-  UI -> MS: publishDraft(draftId)
-  MS -> IGC: publish(media, caption)
-  IGC -> IGA: createPost(payload)
-  IGA --> IGC: result
-  IGC --> MS: publishResult
-  alt success
-    MS -> DB: update draft status=PUBLISHED
-    MS --> UI: publishSuccess
-  else failed
-    MS -> DB: update draft status=PUBLISH_FAILED
-    MS --> UI: publishFailed(reason)
-  end
-end
+MS -> DB: mark draft READY_FOR_REVIEW
+MS --> UI: showReviewReady
 @enduml

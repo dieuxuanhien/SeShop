@@ -8,7 +8,7 @@ database "SESHOP DB" as DB
 
 Staff -> UI: Submit transfer request
 UI -> IS: createTransfer(source, destination, items)
-IS -> DB: validate stock and insert transfer(PENDING_APPROVAL)
+IS -> DB: validate stock and insert transfer(DRAFT)
 DB --> IS: transferId
 IS -> AS: log(action=create_transfer)
 AS -> DB: insert audit_logs
@@ -16,11 +16,15 @@ IS --> UI: requestSubmitted
 
 Admin -> UI: Open pending transfer
 UI -> IS: approveTransfer(transferId)
-IS -> DB: update transfer status=APPROVED
+IS -> DB: update transfer status=IN_TRANSIT
 IS -> DB: deduct source on_hand_qty
-IS -> DB: add destination on_hand_qty (on receipt)
 IS -> AS: log(action=approve_transfer)
 AS -> DB: insert audit_logs
-IS --> UI: transferCompleted
-UI --> Staff: Notify transfer completed
+
+opt destination confirms receipt
+	IS -> DB: update transfer status=COMPLETED
+	IS -> DB: add destination on_hand_qty
+	IS --> UI: transferCompleted
+	UI --> Staff: Notify transfer completed
+end
 @enduml

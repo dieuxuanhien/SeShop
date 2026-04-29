@@ -9,10 +9,8 @@ skinparam usecase {
 actor "Super Admin" as SuperAdmin
 actor "Authorized Staff" as Staff
 actor Customer
-actor Supplier
 actor "Payment Gateway" as PaymentGateway
 actor "Shipping Provider" as ShippingProvider
-actor "Instagram API" as InstagramAPI
 
 rectangle "SESHOP Omnichannel Platform" {
   usecase "Register / Sign in" as UC_Auth
@@ -47,7 +45,6 @@ rectangle "SESHOP Omnichannel Platform" {
 
   usecase "Authorize payment" as UC_PaymentGateway
   usecase "Create shipment\nand tracking" as UC_ShipmentGateway
-  usecase "Publish post manually" as UC_IGPublish
 }
 
 Customer --> UC_Auth
@@ -79,16 +76,11 @@ Staff --> UC_Refund
 Staff --> UC_Discount
 Staff --> UC_IGDraft
 
-Supplier --> UC_PO
-Supplier --> UC_GRN
-
 UC_Checkout .> UC_PaymentGateway : <<include>>
 UC_Checkout .> UC_ShipmentGateway : <<include>>
 UC_Return .> UC_Refund : <<include>>
 UC_POSClose .> UC_Invoice : <<include>>
-UC_IGDraft .> UC_IGPublish : <<extend>>
 
 PaymentGateway --> UC_PaymentGateway
 ShippingProvider --> UC_ShipmentGateway
-InstagramAPI --> UC_IGPublish
 @enduml

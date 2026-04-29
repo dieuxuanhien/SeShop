@@ -351,9 +351,9 @@ Customer order headers for online commerce. It stores lifecycle state, financial
 | id | BIGSERIAL | PK | Order ID |
 | order_number | VARCHAR(60) | NN, UQ | Human order code |
 | customer_user_id | BIGINT | NN, FK | Buyer |
-| status | VARCHAR(20) | NN | CREATED/CONFIRMED/CANCELLED/etc. |
-| payment_status | VARCHAR(20) | NN | UNPAID/PAID/REFUNDED |
-| shipment_status | VARCHAR(20) | NN | PENDING/SHIPPED/DELIVERED |
+| status | VARCHAR(20) | NN | PENDING/ALLOCATED/PICKING/PACKED/SHIPPED/DELIVERED/COMPLETED/CANCELLED/RETURNED |
+| payment_status | VARCHAR(20) | NN | PENDING/PAID/FAILED/REFUNDED/PARTIALLY_REFUNDED |
+| shipment_status | VARCHAR(20) | NN | PENDING/SHIPPED/IN_TRANSIT/DELIVERED |
 | total_amount | NUMERIC(12,2) | NN | Order total stored snapshot |
 | currency | CHAR(3) | NN | Currency code |
 | created_at | TIMESTAMPTZ | NN | Created time |
@@ -416,8 +416,8 @@ Payment transactions linked to orders. It stores provider/method/status/amount t
 | id | BIGSERIAL | PK | Payment ID |
 | order_id | BIGINT | NN, FK | Order reference |
 | provider | VARCHAR(50) | NN | Stripe, etc. |
-| method | VARCHAR(30) | NN | CARD/COD/WALLET |
-| status | VARCHAR(20) | NN | PENDING/COMPLETED/FAILED |
+| method | VARCHAR(30) | NN | CARD/COD |
+| status | VARCHAR(20) | NN | PENDING/PAID/FAILED/REFUNDED |
 | amount | NUMERIC(12,2) | NN | Amount paid |
 | created_at | TIMESTAMPTZ | NN | Created time |
 | updated_at | TIMESTAMPTZ | NN | Updated time |
@@ -466,7 +466,7 @@ Reverse-logistics request headers initiated by customers. It captures return rea
 | order_id | BIGINT | NN, FK | Original order |
 | customer_user_id | BIGINT | NN, FK | Requester |
 | reason | VARCHAR(255) | NN | Return reason |
-| status | VARCHAR(20) | NN | REQUESTED/APPROVED/REJECTED/CLOSED |
+| status | VARCHAR(20) | NN | REQUESTED/LABEL_GENERATED/RETURNED/RECEIVED/INSPECTED/APPROVED/REJECTED/CLOSED |
 | requested_at | TIMESTAMPTZ | NN | Request time |
 | approved_by | BIGINT | FK | Approver |
 | approved_at | TIMESTAMPTZ |  | Approval time |
@@ -500,7 +500,7 @@ Monetary refund transactions associated with returns or other approved scenarios
 | payment_id | BIGINT | FK | Original payment |
 | return_request_id | BIGINT | FK | Return request |
 | amount | NUMERIC(12,2) | NN | Refund amount |
-| status | VARCHAR(20) | NN | PENDING/COMPLETED/FAILED |
+| status | VARCHAR(20) | NN | PENDING/APPROVED/PROCESSING/COMPLETED/REJECTED |
 | created_at | TIMESTAMPTZ | NN | Created time |
 | updated_at | TIMESTAMPTZ | NN | Updated time |
 
@@ -646,7 +646,7 @@ Draft social posts prepared from product data before publication. It supports co
 | caption | TEXT |  | Draft caption |
 | hashtags | TEXT |  | Hashtag text |
 | media_order_json | JSONB |  | Media order payload |
-| status | VARCHAR(20) | NN | DRAFT/READY |
+| status | VARCHAR(20) | NN | NEW/EDITING/READY_FOR_REVIEW/APPROVED/ARCHIVED |
 | created_at | TIMESTAMPTZ | NN | Created time |
 | updated_at | TIMESTAMPTZ | NN | Updated time |
 
@@ -666,3 +666,31 @@ Customer product review records tied to purchased order lines. It powers trust s
 | image_url | TEXT |  | Optional proof image |
 | status | VARCHAR(20) | NN | PENDING/APPROVED/REJECTED |
 | created_at | TIMESTAMPTZ | NN | Created time |
+
+## 43. `carts`
+
+### Table Function
+Customer cart headers for ongoing shopping sessions. It allows a customer to accumulate items prior to checkout.
+
+| Column | Type | Constraints | Meaning |
+|---|---|---|---|
+| id | BIGSERIAL | PK | Cart ID |
+| customer_user_id | BIGINT | NN, FK | Customer owner |
+| status | VARCHAR(20) | NN | ACTIVE/ORDERED/ABANDONED |
+| created_at | TIMESTAMPTZ | NN | Created time |
+| updated_at | TIMESTAMPTZ | NN | Updated time |
+
+## 44. `cart_items`
+
+### Table Function
+Line items inside a customer cart. It captures SKU, quantity, and price snapshot for checkout computation.
+
+| Column | Type | Constraints | Meaning |
+|---|---|---|---|
+| id | BIGSERIAL | PK | Cart item ID |
+| cart_id | BIGINT | NN, FK | Cart reference |
+| variant_id | BIGINT | NN, FK | SKU reference |
+| qty | INT | NN | Quantity |
+| unit_price | NUMERIC(12,2) | NN | Price at time of cart entry |
+| created_at | TIMESTAMPTZ | NN | Created time |
+| updated_at | TIMESTAMPTZ | NN | Updated time |

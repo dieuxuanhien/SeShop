@@ -56,10 +56,10 @@ entity role_permissions {
   created_at : datetime
 }
 
-entity staff_role_assignments {
+entity user_roles {
   *id : bigint <<PK>>
   --
-  staff_user_id : bigint <<FK>>
+  user_id : bigint <<FK>>
   role_id : bigint <<FK>>
   assigned_by : bigint <<FK>>
   assigned_at : datetime
@@ -145,7 +145,6 @@ entity inventory_balances {
   location_id : bigint <<FK>>
   on_hand_qty : int
   reserved_qty : int
-  available_qty : int
   updated_at : datetime
 }
 
@@ -188,7 +187,6 @@ entity cycle_count_items {
   variant_id : bigint <<FK>>
   system_qty : int
   counted_qty : int
-  variance_qty : int
   reason_code : varchar
 }
 
@@ -264,6 +262,9 @@ entity cart_items {
   cart_id : bigint <<FK>>
   variant_id : bigint <<FK>>
   qty : int
+  unit_price : decimal
+  created_at : datetime
+  updated_at : datetime
 }
 
 entity orders {
@@ -513,8 +514,8 @@ entity reviews {
 ' =========================
 ' Relationships
 ' =========================
-users ||--o{ staff_role_assignments : assigned_staff
-roles ||--o{ staff_role_assignments : grants
+users ||--o{ user_roles : assigned_staff
+roles ||--o{ user_roles : grants
 roles ||--o{ role_permissions : has
 permissions ||--o{ role_permissions : includes
 users ||--o{ audit_logs : performs

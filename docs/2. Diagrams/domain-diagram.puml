@@ -5,14 +5,13 @@ skinparam shadowing false
 rectangle "Customer" as customer
 rectangle "Super Admin" as admin
 rectangle "Authorized Staff" as staff
-rectangle "Supplier" as supplier
 
 package "SESHOP Domain" {
   package "Identity & RBAC" {
     [User Account]
     [Role]
     [Permission]
-    [Staff Role Assignment]
+    [User Role Assignment]
     [Audit Log]
   }
 
@@ -73,7 +72,7 @@ package "SESHOP Domain" {
 
 cloud "Payment Gateway" as pg
 cloud "Shipping Provider" as sp
-cloud "Instagram API" as ig
+cloud "Instagram Integration" as ig
 
 customer --> [User Account]
 customer --> [Cart]
@@ -93,13 +92,10 @@ staff --> [Instagram Draft]
 
 admin --> [Role]
 admin --> [Permission]
-admin --> [Staff Role Assignment]
+admin --> [User Role Assignment]
 admin --> [Audit Log]
 admin --> [Inventory Transfer]
 admin --> [Tax Invoice]
-
-supplier --> [Supplier]
-supplier --> [Purchase Order]
 
 [Product] --> [Product Variant]
 [Product] --> [Product Category Mapping]
@@ -150,7 +146,7 @@ supplier --> [Purchase Order]
 [Instagram Draft] --> ig
 
 [Role] --> [Permission]
-[User Account] --> [Staff Role Assignment]
-[Role] --> [Staff Role Assignment]
+[User Account] --> [User Role Assignment]
+[Role] --> [User Role Assignment]
 [User Account] --> [Audit Log]
 @enduml

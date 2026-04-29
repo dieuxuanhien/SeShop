@@ -10,29 +10,16 @@ start
 if (Connection active?) then (yes)
   :Prepare Instagram-ready media set;
   :Generate caption and hashtag suggestions;
-  :Create draft in DRAFT state;
+  :Create draft in NEW state;
 
   |Authorized Staff|
   :Edit caption and media order;
   :Save draft;
 
   |SESHOP System|
-  :Store draft version history;
-  if (Send to publish?) then (yes)
-    |Instagram API|
-    :Submit publish request;
-    if (Accepted?) then (yes)
-      |SESHOP System|
-      :Set draft state = PUBLISHED;
-      :Write audit log;
-    else (no)
-      |SESHOP System|
-      :Set draft state = PUBLISH_FAILED;
-      :Show failure reason;
-    endif
-  else (no)
-    :Keep draft state = READY_TO_PUBLISH;
-  endif
+  :Persist draft changes;
+  :Set draft state = READY_FOR_REVIEW;
+  :Notify reviewer;
 else (no)
   :Show reconnect Instagram account message;
 endif

@@ -15,24 +15,35 @@ IS -> DB: select/update inventory_balances
 DB --> IS: stock reserved
 IS --> OS: reserveSuccess
 
-OS -> PS: createPayment(orderId, amount)
-PS -> PG: authorize(amount, callbackUrl)
-PG --> PS: authorizationResult
+alt payment method = CARD/STRIPE
+  OS -> PS: createPayment(orderId, amount, method=CARD)
+  PS -> PG: authorize(amount, callbackUrl)
+  PG --> PS: authorizationResult
 
-alt payment success
-  PS -> DB: update payments(status=COMPLETED)
-  PS --> OS: paymentCompleted
-  OS -> DB: update orders(status=CONFIRMED)
+  alt payment success
+    PS -> DB: update payments(status=COMPLETED)
+    PS --> OS: paymentCompleted
+    OS -> DB: update orders(status=ALLOCATED)
+    OS -> SS: createShipment(orderId)
+    SS -> DB: insert shipments
+    OS --> UI: orderConfirmed(orderNumber)
+    UI --> Customer: Show success and tracking
+  else payment failed
+    PS -> DB: update payments(status=FAILED)
+    OS -> IS: releaseReservation(items)
+    IS -> DB: rollback reserved_qty
+    OS -> DB: update orders(status=CANCELLED)
+    OS --> UI: paymentFailed(message)
+    UI --> Customer: Show payment failed
+  end
+else payment method = COD
+  OS -> PS: createPayment(orderId, amount, method=COD)
+  PS -> DB: insert payments(status=PENDING)
+  PS --> OS: paymentPending
+  OS -> DB: update orders(status=ALLOCATED)
   OS -> SS: createShipment(orderId)
   SS -> DB: insert shipments
   OS --> UI: orderConfirmed(orderNumber)
   UI --> Customer: Show success and tracking
-else payment failed
-  PS -> DB: update payments(status=FAILED)
-  OS -> IS: releaseReservation(items)
-  IS -> DB: rollback reserved_qty
-  OS -> DB: update orders(status=CANCELLED)
-  OS --> UI: paymentFailed(message)
-  UI --> Customer: Show payment failed
 end
 @enduml

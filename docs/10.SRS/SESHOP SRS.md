@@ -145,8 +145,7 @@ Out of scope for `v1`:
 
 - Multi-vendor marketplace.
 - Loyalty points and gift cards.
-- Auto-publish to social channels without manual approval.
-- BOPIS (Buy Online Pick Up In-Store).
+- Automated direct social publishing without manual review gate.
 
 ## **Intended Audiences and Document Organization**
 
@@ -457,7 +456,7 @@ stop
 start
 :Scan/select SKU lines;
 :Confirm quantities and totals;
-:Select payment method (cash/card/e-wallet);
+:Select payment method (cash/card);
 if (Payment success?) then (yes)
   :Create POS receipt;
   :Decrement location inventory atomically;
@@ -554,7 +553,7 @@ stop
 | ----------- | ------- | ----------------------------------------------------------------------------------- |
 | Uniqueness  | BR28    | Discount code must be globally unique.                                              |
 | Stacking    | BR29    | `v1` supports single-code per order; stacking is not allowed.                     |
-| Constraints | BR30    | Rule can include validity period, usage cap, min spend, and product/category scope. |
+| Constraints | BR30    | Rule can include validity period, usage cap, and minimum spend. |
 
 ### UC11: Compose Instagram draft
 
@@ -578,7 +577,7 @@ start
 :Staff edits caption and reorders media;
 if (Save draft?) then (yes)
   :Store Instagram draft;
-  :Set status = DRAFT_READY;
+  :Set status = READY_FOR_REVIEW;
   :Show success message;
 else (no)
   :Discard or keep as working draft;
@@ -807,7 +806,7 @@ start
 if (Tracking URL available?) then (yes)
   :Display tracking link;
 endif
-:Render statuses (confirmed, packed, shipped, in_transit, delivered);
+:Render statuses (pending/allocated, packed, shipped, in_transit, delivered);
 stop
 @enduml
 ```
@@ -816,7 +815,7 @@ stop
 
 | Activity      | BR Code | Description                                                                             |
 | ------------- | ------- | --------------------------------------------------------------------------------------- |
-| Timeline      | BR49    | Minimum statuses:`CONFIRMED`, `PACKED`, `SHIPPED`, `IN_TRANSIT`, `DELIVERED`. |
+| Timeline      | BR49    | Minimum statuses:`PENDING/ALLOCATED`, `PACKED`, `SHIPPED`, `IN_TRANSIT`, `DELIVERED`. |
 | Notifications | BR50    | Customer is notified on major shipment status transitions.                              |
 | External sync | BR51    | Tracking status may be synchronized from shipping partner APIs.                         |
 

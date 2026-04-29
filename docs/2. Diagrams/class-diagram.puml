@@ -42,15 +42,18 @@ package "Identity & Access" {
     +description: string
   }
 
-  class StaffRoleAssignment {
+  class UserRoleAssignment {
     +id: bigint
-    +staffUserId: bigint
+    +userId: bigint
+    +roleId: bigint
     +assignedBy: bigint
     +assignedAt: datetime
     +revokedAt: datetime
   }
 
   class RolePermission {
+    +roleId: bigint
+    +permissionId: bigint
     +createdAt: datetime
   }
 
@@ -124,7 +127,6 @@ package "Inventory" {
     +locationId: bigint
     +onHandQty: int
     +reservedQty: int
-    +availableQty: int
     +updatedAt: datetime
   }
 
@@ -163,7 +165,6 @@ package "Inventory" {
     +variantId: bigint
     +systemQty: int
     +countedQty: int
-    +varianceQty: int
     +reasonCode: string
   }
 
@@ -228,6 +229,9 @@ package "Sales" {
     +cartId: bigint
     +variantId: bigint
     +qty: int
+    +unitPrice: decimal
+    +createdAt: datetime
+    +updatedAt: datetime
   }
 
   class Order {
@@ -263,6 +267,7 @@ package "Sales" {
 
   class Shipment {
     +id: bigint
+    +orderId: bigint
     +carrier: string
     +trackingNumber: string
     +status: string
@@ -287,6 +292,9 @@ package "Sales" {
     +discountType: string
     +discountValue: decimal
     +minSpend: decimal
+    +maxUses: int
+    +startAt: datetime
+    +endAt: datetime
     +status: string
   }
 
@@ -362,8 +370,6 @@ package "Sales" {
   class POSReceipt {
     +id: bigint
     +shiftId: bigint
-    +locationId: bigint
-    +cashierUserId: bigint
     +customerUserId: bigint
     +totalAmount: decimal
     +paymentMethod: enum
@@ -438,8 +444,8 @@ package "Social" {
   }
 }
 
-User "1" -- "0..*" StaffRoleAssignment : staff
-Role "1" -- "0..*" StaffRoleAssignment
+User "1" -- "0..*" UserRoleAssignment : user
+Role "1" -- "0..*" UserRoleAssignment
 Role "1" -- "0..*" RolePermission
 Permission "1" -- "0..*" RolePermission
 User "1" -- "0..*" AuditLog : actor

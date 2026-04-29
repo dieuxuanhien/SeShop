@@ -207,6 +207,25 @@ CREATE TABLE goods_receipt_items (
   UNIQUE (goods_receipt_id, variant_id)
 );
 
+CREATE TABLE carts (
+  id BIGSERIAL PRIMARY KEY,
+  customer_user_id BIGINT NOT NULL REFERENCES users(id),
+  status VARCHAR(20) NOT NULL, -- ACTIVE, ORDERED, ABANDONED
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE cart_items (
+  id BIGSERIAL PRIMARY KEY,
+  cart_id BIGINT NOT NULL REFERENCES carts(id),
+  variant_id BIGINT NOT NULL REFERENCES product_variants(id),
+  qty INT NOT NULL,
+  unit_price NUMERIC(12,2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (cart_id, variant_id)
+);
+
 CREATE TABLE orders (
   id BIGSERIAL PRIMARY KEY,
   order_number VARCHAR(60) NOT NULL UNIQUE,

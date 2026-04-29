@@ -93,7 +93,7 @@ Out of scope for v1:
 - Storage locations are treated as normal inventory nodes in DB behavior.
 - Customer UI shows location availability without exposing internal operational type when not needed.
 - Payment in v1 includes `Stripe`, `Cash on Delivery`, and `In-store POS payment`.
-- Shipping only in v1 (BOPIS not in scope).
+- Shipping-only fulfillment in v1.
 - Instagram flow is `compose draft + manual publish approval`.
 
 ### 2.5 High-Level Architecture Direction
@@ -141,7 +141,7 @@ Out of scope for v1:
 | 3  | Role                 | Custom role created by Super Admin (single-function or combined).      |
 | 4  | Permission           | Atomic action grant (for example `inventory.transfer.create`).       |
 | 5  | RolePermission       | Mapping between role and permissions.                                  |
-| 6  | StaffRoleAssignment  | Mapping between staff account and assigned role(s).                    |
+| 6  | UserRoleAssignment   | Mapping between user account and assigned role(s).                     |
 | 7  | AuditLog             | Immutable record of sensitive/operational actions.                     |
 | 8  | Product              | Parent clothing/accessory item.                                        |
 | 9  | ProductVariant (SKU) | Sellable variant by attributes (size, color, etc.).                    |
@@ -202,7 +202,7 @@ Out of scope for v1:
 | 1 | Super Admin      | Full governance over RBAC, audit access, and high-risk operations. |
 | 2 | Authorized Staff | Operational user with limited permissions assigned by role.        |
 | 3 | Customer         | End user shopping through storefront.                              |
-| 4 | External Service | Stripe, shipping providers, Instagram API integration.             |
+| 4 | External Service | Stripe, shipping providers, Instagram integration.             |
 
 ### 7.2 Primary Use Cases
 
@@ -292,7 +292,7 @@ Out of scope for v1:
 
 | Story ID  | User Story                                                                                                                                   | Priority | Acceptance Criteria                                                                                                                                               |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| US-MKT-01 | As an Authorized Staff member, I want to generate and manage discount codes so that promotional campaigns can run safely.                    | Must     | Code uniqueness enforced; supports validity window, usage cap, min spend, applicable SKUs/categories; redemption tracked.                                         |
+| US-MKT-01 | As an Authorized Staff member, I want to generate and manage discount codes so that promotional campaigns can run safely.                    | Must     | Code uniqueness enforced; supports validity window, usage cap, and minimum spend; redemption tracked.                                         |
 | US-MKT-02 | As an Authorized Staff member, I want to connect Instagram account integrations so that social operations are centralized.                   | Should   | OAuth token lifecycle handled securely; reconnect flow supported; permission scope validation visible to staff.                                                   |
 | US-MKT-03 | As an Authorized Staff member, I want compose-first Instagram draft generation from catalog items so that I can edit details before publish. | Must     | Draft includes editable caption, hashtags, tagged product references, and reorderable image list; user can remove/rearrange media; no auto-post without approval. |
 
@@ -384,7 +384,7 @@ Out of scope for v1:
 ## 12. Assumptions and Dependencies
 
 - Stripe is available and approved for payment integration.
-- Instagram API permissions are obtainable for compose/publish workflow.
+- Instagram integration permissions are obtainable for compose/review workflow.
 - Shipping provider integration will provide tracking updates.
 - Organization provides product content moderation policy for user-generated review images.
 - Supplier master data and approval authority model are available for procurement workflows.
@@ -394,7 +394,6 @@ Out of scope for v1:
 
 ## 13. Out of Scope
 
-- Buy Online, Pick Up In-Store (BOPIS) in v1.
 - Automated direct social publishing without manual review gate.
 - Multi-currency expansion in v1.
 - Advanced loyalty system.

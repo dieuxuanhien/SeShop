@@ -10,7 +10,8 @@ start
 |SESHOP System|
 :Validate cart and stock availability;
 if (Stock available?) then (yes)
-  :Create pending order;
+  :Create order with status PENDING;
+  :Reserve inventory for checkout window;
   if (Payment method is online?) then (yes)
     :Create payment request;
 
@@ -19,19 +20,20 @@ if (Stock available?) then (yes)
     if (Payment success?) then (yes)
       |SESHOP System|
       :Mark payment as COMPLETED;
-      :Reserve and deduct inventory;
+      :Set order status = ALLOCATED;
       :Create shipment request;
       :Send order confirmation;
     else (no)
       |SESHOP System|
       :Mark payment as FAILED;
-      :Cancel pending order;
+      :Release inventory reservation;
+      :Cancel order;
       :Show payment failed message;
       stop
     endif
   else (no)
     :Set payment method = COD;
-    :Reserve inventory;
+    :Set order status = ALLOCATED;
     :Create shipment request;
     :Send order confirmation;
   endif
