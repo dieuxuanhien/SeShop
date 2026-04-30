@@ -1,0 +1,119 @@
+import { LogOut, Menu, ShoppingCart } from 'lucide-react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/features/auth/model/useAuth';
+import { useCartStore } from '@/features/cart/model/cartStore';
+import { Button } from '@/shared/ui/Button';
+
+const navGroups = [
+  {
+    label: 'Customer',
+    links: [
+      ['/', 'Home'],
+      ['/products', 'Products'],
+      ['/cart', 'Cart'],
+      ['/checkout', 'Checkout'],
+      ['/orders', 'Orders'],
+      ['/profile', 'Profile'],
+      ['/ai-chat', 'AI Chat'],
+    ],
+  },
+  {
+    label: 'Staff',
+    links: [
+      ['/staff/dashboard', 'Dashboard'],
+      ['/staff/catalog', 'Catalog'],
+      ['/staff/inventory', 'Inventory'],
+      ['/staff/stock-transfer', 'Transfers'],
+      ['/staff/orders', 'Orders'],
+      ['/staff/returns', 'Returns'],
+      ['/staff/discounts', 'Discounts'],
+      ['/staff/pos', 'POS'],
+      ['/staff/shift-close', 'Shift Close'],
+      ['/instagram/drafts', 'Instagram Drafts'],
+    ],
+  },
+  {
+    label: 'Admin',
+    links: [
+      ['/admin/dashboard', 'Dashboard'],
+      ['/admin/users', 'Users & Roles'],
+      ['/admin/locations', 'Locations'],
+      ['/admin/audit-logs', 'Audit Logs'],
+      ['/admin/settings', 'Settings'],
+    ],
+  },
+] as const;
+
+export function RootLayout() {
+  const navigate = useNavigate();
+  const { user, token, logout } = useAuth();
+  const itemCount = useCartStore((state) => state.items.reduce((sum, item) => sum + item.qty, 0));
+
+  function handleLogout() {
+    logout();
+    navigate('/');
+  }
+
+  return (
+    <div className="min-h-screen bg-surface text-ink">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
+        <div className="flex min-h-16 items-center justify-between gap-4 px-4 lg:px-6">
+          <div className="flex items-center gap-3">
+            <Button variant="secondary" className="px-3 lg:hidden" aria-label="Open navigation" icon={<Menu size={18} />} />
+            <NavLink to="/" className="text-lg font-semibold">
+              SeShop
+            </NavLink>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <NavLink to="/cart" className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <ShoppingCart size={16} />
+              <span>{itemCount}</span>
+            </NavLink>
+            {token ? (
+              <>
+                <span className="hidden text-sm text-slate-600 sm:inline">{user?.username ?? 'Signed in'}</span>
+                <Button variant="secondary" icon={<LogOut size={16} />} onClick={handleLogout}>
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => navigate('/auth/login')}>Sign in</Button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="grid lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="hidden border-r border-slate-200 bg-white p-4 lg:block">
+          <nav className="grid gap-6">
+            {navGroups.map((group) => (
+              <section key={group.label}>
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{group.label}</h2>
+                <div className="grid gap-1">
+                  {group.links.map(([to, label]) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      className={({ isActive }) =>
+                        `rounded-md px-3 py-2 text-sm transition ${
+                          isActive ? 'bg-blue-50 font-medium text-primary' : 'text-slate-700 hover:bg-slate-50'
+                        }`
+                      }
+                    >
+                      {label}
+                    </NavLink>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </nav>
+        </aside>
+
+        <main className="min-w-0 p-4 lg:p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}

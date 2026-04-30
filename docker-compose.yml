@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: seshop-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-seshop}
+      POSTGRES_USER: ${POSTGRES_USER:-seshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-seshop}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-seshop} -d ${POSTGRES_DB:-seshop}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: seshop-redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+    container_name: seshop-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-seshop}
+      DB_USERNAME: ${POSTGRES_USER:-seshop}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-seshop}
+      JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-change-this-development-secret}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
+    container_name: seshop-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres-data:

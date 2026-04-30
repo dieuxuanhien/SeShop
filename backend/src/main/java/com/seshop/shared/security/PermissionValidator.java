@@ -1,0 +1,23 @@
+package com.seshop.shared.security;
+
+import com.seshop.shared.exception.ForbiddenOperationException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
+@Service
+public class PermissionValidator {
+
+    public void require(String permission) {
+        if (!hasPermission(permission)) {
+            throw new ForbiddenOperationException("Missing permission: " + permission);
+        }
+    }
+
+    public boolean hasPermission(String permission) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null
+                && authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals(permission));
+    }
+}
