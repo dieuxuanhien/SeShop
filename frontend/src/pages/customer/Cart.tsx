@@ -21,10 +21,10 @@ export function Cart() {
       ) : (
         <div className="grid gap-3">
           {items.map((item) => (
-            <div key={item.variantId} className="flex items-center justify-between rounded-md border border-slate-200 p-3">
+            <div key={item.variantId} className="flex items-center justify-between rounded-md border border-primary/20 p-3">
               <div>
                 <p className="font-medium">{item.name}</p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-ink/70">
                   {item.skuCode} · {item.qty} x {formatCurrency(item.unitPrice)}
                 </p>
               </div>

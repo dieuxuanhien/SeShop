@@ -43,11 +43,11 @@ export function RegisterPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-surface px-4 py-8">
+    <main className="grid min-h-screen place-items-center bg-ink px-4 py-8">
       <Card className="w-full max-w-lg p-6">
         <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">SeShop</p>
-          <h1 className="mt-1 text-2xl font-semibold text-ink">Create account</h1>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">SeShop Vintage</p>
+          <h1 className="font-display mt-1 text-2xl font-semibold text-ink">Create account</h1>
         </div>
 
         <form className="grid gap-4" onSubmit={handleSubmit(onSubmit)}>
@@ -56,14 +56,14 @@ export function RegisterPage() {
           <Input label="Phone number" autoComplete="tel" error={errors.phoneNumber?.message} {...register('phoneNumber')} />
           <Input label="Password" type="password" autoComplete="new-password" error={errors.password?.message} {...register('password')} />
 
-          {submitError ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-danger">{submitError}</p> : null}
+          {submitError ? <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{submitError}</p> : null}
 
           <Button type="submit" disabled={isSubmitting} icon={isSubmitting ? <Spinner /> : <UserPlus size={16} />}>
             Create account
           </Button>
         </form>
 
-        <p className="mt-4 text-sm text-slate-600">
+        <p className="mt-4 text-sm text-ink/70">
           Already registered?{' '}
           <Link className="font-medium text-primary" to="/auth/login">
             Sign in

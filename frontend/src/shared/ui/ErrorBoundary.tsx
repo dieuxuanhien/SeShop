@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   render() {
     if (this.state.hasError) {
       return (
-        <main className="min-h-screen bg-surface p-6">
+        <main className="min-h-screen bg-ink p-6">
           <EmptyState title="Something went wrong" description="Reload the page or return to the previous screen." />
         </main>
       );

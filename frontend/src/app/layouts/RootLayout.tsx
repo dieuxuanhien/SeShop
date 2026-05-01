@@ -6,18 +6,6 @@ import { Button } from '@/shared/ui/Button';
 
 const navGroups = [
   {
-    label: 'Customer',
-    links: [
-      ['/', 'Home'],
-      ['/products', 'Products'],
-      ['/cart', 'Cart'],
-      ['/checkout', 'Checkout'],
-      ['/orders', 'Orders'],
-      ['/profile', 'Profile'],
-      ['/ai-chat', 'AI Chat'],
-    ],
-  },
-  {
     label: 'Staff',
     links: [
       ['/staff/dashboard', 'Dashboard'],
@@ -55,24 +43,24 @@ export function RootLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-surface text-ink">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
+    <div className="min-h-screen bg-ink text-surface">
+      <header className="sticky top-0 z-20 border-b border-primary/20 bg-ink/95 backdrop-blur">
         <div className="flex min-h-16 items-center justify-between gap-4 px-4 lg:px-6">
           <div className="flex items-center gap-3">
             <Button variant="secondary" className="px-3 lg:hidden" aria-label="Open navigation" icon={<Menu size={18} />} />
-            <NavLink to="/" className="text-lg font-semibold">
-              SeShop
+            <NavLink to="/" className="font-display text-lg font-semibold text-highlight">
+              SeShop Vintage
             </NavLink>
           </div>
 
           <div className="flex items-center gap-3">
-            <NavLink to="/cart" className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <NavLink to="/cart" className="inline-flex items-center gap-2 rounded-md border border-primary/40 px-3 py-2 text-sm text-primary">
               <ShoppingCart size={16} />
               <span>{itemCount}</span>
             </NavLink>
             {token ? (
               <>
-                <span className="hidden text-sm text-slate-600 sm:inline">{user?.username ?? 'Signed in'}</span>
+                <span className="hidden text-sm text-surface/70 sm:inline">{user?.username ?? 'Signed in'}</span>
                 <Button variant="secondary" icon={<LogOut size={16} />} onClick={handleLogout}>
                   Logout
                 </Button>
@@ -85,11 +73,11 @@ export function RootLayout() {
       </header>
 
       <div className="grid lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="hidden border-r border-slate-200 bg-white p-4 lg:block">
+        <aside className="hidden border-r border-primary/20 bg-ink/90 p-4 lg:block">
           <nav className="grid gap-6">
             {navGroups.map((group) => (
               <section key={group.label}>
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{group.label}</h2>
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface/60">{group.label}</h2>
                 <div className="grid gap-1">
                   {group.links.map(([to, label]) => (
                     <NavLink
@@ -97,7 +85,9 @@ export function RootLayout() {
                       to={to}
                       className={({ isActive }) =>
                         `rounded-md px-3 py-2 text-sm transition ${
-                          isActive ? 'bg-blue-50 font-medium text-primary' : 'text-slate-700 hover:bg-slate-50'
+                          isActive
+                            ? 'bg-primary/15 font-medium text-highlight'
+                            : 'text-surface/80 hover:bg-primary/10'
                         }`
                       }
                     >

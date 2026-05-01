@@ -150,28 +150,29 @@ KTPM/
 | UC2: Assign Permission | `POST /api/v1/admin/roles/{id}/permissions` | ✅ Phase 1 |
 | UC3: Assign Role | `POST /api/v1/admin/users/{id}/roles` | ✅ Phase 1 |
 | UC4: Audit Logs | `GET /api/v1/admin/audit-logs` | ✅ Phase 1 |
-| UC5: Add Products | `POST /api/v1/catalog/products` | ✅ Phase 2 |
-| UC6: Adjust Inventory | `POST /api/v1/inventory/adjust` | ✅ Phase 2 |
-| UC7: Transfer Stock | `POST /api/v1/inventory/transfer` | ✅ Phase 2 |
-| UC8: POS Sale | `POST /api/v1/pos/sales` | ✅ Phase 3 |
-| UC9: Process Refund | `POST /api/v1/returns/{id}/process-refund` | ✅ Phase 3 |
-| UC10: Discount Codes | `POST /api/v1/admin/discounts` | ✅ Phase 4 |
-| UC11: Instagram Draft | `POST /api/v1/instagram/drafts` | ✅ Phase 4 |
+| UC5: Add Products | `POST /api/v1/staff/products` | ✅ Phase 2 |
+| UC6: Adjust Inventory | `POST /api/v1/staff/inventory/adjustments` | ✅ Phase 2 |
+| UC7: Transfer Stock | `POST /api/v1/staff/inventory/transfers` | ✅ Phase 2 |
+| UC8: POS Sale | `POST /api/v1/pos/receipts` | ✅ Phase 3 |
+| UC9: Process Refund | `POST /api/v1/refunds` | ✅ Phase 3 |
+| UC10: Discount Codes | `POST /api/v1/staff/discounts` | ✅ Phase 4 |
+| UC11: Instagram Draft | `POST /api/v1/marketing/drafts` | ✅ Phase 4 |
 | UC12: Register | `POST /api/v1/auth/register` | ✅ Phase 1 |
-| UC13: Browse Products | `GET /api/v1/catalog/products` | ✅ Phase 2 |
-| UC14: AI Chat | `POST /api/v1/ai/chat` | ✅ Phase 4 |
+| UC13: Browse Products | `GET /api/v1/products` | ✅ Phase 2 |
+| UC14: AI Chat | `POST /api/v1/assistant/recommendations` | ✅ Phase 4 |
 | UC15: Checkout | `POST /api/v1/checkout` | ✅ Phase 3 |
-| UC16: View Stock | `GET /api/v1/inventory/locations/{id}/stock` | ✅ Phase 2 |
-| UC17: Track Shipment | `GET /api/v1/customer/orders/{id}/tracking` | ✅ Phase 3 |
-| UC18: Leave Review | `POST /api/v1/customer/products/{id}/reviews` | ✅ Phase 3 |
-| UC19: Pending Orders | `GET /api/v1/admin/orders?status=PENDING` | ✅ Phase 3 |
-| UC20: Mark Shipped | `PUT /api/v1/admin/orders/{id}/ship` | ✅ Phase 3 |
-| UC21: Instagram Connect | `POST /api/v1/instagram/connect` | ✅ Phase 4 |
-| UC22: Purchase Orders | `POST /api/v1/admin/purchase-orders` | ✅ Phase 5 |
-| UC23: Allocate Order | `PUT /api/v1/admin/orders/{id}/allocate` | ✅ Phase 3 |
+| UC16: View Stock | `GET /api/v1/products/{productId}/availability` | ✅ Phase 2 |
+| UC17: Track Shipment | `GET /api/v1/orders/{orderId}` | ✅ Phase 3 |
+| UC18: Leave Review | `POST /api/v1/reviews` | ✅ Phase 3 |
+| UC19: Pending Orders | `GET /api/v1/staff/orders` | ✅ Phase 3 |
+| UC20: Mark Shipped | `POST /api/v1/staff/orders/{orderId}/ship` | ✅ Phase 3 |
+| UC21: Instagram Connect | `POST /api/v1/marketing/instagram/connect` | ✅ Phase 4 |
+| UC22: Purchase Orders | `POST /api/v1/staff/purchase-orders` | ✅ Phase 5 |
+| UC23: Allocate Order | `POST /api/v1/staff/orders/{orderId}/allocate` | ✅ Phase 3 |
 | UC24: Return Intake | `POST /api/v1/returns` | ✅ Phase 3 |
-| UC25: Cycle Count | `POST /api/v1/inventory/cycle-count` | ✅ Phase 2 |
-| UC26: Shift Close | `POST /api/v1/pos/shifts/close` | ✅ Phase 3 |
+| UC25: Cycle Count | `POST /api/v1/staff/cycle-counts` | ✅ Phase 2 |
+| UC26: Shift Close | `POST /api/v1/pos/shifts/{shiftId}/close` | ✅ Phase 3 |
+| UC27: Tax Invoice | `POST /api/v1/invoices/tax` | ✅ Phase 3 |
 
 ---
 
@@ -361,7 +362,7 @@ npm run build
 
 | Metric | Value |
 |--------|-------|
-| **Total Use Cases** | 26 |
+| **Total Use Cases** | 27 |
 | **Backend APIs** | 70+ endpoints |
 | **Frontend Pages** | 50+ pages |
 | **Database Tables** | 30+ tables |
@@ -412,7 +413,8 @@ npm run build
 
 | Metric | Target |
 |--------|--------|
-| **API Response Time** | < 200ms (p95) |
+| **General API Response Time** | < 200ms (p95) |
+| **Product Search Response Time** | ≤ 2s (p95, per BRD NFR-01) |
 | **Frontend Load Time** | < 2s (page load) |
 | **Database Query Time** | < 100ms (p95) |
 | **Code Coverage** | 80%+ |
@@ -426,7 +428,7 @@ npm run build
 
 Kế hoạch triển khai chi tiết đã được xây dựng với:
 - ✅ Cấu trúc thư mục rõ ràng
-- ✅ 26 use cases được ánh xạ
+- ✅ 27 use cases được ánh xạ
 - ✅ 70+ APIs được định nghĩa
 - ✅ 8 domain modules độc lập
 - ✅ 3 portals hoàn chỉnh

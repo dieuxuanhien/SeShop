@@ -486,7 +486,7 @@ README.md
   
 - `/instagram/drafts` - Draft history
   - Draft list
-  - Status (DRAFT, PENDING_REVIEW, APPROVED, PUBLISHED)
+  - Status (NEW, EDITING, READY_FOR_REVIEW, APPROVED, ARCHIVED)
   - Edit/delete/publish draft
   - View analytics (if published)
 

@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import { RootLayout } from '@/app/layouts/RootLayout';
+import { PublicLayout } from '@/app/layouts/PublicLayout';
 import { ProtectedRoute } from '@/features/auth/ui/ProtectedRoute';
 import { LoginPage } from '@/features/auth/ui/LoginPage';
 import { RegisterPage } from '@/features/auth/ui/RegisterPage';
@@ -40,7 +41,7 @@ export function AppRoutes() {
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/register" element={<RegisterPage />} />
 
-      <Route element={<RootLayout />}>
+      <Route element={<PublicLayout />}>
         <Route index element={<Home />} />
         <Route path="products" element={<Products />} />
         <Route path="products/:productId" element={<ProductDetail />} />
@@ -55,7 +56,9 @@ export function AppRoutes() {
           <Route path="profile" element={<Profile />} />
           <Route path="products/:productId/reviews" element={<Reviews />} />
         </Route>
+      </Route>
 
+      <Route element={<RootLayout />}>
         <Route element={<ProtectedRoute role="STAFF" />}>
           <Route path="staff/dashboard" element={<StaffDashboard />} />
           <Route path="staff/catalog" element={<CatalogManagement />} />

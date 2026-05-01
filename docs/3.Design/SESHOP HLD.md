@@ -319,7 +319,7 @@ Each module should follow these layers:
 - Spring Validation
 - Spring Security
 - Spring Data JPA
-- Flyway or Liquibase
+- Flyway
 - Redis client
 - OpenAPI for API documentation
 - MapStruct for DTO mapping
