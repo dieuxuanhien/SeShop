@@ -1,0 +1,90 @@
+# SESHOP - IMPLEMENTATION PLAN & PROGRESS TRACKER
+
+This document serves as the active progress tracker for the SeShop project. It is continuously updated by the AI workflow.
+
+## 🎯 Backend - Các Domain & Modules
+
+### 8 Domain Modules:
+1. **Auth** - Authentication & RBAC (UC1-4)
+2. **Catalog** - Product Management (UC5)
+3. **Inventory** - Stock Management (UC6, UC7, UC16, UC25)
+4. **Commerce** - Shopping (UC13, UC14, UC15)
+5. **Order** - Order Processing (UC15, UC19, UC20, UC23)
+6. **POS** - Point of Sale (UC8, UC26)
+7. **Return** - Returns & Refunds (UC9, UC24)
+8. **Marketing** - Promotions & Social (UC10, UC11, UC21)
+
+## 📊 Use Case Mapping & Status
+
+| Use Case | Endpoints | Status |
+|----------|-----------|--------|
+| UC1: Create Role | `POST /api/v1/admin/roles` | ✅ Phase 1 |
+| UC2: Assign Permission | `POST /api/v1/admin/roles/{id}/permissions` | ✅ Phase 1 |
+| UC3: Assign Role | `POST /api/v1/admin/users/{id}/roles` | ✅ Phase 1 |
+| UC4: Audit Logs | `GET /api/v1/admin/audit-logs` | ✅ Phase 1 |
+| UC5: Add Products | `POST /api/v1/staff/products` | ✅ Phase 2 |
+| UC6: Adjust Inventory | `POST /api/v1/staff/inventory/adjustments` | ✅ Phase 2 |
+| UC7: Transfer Stock | `POST /api/v1/staff/inventory/transfers` | ✅ Phase 2 |
+| UC8: POS Sale | `POST /api/v1/pos/receipts` | ✅ Phase 3 |
+| UC9: Process Refund | `POST /api/v1/refunds` | ✅ Phase 3 |
+| UC10: Discount Codes | `POST /api/v1/staff/discounts` | ✅ Phase 4 |
+| UC11: Instagram Draft | `POST /api/v1/marketing/drafts` | ✅ Phase 4 |
+| UC12: Register | `POST /api/v1/auth/register` | ✅ Phase 1 |
+| UC13: Browse Products | `GET /api/v1/products` | ✅ Phase 2 |
+| UC14: AI Chat | `POST /api/v1/assistant/recommendations` | ✅ Phase 4 |
+| UC15: Checkout | `POST /api/v1/checkout` | ✅ Phase 3 |
+| UC16: View Stock | `GET /api/v1/products/{productId}/availability` | ✅ Phase 2 |
+| UC17: Track Shipment | `GET /api/v1/orders/{orderId}` | ✅ Phase 3 |
+| UC18: Leave Review | `POST /api/v1/reviews` | ✅ Phase 3 |
+| UC19: Pending Orders | `GET /api/v1/staff/orders` | ✅ Phase 3 |
+| UC20: Mark Shipped | `POST /api/v1/staff/orders/{orderId}/ship` | ✅ Phase 3 |
+| UC21: Instagram Connect | `POST /api/v1/marketing/instagram/connect` | ✅ Phase 4 |
+| UC22: Purchase Orders | `POST /api/v1/staff/purchase-orders` | ✅ Phase 5 |
+| UC23: Allocate Order | `POST /api/v1/staff/orders/{orderId}/allocate` | ✅ Phase 3 |
+| UC24: Return Intake | `POST /api/v1/returns` | ✅ Phase 3 |
+| UC25: Cycle Count | `POST /api/v1/staff/cycle-counts` | ✅ Phase 2 |
+| UC26: Shift Close | `POST /api/v1/pos/shifts/{shiftId}/close` | ✅ Phase 3 |
+| UC27: Tax Invoice | `POST /api/v1/invoices/tax` | ✅ Phase 3 |
+
+## 📅 Timeline Chi Tiết
+
+**TUẦN 1 (3-4 ngày work) - HOÀN THÀNH ✅**
+- Backend: Spring Boot setup, PostgreSQL, JWT, Auth APIs
+- Frontend: Vite setup, React Router, Tailwind, Login/Register UI
+
+**TUẦN 2-3 - ĐANG TIẾN HÀNH 🔄**
+- Backend: Catalog APIs, Inventory APIs
+- Frontend: Product Catalog, Shopping Cart
+
+**TUẦN 3-4 - CHƯA BẮT ĐẦU ⏳**
+- Backend: Commerce/Order APIs, POS APIs
+- Frontend: Checkout, Staff Portal
+
+**TUẦN 5 - CHƯA BẮT ĐẦU ⏳**
+- Backend: Advanced APIs (Discount, Instagram, AI), Testing
+- Frontend: Admin Portal, Instagram Integration
+
+**TUẦN 6-8 - CHƯA BẮT ĐẦU ⏳**
+- Testing, Polish, Deployment, Go-live ready
+
+## 📝 Active Tasks
+
+### 3. Backend Development (Weeks 1-3)
+- [x] Initialize Spring Boot project
+- [x] Setup database & migrations
+- [ ] Implement Core Modules (Auth, Catalog, Inventory)
+
+### 4. Frontend Development (Weeks 1-3)
+- [x] Initialize React + Vite project
+- [x] Setup routing & state management
+- [x] Build UI for authentication & catalog (in progress)
+
+### 5. Integration Testing (Weeks 4-5)
+- [ ] API testing
+- [ ] Component testing
+- [ ] E2E testing
+
+### 6. Deployment (Week 8)
+- [ ] Docker build & push
+- [ ] Production deployment
+- [ ] Monitoring & observability

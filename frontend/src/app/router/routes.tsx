@@ -63,21 +63,21 @@ export function AppRoutes() {
           <Route path="staff/dashboard" element={<StaffDashboard />} />
           <Route path="staff/catalog" element={<CatalogManagement />} />
           <Route path="staff/inventory" element={<InventoryAdjustment />} />
-          <Route path="staff/stock-transfer" element={<StockTransfer />} />
+          <Route path="staff/transfers" element={<StockTransfer />} />
           <Route path="staff/orders" element={<OrdersManagement />} />
           <Route path="staff/returns" element={<ReturnsManagement />} />
           <Route path="staff/discounts" element={<Discounts />} />
           <Route path="staff/pos" element={<POS />} />
-          <Route path="staff/shift-close" element={<ShiftClose />} />
+          <Route path="staff/pos/shift-close" element={<ShiftClose />} />
           <Route path="staff/purchase-orders" element={<PurchaseOrders />} />
           <Route path="staff/sales-report" element={<SalesReport />} />
-          <Route path="instagram/drafts" element={<InstagramDrafts />} />
-          <Route path="instagram/connect" element={<InstagramConnection />} />
+          <Route path="staff/marketing/drafts" element={<InstagramDrafts />} />
+          <Route path="staff/marketing/instagram" element={<InstagramConnection />} />
         </Route>
 
         <Route element={<ProtectedRoute role="ADMIN" />}>
           <Route path="admin/dashboard" element={<AdminDashboard />} />
-          <Route path="admin/users" element={<UserRoleManagement />} />
+          <Route path="admin/users-roles" element={<UserRoleManagement />} />
           <Route path="admin/locations" element={<LocationsManagement />} />
           <Route path="admin/audit-logs" element={<AuditLogs />} />
           <Route path="admin/settings" element={<Settings />} />

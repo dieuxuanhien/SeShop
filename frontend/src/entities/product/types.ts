@@ -6,6 +6,7 @@ export type ProductImage = {
   url: string;
   altText?: string;
   sortOrder: number;
+  isInstagramReady: boolean;
 };
 
 export type ProductVariant = {
