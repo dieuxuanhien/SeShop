@@ -72,12 +72,23 @@ This document serves as the active progress tracker for the SeShop project. It i
 ### 3. Backend Development (Weeks 1-3)
 - [x] Initialize Spring Boot project
 - [x] Setup database & migrations
-- [ ] Implement Core Modules (Auth, Catalog, Inventory)
+- [x] Implement Core Modules
+  - [x] Auth Module
+  - [x] Catalog Module
+  - [x] Inventory Module
 
 ### 4. Frontend Development (Weeks 1-3)
 - [x] Initialize React + Vite project
 - [x] Setup routing & state management
-- [x] Build UI for authentication & catalog (in progress)
+- [x] Build UI for authentication & catalog
+
+### 5. Backend Development (Weeks 3-4)
+- [x] Implement Commerce Module (Orders, Checkout)
+- [x] Implement POS Module (Receipts, Returns, Shifts)
+
+### 6. Frontend Development (Weeks 3-4)
+- [ ] Implement Checkout UI
+- [ ] Implement Staff Portal (Orders, Inventory, POS)
 
 ### 5. Integration Testing (Weeks 4-5)
 - [ ] API testing
