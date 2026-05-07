@@ -108,7 +108,8 @@ This document serves as the active progress tracker for the SeShop project. It i
   - [x] Build Instagram connection status and permissions shell
 
 ### 9. Integration Testing (Weeks 4-5)
-- [ ] API testing
+- [x] API testing
+  - [x] Add backend API contract tests for staff inventory and POS endpoints
 - [ ] Component testing
 - [ ] E2E testing
 - [x] Frontend mock API cleanup for catalog, checkout, and staff order flows
