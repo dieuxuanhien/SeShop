@@ -1,5 +1,6 @@
 package com.seshop.catalog.api;
 
+import com.seshop.catalog.api.dto.CategoryDto;
 import com.seshop.catalog.api.dto.ProductDto;
 import com.seshop.catalog.application.CatalogService;
 import org.springframework.data.domain.Page;
@@ -13,7 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/products")
+@RequestMapping("/api/v1")
 public class PublicCatalogController {
 
     private final CatalogService catalogService;
@@ -22,7 +23,7 @@ public class PublicCatalogController {
         this.catalogService = catalogService;
     }
 
-    @GetMapping
+    @GetMapping("/products")
     public ResponseEntity<Map<String, Object>> browseProducts(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String brand,
@@ -43,6 +44,7 @@ public class PublicCatalogController {
         data.put("page", products.getNumber());
         data.put("size", products.getSize());
         data.put("totalElements", products.getTotalElements());
+        data.put("totalPages", products.getTotalPages());
 
         Map<String, Object> response = new HashMap<>();
         response.put("data", data);
@@ -50,13 +52,20 @@ public class PublicCatalogController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{productId}")
+    @GetMapping("/products/{productId}")
     public ResponseEntity<Map<String, Object>> getProductDetail(@PathVariable Long productId) {
         ProductDto product = catalogService.getProductById(productId);
         
         Map<String, Object> response = new HashMap<>();
         response.put("data", product);
         
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<Map<String, Object>> getCategories() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", catalogService.getCategories());
         return ResponseEntity.ok(response);
     }
 }

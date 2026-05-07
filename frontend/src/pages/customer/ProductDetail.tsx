@@ -3,6 +3,7 @@ import { useParams, NavLink } from 'react-router-dom';
 import { ChevronRight, Heart, MapPin, Minus, Plus, ShoppingBag, Star, Truck } from 'lucide-react';
 import { useProduct } from '@/features/catalog/model/catalogHooks';
 import { useCartStore } from '@/features/cart/model/cartStore';
+import { addCartItem } from '@/features/commerce/api/cartApi';
 import { formatCurrency } from '@/shared/lib/formatters';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -15,7 +16,7 @@ type Tab = 'description' | 'shipping' | 'reviews';
 export function ProductDetail() {
   const { productId } = useParams<{ productId: string }>();
   const { data: product, isLoading } = useProduct(Number(productId));
-  const addItem = useCartStore((s) => s.addItem);
+  const setCartItems = useCartStore((s) => s.setItems);
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -24,6 +25,8 @@ export function ProductDetail() {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [addedFeedback, setAddedFeedback] = useState(false);
+  const [cartError, setCartError] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
 
   if (isLoading) return <ProductDetailSkeleton />;
   if (!product) return <div className="py-20 text-center text-surface/50">Product not found.</div>;
@@ -52,17 +55,27 @@ export function ProductDetail() {
     setTimeout(() => setSelectedColor(colorKeys[0]), 0);
   }
 
-  function handleAddToCart() {
+  async function handleAddToCart() {
     if (!matchedVariant) return;
-    addItem({
-      variantId: matchedVariant.id,
-      skuCode: matchedVariant.skuCode,
-      name: `${product!.name} — ${matchedVariant.size ?? ''} / ${matchedVariant.color ?? ''}`.trim(),
-      qty,
-      unitPrice: matchedVariant.price,
-    });
-    setAddedFeedback(true);
-    setTimeout(() => setAddedFeedback(false), 2000);
+    setIsAdding(true);
+    setCartError('');
+    try {
+      const cart = await addCartItem(matchedVariant.id, qty);
+      setCartItems(cart.items.map((item) => ({
+        id: item.id,
+        variantId: item.variantId,
+        skuCode: item.skuCode,
+        name: item.name,
+        qty: item.qty,
+        unitPrice: Number(item.unitPrice),
+      })));
+      setAddedFeedback(true);
+      setTimeout(() => setAddedFeedback(false), 2000);
+    } catch {
+      setCartError('Sign in to add this item to your cart.');
+    } finally {
+      setIsAdding(false);
+    }
   }
 
   const rating = product.reviewSummary;
@@ -235,7 +248,8 @@ export function ProductDetail() {
             <div className="flex gap-3">
               <Button
                 onClick={handleAddToCart}
-                disabled={!matchedVariant}
+                disabled={!matchedVariant || isAdding}
+                isLoading={isAdding}
                 icon={<ShoppingBag size={16} />}
                 className="flex-1"
               >
@@ -248,6 +262,7 @@ export function ProductDetail() {
                 <Heart size={18} />
               </button>
             </div>
+            {cartError && <p className="text-sm text-danger">{cartError}</p>}
 
             {/* Shipping & Availability Quick Info */}
             <div className="space-y-3 pt-2">

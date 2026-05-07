@@ -544,6 +544,8 @@ List inventory balances.
 - `page`
 - `size`
 
+**Note:** The POS UI also uses a convenience endpoint for single-SKU lookup: `GET /api/v1/staff/inventory/balances/sku/{skuCode}`. This endpoint returns a single `ProductVariant` payload (id, skuCode, productName, price) and is implemented for fast barcode scan flows. Documenting both the list endpoint and the SKU convenience path keeps the spec aligned with current implementation.
+
 ### POST `/api/v1/staff/inventory/adjustments`
 Adjust stock by SKU-location.
 

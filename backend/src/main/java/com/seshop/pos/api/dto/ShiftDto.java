@@ -13,6 +13,11 @@ public class ShiftDto {
     private BigDecimal startingCash;
     private BigDecimal endingCash;
     private String status;
+    private String registerName;
+    private OffsetDateTime openedAt;
+    private Integer transactionCount;
+    private BigDecimal cardPaymentsTotal;
+    private BigDecimal expectedCash;
 
     // Getters and Setters
     public Long getId() { return id; }
@@ -38,4 +43,19 @@ public class ShiftDto {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getRegisterName() { return registerName; }
+    public void setRegisterName(String registerName) { this.registerName = registerName; }
+
+    public OffsetDateTime getOpenedAt() { return openedAt; }
+    public void setOpenedAt(OffsetDateTime openedAt) { this.openedAt = openedAt; }
+
+    public Integer getTransactionCount() { return transactionCount; }
+    public void setTransactionCount(Integer transactionCount) { this.transactionCount = transactionCount; }
+
+    public BigDecimal getCardPaymentsTotal() { return cardPaymentsTotal; }
+    public void setCardPaymentsTotal(BigDecimal cardPaymentsTotal) { this.cardPaymentsTotal = cardPaymentsTotal; }
+
+    public BigDecimal getExpectedCash() { return expectedCash; }
+    public void setExpectedCash(BigDecimal expectedCash) { this.expectedCash = expectedCash; }
 }

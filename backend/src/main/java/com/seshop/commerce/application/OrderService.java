@@ -1,13 +1,25 @@
 package com.seshop.commerce.application;
 
 import com.seshop.commerce.api.dto.CheckoutRequest;
+import com.seshop.commerce.api.dto.CheckoutResponse;
 import com.seshop.commerce.api.dto.OrderDto;
 import com.seshop.commerce.api.dto.ProcessOrderRequest;
 import com.seshop.commerce.infrastructure.persistence.*;
+import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
+import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
+import com.seshop.payment.infrastructure.StripeClient;
+import com.seshop.shipping.infrastructure.GhnClient;
+import com.seshop.shipping.infrastructure.persistence.ShipmentEntity;
+import com.seshop.shipping.infrastructure.persistence.ShipmentRepository;
+import com.seshop.shared.exception.BusinessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -18,16 +30,28 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
     private final PaymentRepository paymentRepository;
+    private final StripeClient stripeClient;
+    private final GhnClient ghnClient;
+    private final ShipmentRepository shipmentRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     public OrderService(OrderRepository orderRepository,
                         CartRepository cartRepository,
-                        PaymentRepository paymentRepository) {
+                        PaymentRepository paymentRepository,
+                        StripeClient stripeClient,
+                        GhnClient ghnClient,
+                        ShipmentRepository shipmentRepository,
+                        ProductVariantRepository productVariantRepository) {
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.paymentRepository = paymentRepository;
+        this.stripeClient = stripeClient;
+        this.ghnClient = ghnClient;
+        this.shipmentRepository = shipmentRepository;
+        this.productVariantRepository = productVariantRepository;
     }
 
-    public OrderDto checkout(Long customerId, CheckoutRequest request) {
+    public CheckoutResponse checkout(Long customerId, CheckoutRequest request) {
         CartEntity cart = cartRepository.findById(request.getCartId())
                 .orElseThrow(() -> new IllegalArgumentException("Cart not found"));
 
@@ -43,8 +67,8 @@ public class OrderService {
         order.setCustomerId(customerId);
         order.setOrderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         order.setStatus("PENDING");
-        order.setShippingAddress(request.getShippingAddress());
-        order.setBillingAddress(request.getBillingAddress());
+        order.setShippingAddress(request.shippingAddressText());
+        order.setBillingAddress(request.billingAddressText());
 
         BigDecimal subtotal = BigDecimal.ZERO;
         
@@ -52,12 +76,12 @@ public class OrderService {
             OrderItemEntity orderItem = new OrderItemEntity();
             orderItem.setOrder(order);
             orderItem.setVariantId(cartItem.getVariantId());
-            // Normally, product name, sku, and price would be fetched from Catalog module.
-            // For now, mocking with default values or dummy fetch logic.
-            orderItem.setProductName("Product Name");
-            orderItem.setSku("SKU-123");
+            ProductVariantEntity variant = productVariantRepository.findById(cartItem.getVariantId())
+                    .orElseThrow(() -> new BusinessException("CAT_002", "Product variant not found"));
+            orderItem.setProductName(variant.getProduct().getName());
+            orderItem.setSku(variant.getSkuCode());
             orderItem.setQty(cartItem.getQty());
-            orderItem.setUnitPrice(new BigDecimal("99.99"));
+            orderItem.setUnitPrice(variant.getPrice());
             orderItem.setTotalPrice(orderItem.getUnitPrice().multiply(new BigDecimal(cartItem.getQty())));
             
             subtotal = subtotal.add(orderItem.getTotalPrice());
@@ -65,27 +89,67 @@ public class OrderService {
         }
 
         order.setSubtotalAmount(subtotal);
-        // Implement promotion logic here if request.getPromotionCode() is present
         order.setDiscountAmount(BigDecimal.ZERO); 
-        order.setTaxAmount(subtotal.multiply(new BigDecimal("0.1"))); // 10% tax
+        order.setTaxAmount(subtotal.multiply(new BigDecimal("0.1")));
         order.setTotalAmount(subtotal.subtract(order.getDiscountAmount()).add(order.getTaxAmount()));
 
         OrderEntity savedOrder = orderRepository.save(order);
 
-        // Process Payment logic
         PaymentEntity payment = new PaymentEntity();
         payment.setOrder(savedOrder);
         payment.setAmount(savedOrder.getTotalAmount());
-        payment.setProvider(request.getPaymentProvider());
-        payment.setStatus("COMPLETED"); // Assuming instant success for mock
-        payment.setTransactionId(UUID.randomUUID().toString());
+        String provider = request.resolvePaymentProvider();
+        if (provider == null || provider.isBlank()) {
+            throw new BusinessException("PAY_002", "Payment provider is required");
+        }
+        provider = provider.toUpperCase();
+        payment.setProvider(provider);
+
+        if ("STRIPE".equals(provider)) {
+            StripeClient.StripePaymentResult result = stripeClient.createPaymentIntent(
+                    savedOrder.getTotalAmount(),
+                    UUID.randomUUID().toString(),
+                    savedOrder.getOrderNumber()
+            );
+            payment.setStatus(normalizeStripeStatus(result.status()));
+            payment.setTransactionId(result.transactionId());
+            savedOrder.setStatus("PAYMENT_PENDING");
+        } else if ("COD".equals(provider)) {
+            payment.setStatus("PENDING");
+            payment.setTransactionId("COD-" + UUID.randomUUID());
+            savedOrder.setStatus("CONFIRMED");
+        } else {
+            throw new BusinessException("PAY_002", "Unsupported payment provider");
+        }
         paymentRepository.save(payment);
 
-        savedOrder.setStatus("CONFIRMED"); // Update order status based on payment success
         cart.setStatus("COMPLETED");
         cartRepository.save(cart);
 
-        return mapToDto(savedOrder);
+        CheckoutResponse response = new CheckoutResponse();
+        response.setOrderId(savedOrder.getId());
+        response.setOrderNumber(savedOrder.getOrderNumber());
+        response.setPaymentStatus(payment.getStatus());
+        response.setShipmentStatus("PENDING");
+        return response;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderDto> listOrdersForCustomer(Long customerId, int page, int size) {
+        return orderRepository.findByCustomerId(customerId, PageRequest.of(page, size)).map(this::mapToDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderDto> listOrdersForStaff(int page, int size) {
+        return orderRepository.findAll(PageRequest.of(page, size)).map(this::mapToDto);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderDto getOrderForCustomer(Long customerId, Long orderId) {
+        OrderEntity order = orderRepository.findById(orderId)
+                .filter(item -> item.getCustomerId().equals(customerId))
+                .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
+        return mapToDto(order);
     }
 
     public OrderDto getOrder(Long orderId) {
@@ -116,6 +180,88 @@ public class OrderService {
         }
 
         return mapToDto(orderRepository.save(order));
+    }
+
+    public OrderDto allocateOrder(Long orderId) {
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
+        order.setStatus("ALLOCATED");
+        return mapToDto(orderRepository.save(order));
+    }
+
+    public OrderDto packOrder(Long orderId) {
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
+        order.setStatus("PACKED");
+        return mapToDto(orderRepository.save(order));
+    }
+
+    public OrderDto shipOrder(Long orderId, String carrier, String toName, String toPhone, String trackingNumber) {
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
+
+        ShipmentEntity shipment = shipmentRepository.findByOrderId(orderId).orElse(new ShipmentEntity());
+        shipment.setOrderId(orderId);
+        shipment.setCarrier(carrier);
+
+        if (trackingNumber != null && !trackingNumber.isBlank()) {
+            shipment.setTrackingNumber(trackingNumber);
+            shipment.setStatus("SHIPPED");
+        } else if ("GHN".equalsIgnoreCase(carrier)) {
+            GhnClient.GhnShipmentResult result = ghnClient.createShippingOrder(
+                    order.getOrderNumber(),
+                    toName,
+                    toPhone,
+                    order.getShippingAddress()
+            );
+            shipment.setTrackingNumber(result.trackingNumber());
+            shipment.setStatus(result.status());
+        } else {
+            shipment.setTrackingNumber("LOCAL-" + UUID.randomUUID());
+            shipment.setStatus("SHIPPED");
+        }
+        shipment.setShippedAt(OffsetDateTime.now());
+        shipmentRepository.save(shipment);
+
+        order.setStatus("SHIPPED");
+        return mapToDto(orderRepository.save(order));
+    }
+
+    public OrderDto cancelOrder(Long orderId) {
+        OrderEntity order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
+        order.setStatus("CANCELLED");
+        return mapToDto(orderRepository.save(order));
+    }
+
+    public String refreshShipmentStatus(Long orderId) {
+        ShipmentEntity shipment = shipmentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new BusinessException("ORD_002", "Shipment not found"));
+        String status = ghnClient.getShippingStatus(shipment.getTrackingNumber());
+        shipment.setStatus(status);
+        if ("delivered".equalsIgnoreCase(status)) {
+            shipment.setDeliveredAt(OffsetDateTime.now());
+        }
+        shipmentRepository.save(shipment);
+        return status;
+    }
+
+    private String normalizeStripeStatus(String stripeStatus) {
+        if (stripeStatus == null) {
+            return "PENDING";
+        }
+        return switch (stripeStatus) {
+            case "succeeded" -> "COMPLETED";
+            case "requires_payment_method", "requires_confirmation", "requires_action" -> "PENDING";
+            default -> "PENDING";
+        };
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getTrackingNumbers(Long orderId) {
+        return shipmentRepository.findByOrderId(orderId)
+                .map(item -> List.of(item.getTrackingNumber()))
+                .orElse(List.of());
     }
 
     private OrderDto mapToDto(OrderEntity entity) {

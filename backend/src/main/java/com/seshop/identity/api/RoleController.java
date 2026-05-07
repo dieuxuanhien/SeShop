@@ -2,9 +2,11 @@ package com.seshop.identity.api;
 
 import com.seshop.identity.application.RoleService;
 import com.seshop.identity.infrastructure.persistence.RoleEntity;
+import com.seshop.shared.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -62,9 +64,9 @@ public class RoleController {
 
     @PostMapping("/users/{userId}/roles")
     public ResponseEntity<?> assignRoleToUser(@PathVariable Long userId,
+                                              @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
                                               @Valid @RequestBody AssignRoleRequest request) {
-        // Hardcoded assignedByUserId = 1 for simplicity until full auth context is built
-        roleService.assignRoleToUser(userId, request.roleId(), 1L);
+        roleService.assignRoleToUser(userId, request.roleId(), authenticatedUser.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "data", Map.of("success", true),
                 "meta", Map.of("traceId", UUID.randomUUID().toString())

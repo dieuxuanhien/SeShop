@@ -2,8 +2,10 @@ package com.seshop.commerce.api;
 
 import com.seshop.commerce.api.dto.OrderDto;
 import com.seshop.commerce.api.dto.ProcessOrderRequest;
+import com.seshop.commerce.api.dto.ShipOrderRequest;
 import com.seshop.commerce.application.OrderService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +20,23 @@ public class StaffOrderController {
 
     public StaffOrderController(OrderService orderService) {
         this.orderService = orderService;
+    }
+
+    @GetMapping
+    public ResponseEntity<Map<String, Object>> listOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Page<OrderDto> orders = orderService.listOrdersForStaff(page, size);
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", Map.of(
+                "items", orders.getContent(),
+                "page", orders.getNumber(),
+                "size", orders.getSize(),
+                "totalElements", orders.getTotalElements(),
+                "totalPages", orders.getTotalPages()
+        ));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{orderId}")
@@ -40,6 +59,38 @@ public class StaffOrderController {
         Map<String, Object> response = new HashMap<>();
         response.put("data", order);
 
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{orderId}/allocate")
+    public ResponseEntity<Map<String, Object>> allocateOrder(@PathVariable Long orderId) {
+        OrderDto order = orderService.allocateOrder(orderId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", order);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{orderId}/pack")
+    public ResponseEntity<Map<String, Object>> packOrder(@PathVariable Long orderId) {
+        OrderDto order = orderService.packOrder(orderId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", order);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{orderId}/ship")
+    public ResponseEntity<Map<String, Object>> shipOrder(@PathVariable Long orderId, @Valid @RequestBody ShipOrderRequest request) {
+        OrderDto order = orderService.shipOrder(orderId, request.getCarrier(), request.getRecipientName(), request.getRecipientPhone(), request.getTrackingNumber());
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", order);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{orderId}/cancel")
+    public ResponseEntity<Map<String, Object>> cancelOrder(@PathVariable Long orderId) {
+        OrderDto order = orderService.cancelOrder(orderId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", order);
         return ResponseEntity.ok(response);
     }
 }

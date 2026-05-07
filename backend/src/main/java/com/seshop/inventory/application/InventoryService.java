@@ -1,10 +1,18 @@
 package com.seshop.inventory.application;
 
+import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
+import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
 import com.seshop.inventory.api.dto.CreateTransferRequest;
+import com.seshop.inventory.api.dto.InventoryBalanceDto;
 import com.seshop.inventory.api.dto.InventoryAdjustmentRequest;
 import com.seshop.inventory.api.dto.LocationAvailabilityDto;
+import com.seshop.inventory.api.dto.ProductVariantDto;
 import com.seshop.inventory.api.dto.ReceiveTransferRequest;
+import com.seshop.inventory.api.dto.StockTransferDto;
 import com.seshop.inventory.infrastructure.persistence.*;
+import com.seshop.shared.api.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,13 +27,16 @@ public class InventoryService {
     private final InventoryBalanceRepository balanceRepository;
     private final LocationRepository locationRepository;
     private final InventoryTransferRepository transferRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     public InventoryService(InventoryBalanceRepository balanceRepository,
                             LocationRepository locationRepository,
-                            InventoryTransferRepository transferRepository) {
+                            InventoryTransferRepository transferRepository,
+                            ProductVariantRepository productVariantRepository) {
         this.balanceRepository = balanceRepository;
         this.locationRepository = locationRepository;
         this.transferRepository = transferRepository;
+        this.productVariantRepository = productVariantRepository;
     }
 
     @Transactional(readOnly = true)
@@ -40,6 +51,46 @@ public class InventoryService {
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<InventoryBalanceDto> listBalances(Long variantId, Long locationId, String skuCode, int page, int size) {
+        Long resolvedVariantId = variantId;
+        if (skuCode != null && !skuCode.isBlank()) {
+            resolvedVariantId = productVariantRepository.findBySkuCode(skuCode)
+                    .map(ProductVariantEntity::getId)
+                    .orElse(-1L);
+        }
+
+        Page<InventoryBalanceEntity> balances = balanceRepository.search(
+                resolvedVariantId,
+                locationId,
+                PageRequest.of(page, size));
+
+        return new PageResponse<>(
+                balances.getContent().stream().map(this::mapBalance).toList(),
+                balances.getNumber(),
+                balances.getSize(),
+                balances.getTotalElements(),
+                balances.getTotalPages());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<StockTransferDto> listTransfers(int page, int size) {
+        Page<InventoryTransferEntity> transfers = transferRepository.findAll(PageRequest.of(page, size));
+        return new PageResponse<>(
+                transfers.getContent().stream().map(this::mapTransfer).toList(),
+                transfers.getNumber(),
+                transfers.getSize(),
+                transfers.getTotalElements(),
+                transfers.getTotalPages());
+    }
+
+    @Transactional(readOnly = true)
+    public ProductVariantDto getProductVariantBySku(String skuCode) {
+        ProductVariantEntity variant = productVariantRepository.findBySkuCode(skuCode)
+                .orElseThrow(() -> new IllegalArgumentException("SKU not found"));
+        return mapVariant(variant);
     }
 
     public void adjustInventory(InventoryAdjustmentRequest request) {
@@ -151,5 +202,42 @@ public class InventoryService {
         transfer.setStatus("COMPLETED");
         transfer.setCompletedAt(OffsetDateTime.now());
         transferRepository.save(transfer);
+    }
+
+    private InventoryBalanceDto mapBalance(InventoryBalanceEntity entity) {
+        InventoryBalanceDto dto = new InventoryBalanceDto();
+        dto.setId(entity.getId());
+        dto.setLocationId(entity.getLocation().getId());
+        dto.setLocationName(entity.getLocation().getDisplayName());
+        dto.setVariantId(entity.getVariantId());
+        dto.setOnHandQty(entity.getOnHandQty());
+        dto.setReservedQty(entity.getReservedQty());
+        dto.setAvailableQty(entity.getOnHandQty() - entity.getReservedQty());
+
+        productVariantRepository.findById(entity.getVariantId()).ifPresent(variant -> {
+            dto.setSkuCode(variant.getSkuCode());
+            dto.setProductName(variant.getProduct().getName());
+        });
+        return dto;
+    }
+
+    private StockTransferDto mapTransfer(InventoryTransferEntity entity) {
+        StockTransferDto dto = new StockTransferDto();
+        dto.setId(entity.getId());
+        dto.setSourceLocationName(entity.getSourceLocation().getDisplayName());
+        dto.setDestinationLocationName(entity.getDestinationLocation().getDisplayName());
+        dto.setStatus(entity.getStatus());
+        dto.setItemCount(entity.getItems().size());
+        dto.setCreatedAt(entity.getCreatedAt());
+        return dto;
+    }
+
+    private ProductVariantDto mapVariant(ProductVariantEntity variant) {
+        ProductVariantDto dto = new ProductVariantDto();
+        dto.setId(variant.getId());
+        dto.setSkuCode(variant.getSkuCode());
+        dto.setProductName(variant.getProduct().getName());
+        dto.setPrice(variant.getPrice());
+        return dto;
     }
 }

@@ -5,9 +5,11 @@ import com.seshop.pos.api.dto.OpenShiftRequest;
 import com.seshop.pos.api.dto.ShiftDto;
 import com.seshop.pos.infrastructure.persistence.PosShiftEntity;
 import com.seshop.pos.infrastructure.persistence.PosShiftRepository;
+import com.seshop.pos.infrastructure.persistence.PosTransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 @Service
@@ -15,9 +17,11 @@ import java.time.OffsetDateTime;
 public class ShiftService {
 
     private final PosShiftRepository shiftRepository;
+    private final PosTransactionRepository transactionRepository;
 
-    public ShiftService(PosShiftRepository shiftRepository) {
+    public ShiftService(PosShiftRepository shiftRepository, PosTransactionRepository transactionRepository) {
         this.shiftRepository = shiftRepository;
+        this.transactionRepository = transactionRepository;
     }
 
     public ShiftDto openShift(Long staffId, OpenShiftRequest request) {
@@ -45,7 +49,11 @@ public class ShiftService {
             throw new IllegalStateException("Shift is not open");
         }
 
-        shift.setEndingCash(request.getEndingCash());
+        BigDecimal endingCash = request.resolvedEndingCash();
+        if (endingCash == null) {
+            throw new IllegalArgumentException("Ending cash is required");
+        }
+        shift.setEndingCash(endingCash);
         shift.setEndTime(OffsetDateTime.now());
         shift.setStatus("CLOSED");
 
@@ -59,7 +67,23 @@ public class ShiftService {
         return mapToDto(shift);
     }
 
+    public ShiftDto getCurrentShift(Long staffId) {
+        PosShiftEntity shift = shiftRepository.findByStaffIdAndStatus(staffId, "OPEN")
+                .orElseThrow(() -> new IllegalArgumentException("No active shift found"));
+        return mapToDto(shift);
+    }
+
     private ShiftDto mapToDto(PosShiftEntity entity) {
+        var transactions = transactionRepository.findByShiftId(entity.getId());
+        BigDecimal cardTotal = transactions.stream()
+                .filter(transaction -> "CARD".equalsIgnoreCase(transaction.getTransactionType()))
+                .map(transaction -> transaction.getAmount() == null ? BigDecimal.ZERO : transaction.getAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal cashSales = transactions.stream()
+                .filter(transaction -> "CASH".equalsIgnoreCase(transaction.getTransactionType()))
+                .map(transaction -> transaction.getAmount() == null ? BigDecimal.ZERO : transaction.getAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         ShiftDto dto = new ShiftDto();
         dto.setId(entity.getId());
         dto.setStaffId(entity.getStaffId());
@@ -69,6 +93,11 @@ public class ShiftService {
         dto.setStartingCash(entity.getStartingCash());
         dto.setEndingCash(entity.getEndingCash());
         dto.setStatus(entity.getStatus());
+        dto.setRegisterName("Location " + entity.getLocationId());
+        dto.setOpenedAt(entity.getStartTime());
+        dto.setTransactionCount(transactions.size());
+        dto.setCardPaymentsTotal(cardTotal);
+        dto.setExpectedCash((entity.getStartingCash() == null ? BigDecimal.ZERO : entity.getStartingCash()).add(cashSales));
         return dto;
     }
 }

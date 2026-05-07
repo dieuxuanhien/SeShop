@@ -244,6 +244,11 @@ function ProductCard({ product, index }: { product: import('@/entities/product/t
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           loading="lazy"
         />
+        {!product.thumbnailUrl && (
+          <div className="absolute inset-0 flex items-center justify-center bg-surface/10 text-xs uppercase tracking-widest text-surface/40">
+            No image
+          </div>
+        )}
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/20 transition-colors duration-300 flex items-end justify-center pb-6 opacity-0 group-hover:opacity-100">
           <span className="bg-surface text-ink text-xs font-semibold uppercase tracking-widest px-6 py-2.5 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">

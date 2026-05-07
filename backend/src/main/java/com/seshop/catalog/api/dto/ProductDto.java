@@ -10,6 +10,7 @@ public class ProductDto {
     private String description;
     private String status;
     private List<VariantDto> variants;
+    private List<ImageDto> images;
 
     public static class VariantDto {
         private Long id;
@@ -34,6 +35,22 @@ public class ProductDto {
         public void setStatus(String status) { this.status = status; }
     }
 
+    public static class ImageDto {
+        private Long id;
+        private String url;
+        private Integer sortOrder;
+        private Boolean instagramReady;
+
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+        public String getUrl() { return url; }
+        public void setUrl(String url) { this.url = url; }
+        public Integer getSortOrder() { return sortOrder; }
+        public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
+        public Boolean getInstagramReady() { return instagramReady; }
+        public void setInstagramReady(Boolean instagramReady) { this.instagramReady = instagramReady; }
+    }
+
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -47,4 +64,6 @@ public class ProductDto {
     public void setStatus(String status) { this.status = status; }
     public List<VariantDto> getVariants() { return variants; }
     public void setVariants(List<VariantDto> variants) { this.variants = variants; }
+    public List<ImageDto> getImages() { return images; }
+    public void setImages(List<ImageDto> images) { this.images = images; }
 }

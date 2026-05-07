@@ -3,6 +3,7 @@ package com.seshop.catalog.api;
 import com.seshop.catalog.api.dto.CreateProductRequest;
 import com.seshop.catalog.api.dto.CreateVariantRequest;
 import com.seshop.catalog.api.dto.ProductDto;
+import com.seshop.catalog.api.dto.RegisterProductImageRequest;
 import com.seshop.catalog.application.CatalogService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,30 @@ public class StaffCatalogController {
         
         List<CreateVariantRequest> variants = requestMap.get("variants");
         ProductDto product = catalogService.createVariants(productId, variants);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", product);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PutMapping("/{productId}")
+    public ResponseEntity<Map<String, Object>> updateProduct(
+            @PathVariable Long productId,
+            @Valid @RequestBody CreateProductRequest request) {
+        ProductDto product = catalogService.updateProduct(productId, request);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", product);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{productId}/images")
+    public ResponseEntity<Map<String, Object>> registerImage(
+            @PathVariable Long productId,
+            @Valid @RequestBody RegisterProductImageRequest request) {
+        ProductDto product = catalogService.registerImage(productId, request);
 
         Map<String, Object> response = new HashMap<>();
         response.put("data", product);

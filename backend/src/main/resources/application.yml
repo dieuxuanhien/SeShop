@@ -54,3 +54,29 @@ seshop:
       issuer: ${JWT_ISSUER:seshop}
       secret: ${JWT_SECRET:change-this-development-secret-change-this-development-secret}
       expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+  integrations:
+    stripe:
+      enabled: ${STRIPE_ENABLED:false}
+      base-url: ${STRIPE_BASE_URL:https://api.stripe.com/v1}
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      currency: ${STRIPE_CURRENCY:vnd}
+    ghn:
+      enabled: ${GHN_ENABLED:false}
+      base-url: ${GHN_BASE_URL:https://dev-online-gateway.ghn.vn}
+      token: ${GHN_TOKEN:}
+      shop-id: ${GHN_SHOP_ID:}
+      create-order-path: ${GHN_CREATE_ORDER_PATH:/shiip/public-api/v2/shipping-order/create}
+      track-path: ${GHN_TRACK_PATH:/shiip/public-api/v2/shipping-order/detail}
+    gemini:
+      enabled: ${GEMINI_ENABLED:false}
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:gemini-1.5-flash}
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta}
+    meta:
+      enabled: ${META_ENABLED:false}
+      base-url: ${META_BASE_URL:https://graph.facebook.com/v20.0}
+      app-id: ${META_APP_ID:}
+      app-secret: ${META_APP_SECRET:}
+      redirect-uri: ${META_REDIRECT_URI:http://localhost:8080/api/v1/webhooks/instagram/callback}
+      scopes: ${META_SCOPES:instagram_basic,pages_show_list,business_management}

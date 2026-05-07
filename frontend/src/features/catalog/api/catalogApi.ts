@@ -1,9 +1,8 @@
+import { apiClient } from '@/shared/api/client';
+import type { ApiResponse, PageResponse } from '@/shared/types/api';
 import type { Product, Category } from '@/entities/product/types';
 import type { StockAvailability } from '@/entities/inventory/types';
-import type { PageResponse } from '@/shared/types/api';
-import { mockProducts, mockCategories, getMockAvailability } from '@/shared/lib/mockData';
 
-// ── Request Types ───────────────────────────────────────────
 export type ProductListParams = {
   page?: number;
   size?: number;
@@ -15,82 +14,85 @@ export type ProductListParams = {
   brand?: string;
 };
 
-// ── Mock Implementations ────────────────────────────────────
-// These functions simulate API calls using mock data.
-// Replace the body with real `apiClient.get(...)` calls when the backend is ready.
+type BackendProduct = {
+  id: number;
+  name: string;
+  brand?: string;
+  description?: string;
+  status: string;
+  variants: Array<{
+    id: number;
+    skuCode: string;
+    size?: string;
+    color?: string;
+    price: string | number;
+    compareAtPrice?: string | number;
+    status: string;
+  }>;
+};
 
-function delay(ms = 300) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+type BackendPage<T> = {
+  items: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+function toFrontendProduct(product: BackendProduct): Product {
+  return {
+    id: product.id,
+    name: product.name,
+    brand: product.brand,
+    description: product.description,
+    status: product.status === 'PUBLISHED' ? 'PUBLISHED' : product.status === 'ARCHIVED' ? 'ARCHIVED' : 'DRAFT',
+    thumbnailUrl: undefined,
+    images: [],
+    variants: product.variants.map((variant) => ({
+      id: variant.id,
+      skuCode: variant.skuCode,
+      size: variant.size,
+      color: variant.color,
+      colorHex: undefined,
+      price: Number(variant.price),
+      compareAtPrice: variant.compareAtPrice != null ? Number(variant.compareAtPrice) : undefined,
+      status: variant.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
+    })),
+    categories: [],
+  };
 }
 
 export async function getProducts(params: ProductListParams = {}): Promise<PageResponse<Product>> {
-  await delay();
-  let filtered = [...mockProducts];
+  const sort = params.sort === 'price_asc' ? 'price,asc' : params.sort === 'price_desc' ? 'price,desc' : 'createdAt,desc';
+  const response = await apiClient.get<ApiResponse<BackendPage<BackendProduct>>>('/products', {
+    params: {
+      page: Math.max(0, (params.page ?? 1) - 1),
+      size: params.size ?? 9,
+      keyword: params.search || undefined,
+      brand: params.brand || undefined,
+      sort,
+    },
+  });
 
-  if (params.search) {
-    const q = params.search.toLowerCase();
-    filtered = filtered.filter(
-      (p) => p.name.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q),
-    );
-  }
-
-  if (params.categoryId) {
-    filtered = filtered.filter((p) => p.categories.some((c) => c.id === params.categoryId));
-  }
-
-  if (params.brand) {
-    filtered = filtered.filter((p) => p.brand === params.brand);
-  }
-
-  if (params.minPrice != null) {
-    filtered = filtered.filter((p) => p.variants.some((v) => v.price >= params.minPrice!));
-  }
-  if (params.maxPrice != null) {
-    filtered = filtered.filter((p) => p.variants.some((v) => v.price <= params.maxPrice!));
-  }
-
-  // Sort
-  switch (params.sort) {
-    case 'price_asc':
-      filtered.sort((a, b) => (a.variants[0]?.price ?? 0) - (b.variants[0]?.price ?? 0));
-      break;
-    case 'price_desc':
-      filtered.sort((a, b) => (b.variants[0]?.price ?? 0) - (a.variants[0]?.price ?? 0));
-      break;
-    case 'popular':
-      filtered.sort((a, b) => (b.reviewSummary?.reviewCount ?? 0) - (a.reviewSummary?.reviewCount ?? 0));
-      break;
-    case 'newest':
-    default:
-      filtered.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
-      break;
-  }
-
-  const page = params.page ?? 1;
-  const size = params.size ?? 9;
-  const start = (page - 1) * size;
-  const items = filtered.slice(start, start + size);
-
+  const data = response.data.data;
   return {
-    items,
-    page,
-    size,
-    totalElements: filtered.length,
-    totalPages: Math.ceil(filtered.length / size),
+    ...data,
+    page: data.page + 1,
+    items: data.items.map(toFrontendProduct),
   };
 }
 
 export async function getProductById(productId: number): Promise<Product | undefined> {
-  await delay(200);
-  return mockProducts.find((p) => p.id === productId);
+  const response = await apiClient.get<ApiResponse<BackendProduct>>(`/products/${productId}`);
+  return toFrontendProduct(response.data.data);
 }
 
 export async function getProductAvailability(productId: number): Promise<StockAvailability[]> {
-  await delay(250);
-  return getMockAvailability(productId);
+  const response = await apiClient.get<ApiResponse<StockAvailability[]>>(`/products/${productId}/availability`);
+  return response.data.data;
 }
 
 export async function getCategories(): Promise<Category[]> {
-  await delay(150);
-  return mockCategories;
+  const response = await apiClient.get<ApiResponse<Category[]>>('/categories');
+  return response.data.data;
 }

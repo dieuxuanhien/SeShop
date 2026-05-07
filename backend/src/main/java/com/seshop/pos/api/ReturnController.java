@@ -3,9 +3,11 @@ package com.seshop.pos.api;
 import com.seshop.pos.api.dto.ProcessReturnRequest;
 import com.seshop.pos.api.dto.ReturnDto;
 import com.seshop.pos.application.ReturnService;
+import com.seshop.shared.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -22,10 +24,10 @@ public class ReturnController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> processReturn(@Valid @RequestBody ProcessReturnRequest request) {
-        // In a real application, staffId would come from the authenticated user context
-        Long staffId = 1L;
-        ReturnDto returnDto = returnService.processReturn(request, staffId);
+    public ResponseEntity<Map<String, Object>> processReturn(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @Valid @RequestBody ProcessReturnRequest request) {
+        ReturnDto returnDto = returnService.processReturn(request, user.userId());
 
         Map<String, Object> response = new HashMap<>();
         response.put("data", returnDto);

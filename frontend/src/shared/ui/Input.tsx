@@ -1,7 +1,7 @@
 import { forwardRef, InputHTMLAttributes } from 'react';
 
 type InputProps = InputHTMLAttributes<HTMLInputElement> & {
-  label: string;
+  label?: string;
   error?: string;
 };
 
@@ -9,7 +9,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   function Input({ label, error, className = '', ...props }, ref) {
     return (
       <label className="grid gap-1 text-sm font-medium text-ink">
-        <span>{label}</span>
+        {label ? <span>{label}</span> : null}
         <input
           ref={ref}
           className={`min-h-10 rounded-md border border-primary/30 bg-surface px-3 text-sm text-ink outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30 ${className}`}

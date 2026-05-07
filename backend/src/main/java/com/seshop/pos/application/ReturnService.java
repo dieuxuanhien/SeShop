@@ -19,7 +19,7 @@ public class ReturnService {
 
     public ReturnDto processReturn(ProcessReturnRequest request, Long staffId) {
         // Typically, we would validate that the original order exists and its items are returnable
-        // and update inventory balances accordingly. This is a simplified mock process.
+        // and update inventory balances accordingly.
 
         PosReturnEntity posReturn = new PosReturnEntity();
         posReturn.setOriginalOrderId(request.getOriginalOrderId());

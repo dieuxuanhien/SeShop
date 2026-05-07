@@ -4,9 +4,12 @@ import com.seshop.inventory.api.dto.CreateTransferRequest;
 import com.seshop.inventory.api.dto.InventoryAdjustmentRequest;
 import com.seshop.inventory.api.dto.ReceiveTransferRequest;
 import com.seshop.inventory.application.InventoryService;
+import com.seshop.shared.api.ApiResponse;
+import com.seshop.shared.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -22,6 +25,16 @@ public class StaffInventoryController {
         this.inventoryService = inventoryService;
     }
 
+    @GetMapping("/balances")
+    public ApiResponse<?> listBalances(
+            @RequestParam(required = false) Long variantId,
+            @RequestParam(required = false) Long locationId,
+            @RequestParam(required = false) String skuCode,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.success(inventoryService.listBalances(variantId, locationId, skuCode, page, size));
+    }
+
     @PostMapping("/adjustments")
     public ResponseEntity<Map<String, Object>> adjustInventory(@Valid @RequestBody InventoryAdjustmentRequest request) {
         inventoryService.adjustInventory(request);
@@ -33,10 +46,10 @@ public class StaffInventoryController {
     }
 
     @PostMapping("/transfers")
-    public ResponseEntity<Map<String, Object>> createTransfer(@Valid @RequestBody CreateTransferRequest request) {
-        // In a real application, createdBy would come from the authenticated user context
-        Long createdBy = 1L; 
-        Long transferId = inventoryService.createTransfer(request, createdBy);
+    public ResponseEntity<Map<String, Object>> createTransfer(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @Valid @RequestBody CreateTransferRequest request) {
+        Long transferId = inventoryService.createTransfer(request, user.userId());
         
         Map<String, Object> data = new HashMap<>();
         data.put("transferId", transferId);
@@ -45,6 +58,13 @@ public class StaffInventoryController {
         response.put("data", data);
         
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/transfers")
+    public ApiResponse<?> listTransfers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.success(inventoryService.listTransfers(page, size));
     }
 
     @PostMapping("/transfers/{transferId}/approve")

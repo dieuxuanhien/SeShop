@@ -56,7 +56,7 @@ This document serves as the active progress tracker for the SeShop project. It i
 - Backend: Catalog APIs, Inventory APIs
 - Frontend: Product Catalog, Shopping Cart
 
-**TUẦN 3-4 - CHƯA BẮT ĐẦU ⏳**
+**TUẦN 3-4 (HOÀN THÀNH) ✅**
 - Backend: Commerce/Order APIs, POS APIs
 - Frontend: Checkout, Staff Portal
 
@@ -87,15 +87,34 @@ This document serves as the active progress tracker for the SeShop project. It i
 - [x] Implement POS Module (Receipts, Returns, Shifts)
 
 ### 6. Frontend Development (Weeks 3-4)
-- [ ] Implement Checkout UI
-- [ ] Implement Staff Portal (Orders, Inventory, POS)
+- [x] Implement Checkout UI
+- [x] Implement Staff Portal (Orders, Inventory, POS)
 
-### 5. Integration Testing (Weeks 4-5)
+### 7. Backend Development (Week 5)
+- [x] Implement Advanced APIs (Discount, Instagram, AI)
+  - [x] Add discount usage validation and stronger request checks
+  - [x] Enforce Instagram draft state rules and connection checks
+  - [x] Validate AI recommendation input
+- [x] Implement Purchase Orders APIs
+  - [x] Create purchase order and goods receipt endpoints
+  - [x] Update inventory balances on goods receipt
+
+### 8. Frontend Development (Week 5)
+- [x] Implement Admin Portal
+  - [x] Build dashboard, user/role, locations, audit, and settings shells
+  - [x] Align admin navigation routes
+- [x] Implement Instagram Integration
+  - [x] Build Instagram drafts gallery and composer shell
+  - [x] Build Instagram connection status and permissions shell
+
+### 9. Integration Testing (Weeks 4-5)
 - [ ] API testing
 - [ ] Component testing
 - [ ] E2E testing
+- [x] Frontend mock API cleanup for catalog, checkout, and staff order flows
+- [ ] Complete live backend endpoints for staff inventory and POS flows
 
-### 6. Deployment (Week 8)
+### 10. Deployment (Week 8)
 - [ ] Docker build & push
 - [ ] Production deployment
 - [ ] Monitoring & observability

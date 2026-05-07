@@ -1,8 +1,10 @@
 package com.seshop.catalog.application;
 
+import com.seshop.catalog.api.dto.CategoryDto;
 import com.seshop.catalog.api.dto.CreateProductRequest;
 import com.seshop.catalog.api.dto.CreateVariantRequest;
 import com.seshop.catalog.api.dto.ProductDto;
+import com.seshop.catalog.api.dto.RegisterProductImageRequest;
 import com.seshop.catalog.infrastructure.persistence.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +41,16 @@ public class CatalogService {
         return mapToDto(saved);
     }
 
+    public ProductDto updateProduct(Long productId, CreateProductRequest request) {
+        ProductEntity entity = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        entity.setName(request.getName());
+        entity.setBrand(request.getBrand());
+        entity.setDescription(request.getDescription());
+        entity.setStatus(request.getStatus());
+        return mapToDto(productRepository.save(entity));
+    }
+
     public ProductDto createVariants(Long productId, List<CreateVariantRequest> requests) {
         ProductEntity product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
@@ -59,6 +71,18 @@ public class CatalogService {
         return mapToDto(saved);
     }
 
+    public ProductDto registerImage(Long productId, RegisterProductImageRequest request) {
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        ProductImageEntity image = new ProductImageEntity();
+        image.setProduct(product);
+        image.setUrl(request.getUrl());
+        image.setSortOrder(request.getSortOrder() == null ? product.getImages().size() : request.getSortOrder());
+        image.setIsInstagramReady(Boolean.TRUE.equals(request.getIsInstagramReady()));
+        product.getImages().add(image);
+        return mapToDto(productRepository.save(product));
+    }
+
     @Transactional(readOnly = true)
     public Page<ProductDto> getPublishedProducts(String keyword, String brand, Pageable pageable) {
         return productRepository.findPublishedProducts(keyword, brand, pageable)
@@ -70,6 +94,19 @@ public class CatalogService {
         ProductEntity product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
         return mapToDto(product);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getCategories() {
+        return categoryRepository.findAll().stream()
+                .map(category -> {
+                    CategoryDto dto = new CategoryDto();
+                    dto.setId(category.getId());
+                    dto.setName(category.getName());
+                    dto.setSlug(category.getName().toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", ""));
+                    return dto;
+                })
+                .toList();
     }
 
     private ProductDto mapToDto(ProductEntity entity) {
@@ -90,6 +127,16 @@ public class CatalogService {
                 vDto.setPrice(v.getPrice());
                 vDto.setStatus(v.getStatus());
                 return vDto;
+            }).collect(Collectors.toList()));
+        }
+        if (entity.getImages() != null) {
+            dto.setImages(entity.getImages().stream().map(image -> {
+                ProductDto.ImageDto imageDto = new ProductDto.ImageDto();
+                imageDto.setId(image.getId());
+                imageDto.setUrl(image.getUrl());
+                imageDto.setSortOrder(image.getSortOrder());
+                imageDto.setInstagramReady(image.getIsInstagramReady());
+                return imageDto;
             }).collect(Collectors.toList()));
         }
         

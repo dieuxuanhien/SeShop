@@ -2,17 +2,20 @@ import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 type ModalProps = {
-  open: boolean;
+  open?: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   children: React.ReactNode;
   className?: string;
+  title?: string;
 };
 
-export function Modal({ open, onClose, children, className = '' }: ModalProps) {
+export function Modal({ open, isOpen, onClose, children, className = '', title }: ModalProps) {
+  const resolvedOpen = open ?? isOpen ?? false;
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!resolvedOpen) return;
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
@@ -22,9 +25,9 @@ export function Modal({ open, onClose, children, className = '' }: ModalProps) {
       document.removeEventListener('keydown', handleEsc);
       document.body.style.overflow = '';
     };
-  }, [open, onClose]);
+  }, [resolvedOpen, onClose]);
 
-  if (!open) return null;
+  if (!resolvedOpen) return null;
 
   return (
     <div
@@ -41,6 +44,7 @@ export function Modal({ open, onClose, children, className = '' }: ModalProps) {
       <div
         className={`relative z-10 max-h-[90vh] overflow-auto rounded-lg border border-primary/10 bg-ink shadow-soft animate-fade-in-up ${className}`}
       >
+        {title ? <div className="border-b border-primary/10 px-6 py-4 pr-12 text-lg font-semibold text-surface">{title}</div> : null}
         <button
           onClick={onClose}
           className="absolute right-3 top-3 z-20 rounded-full p-1.5 text-surface/60 hover:bg-surface/10 hover:text-surface transition-colors"

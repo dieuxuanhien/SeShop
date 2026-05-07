@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 export type CartLine = {
+  id?: number;
   variantId: number;
   skuCode: string;
   name: string;
@@ -10,6 +11,7 @@ export type CartLine = {
 
 type CartState = {
   items: CartLine[];
+  setItems: (items: CartLine[]) => void;
   addItem: (item: CartLine) => void;
   removeItem: (variantId: number) => void;
   clear: () => void;
@@ -17,6 +19,7 @@ type CartState = {
 
 export const useCartStore = create<CartState>((set) => ({
   items: [],
+  setItems: (items) => set({ items }),
   addItem: (item) =>
     set((state) => {
       const existing = state.items.find((line) => line.variantId === item.variantId);

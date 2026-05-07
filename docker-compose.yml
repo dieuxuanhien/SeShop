@@ -36,6 +36,27 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-seshop}
       JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-change-this-development-secret}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      STRIPE_ENABLED: ${STRIPE_ENABLED:-false}
+      STRIPE_BASE_URL: ${STRIPE_BASE_URL:-https://api.stripe.com/v1}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_CURRENCY: ${STRIPE_CURRENCY:-vnd}
+      GHN_ENABLED: ${GHN_ENABLED:-false}
+      GHN_BASE_URL: ${GHN_BASE_URL:-https://dev-online-gateway.ghn.vn}
+      GHN_TOKEN: ${GHN_TOKEN:-}
+      GHN_SHOP_ID: ${GHN_SHOP_ID:-}
+      GHN_CREATE_ORDER_PATH: ${GHN_CREATE_ORDER_PATH:-/shiip/public-api/v2/shipping-order/create}
+      GHN_TRACK_PATH: ${GHN_TRACK_PATH:-/shiip/public-api/v2/shipping-order/detail}
+      GEMINI_ENABLED: ${GEMINI_ENABLED:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+      META_ENABLED: ${META_ENABLED:-false}
+      META_BASE_URL: ${META_BASE_URL:-https://graph.facebook.com/v20.0}
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_REDIRECT_URI: ${META_REDIRECT_URI:-http://localhost:8080/api/v1/webhooks/instagram/callback}
+      META_SCOPES: ${META_SCOPES:-instagram_basic,pages_show_list,business_management}
     ports:
       - "8080:8080"
 
