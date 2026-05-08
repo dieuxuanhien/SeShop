@@ -132,6 +132,15 @@ Folder structure rules are documented in [docs/3.Design/SESHOP Folder Structure.
   - [x] Persist cash reconciliation data when shifts close
 
 ### 10. Deployment (Week 8)
-- [ ] Docker build & push
-- [ ] Production deployment
-- [ ] Monitoring & observability
+- [x] Docker build & push
+  - [x] Add GitHub Actions workflow to build backend and frontend Docker images
+  - [x] Publish images to GitHub Container Registry on main/tag/manual runs
+- [x] Production deployment
+  - [x] Add production Docker Compose topology for app, API, PostgreSQL, and Redis
+  - [x] Add same-origin frontend API proxy and container health checks
+  - [x] Add production environment example and deployment runbook
+- [x] Monitoring & observability
+  - [x] Expose Prometheus-compatible backend metrics
+  - [x] Add Prometheus scrape config and alert rules
+  - [x] Add Grafana datasource and SeShop overview dashboard
+  - [x] Document health, metrics, logs, trace IDs, dashboards, and alerting

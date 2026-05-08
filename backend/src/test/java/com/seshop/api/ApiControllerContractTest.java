@@ -116,6 +116,15 @@ class ApiControllerContractTest {
     }
 
     @Test
+    void actuatorPrometheusEndpointIsNotBlockedByAuthentication() throws Exception {
+        mockMvc.perform(get("/actuator/prometheus")
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-prometheus"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(header().string(TraceIdFilter.TRACE_HEADER, "trace-prometheus"))
+                .andExpect(jsonPath("$.code").value("GEN_500"));
+    }
+
+    @Test
     void listInventoryBalancesUsesApiEnvelopeAndQueryParameters() throws Exception {
         InventoryBalanceDto balance = new InventoryBalanceDto();
         balance.setId(8801L);

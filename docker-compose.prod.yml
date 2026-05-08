@@ -1,0 +1,155 @@
+name: seshop-prod
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-seshop}
+      POSTGRES_USER: ${POSTGRES_USER:-seshop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-seshop} -d ${POSTGRES_DB:-seshop}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  backend:
+    image: ${SESHOP_BACKEND_IMAGE:?Set SESHOP_BACKEND_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-seshop}
+      DB_USERNAME: ${POSTGRES_USER:-seshop}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      JWT_ISSUER: ${JWT_ISSUER:-seshop}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-60}
+      CORS_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN}
+      STRIPE_ENABLED: ${STRIPE_ENABLED:-false}
+      STRIPE_BASE_URL: ${STRIPE_BASE_URL:-https://api.stripe.com/v1}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_CURRENCY: ${STRIPE_CURRENCY:-vnd}
+      GHN_ENABLED: ${GHN_ENABLED:-false}
+      GHN_BASE_URL: ${GHN_BASE_URL:-https://dev-online-gateway.ghn.vn}
+      GHN_TOKEN: ${GHN_TOKEN:-}
+      GHN_SHOP_ID: ${GHN_SHOP_ID:-}
+      GHN_CREATE_ORDER_PATH: ${GHN_CREATE_ORDER_PATH:-/shiip/public-api/v2/shipping-order/create}
+      GHN_TRACK_PATH: ${GHN_TRACK_PATH:-/shiip/public-api/v2/shipping-order/detail}
+      GEMINI_ENABLED: ${GEMINI_ENABLED:-false}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+      GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+      META_ENABLED: ${META_ENABLED:-false}
+      META_BASE_URL: ${META_BASE_URL:-https://graph.facebook.com/v25.0}
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_REDIRECT_URI: ${META_REDIRECT_URI:-${PUBLIC_ORIGIN}/api/v1/webhooks/instagram/callback}
+      META_SCOPES: ${META_SCOPES:-instagram_basic,pages_show_list,pages_read_engagement,instagram_content_publish}
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75}
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health/readiness >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    networks:
+      - backend
+
+  frontend:
+    image: ${SESHOP_FRONTEND_IMAGE:?Set SESHOP_FRONTEND_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_UPSTREAM: http://backend:8080
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks:
+      - edge
+      - backend
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.55.1}
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - backend
+      - monitoring
+
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana:11.3.0}
+    profiles: ["monitoring"]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-${PUBLIC_ORIGIN}/grafana}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  edge:
+  backend:
+    internal: true
+  monitoring:

@@ -1,0 +1,237 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"seshop-backend\"}",
+          "legendFormat": "backend",
+          "refId": "A"
+        }
+      ],
+      "title": "Backend Up",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"seshop-backend\"}[5m]))",
+          "legendFormat": "requests/sec",
+          "refId": "A"
+        }
+      ],
+      "title": "Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"seshop-backend\",status=~\"5..\"}[5m]))",
+          "legendFormat": "5xx/sec",
+          "refId": "A"
+        }
+      ],
+      "title": "Server Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_sum{job=\"seshop-backend\"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{job=\"seshop-backend\"}[5m])), 0.001)",
+          "legendFormat": "average latency",
+          "refId": "A"
+        }
+      ],
+      "title": "Average HTTP Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{job=\"seshop-backend\"}",
+          "legendFormat": "active",
+          "refId": "A"
+        },
+        {
+          "expr": "hikaricp_connections_idle{job=\"seshop-backend\"}",
+          "legendFormat": "idle",
+          "refId": "B"
+        },
+        {
+          "expr": "hikaricp_connections_max{job=\"seshop-backend\"}",
+          "legendFormat": "max",
+          "refId": "C"
+        }
+      ],
+      "title": "Database Pool",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{job=\"seshop-backend\",area=\"heap\"}",
+          "legendFormat": "{{id}}",
+          "refId": "A"
+        }
+      ],
+      "title": "JVM Heap Usage",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "seshop",
+    "spring-boot"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SeShop Overview",
+  "uid": "seshop-overview",
+  "version": 1,
+  "weekStart": ""
+}

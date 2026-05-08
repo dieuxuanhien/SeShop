@@ -2,8 +2,6 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: seshop-postgres
-    env_file:
-      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-seshop}
       POSTGRES_USER: ${POSTGRES_USER:-seshop}
@@ -25,11 +23,10 @@ services:
       - "6379:6379"
 
   backend:
+    image: ${SESHOP_BACKEND_IMAGE:-seshop-backend:local}
     build:
       context: ./backend
     container_name: seshop-backend
-    env_file:
-      - .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,13 +62,12 @@ services:
       - "8080:8080"
 
   frontend:
+    image: ${SESHOP_FRONTEND_IMAGE:-seshop-frontend:local}
     build:
       context: ./frontend
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
     container_name: seshop-frontend
-    env_file:
-      - .env
     depends_on:
       - backend
     ports:

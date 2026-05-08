@@ -1,0 +1,16 @@
+spring:
+  jpa:
+    show-sql: false
+
+server:
+  forward-headers-strategy: framework
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: INFO
+    com.seshop: INFO

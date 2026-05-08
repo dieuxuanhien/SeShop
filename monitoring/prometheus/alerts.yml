@@ -1,0 +1,46 @@
+groups:
+  - name: seshop-availability
+    rules:
+      - alert: SeShopBackendDown
+        expr: up{job="seshop-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: SeShop backend is not scrapeable
+          description: Prometheus cannot scrape the Spring Boot API for more than 2 minutes.
+
+      - alert: SeShopHighServerErrorRate
+        expr: sum(rate(http_server_requests_seconds_count{job="seshop-backend",status=~"5.."}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: SeShop backend is returning 5xx responses
+          description: One or more backend endpoints have returned server errors during the last 5 minutes.
+
+      - alert: SeShopSlowHttpAverageLatency
+        expr: |
+          sum(rate(http_server_requests_seconds_sum{job="seshop-backend"}[5m]))
+          /
+          clamp_min(sum(rate(http_server_requests_seconds_count{job="seshop-backend"}[5m])), 0.001)
+          > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: SeShop backend average latency is above 1 second
+          description: Average HTTP request latency has stayed above 1 second for 10 minutes.
+
+      - alert: SeShopDatabasePoolSaturation
+        expr: |
+          max(hikaricp_connections_active{job="seshop-backend"})
+          /
+          clamp_min(max(hikaricp_connections_max{job="seshop-backend"}), 1)
+          > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: SeShop database connection pool is near saturation
+          description: Active HikariCP connections are above 80 percent of the configured maximum.
