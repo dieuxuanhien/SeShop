@@ -3,9 +3,13 @@ package com.seshop.pos.application;
 import com.seshop.pos.api.dto.CloseShiftRequest;
 import com.seshop.pos.api.dto.OpenShiftRequest;
 import com.seshop.pos.api.dto.ShiftDto;
+import com.seshop.pos.infrastructure.persistence.CashReconciliationEntity;
+import com.seshop.pos.infrastructure.persistence.CashReconciliationRepository;
+import com.seshop.pos.infrastructure.persistence.PosReceiptRepository;
 import com.seshop.pos.infrastructure.persistence.PosShiftEntity;
 import com.seshop.pos.infrastructure.persistence.PosShiftRepository;
-import com.seshop.pos.infrastructure.persistence.PosTransactionRepository;
+import com.seshop.shared.exception.BusinessException;
+import com.seshop.shared.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,18 +21,21 @@ import java.time.OffsetDateTime;
 public class ShiftService {
 
     private final PosShiftRepository shiftRepository;
-    private final PosTransactionRepository transactionRepository;
+    private final PosReceiptRepository receiptRepository;
+    private final CashReconciliationRepository reconciliationRepository;
 
-    public ShiftService(PosShiftRepository shiftRepository, PosTransactionRepository transactionRepository) {
+    public ShiftService(PosShiftRepository shiftRepository,
+                        PosReceiptRepository receiptRepository,
+                        CashReconciliationRepository reconciliationRepository) {
         this.shiftRepository = shiftRepository;
-        this.transactionRepository = transactionRepository;
+        this.receiptRepository = receiptRepository;
+        this.reconciliationRepository = reconciliationRepository;
     }
 
     public ShiftDto openShift(Long staffId, OpenShiftRequest request) {
-        // Check if there is already an open shift for this staff
         shiftRepository.findByStaffIdAndStatus(staffId, "OPEN")
                 .ifPresent(s -> {
-                    throw new IllegalStateException("An open shift already exists for this staff member");
+                    throw new BusinessException("POS_002", "An open shift already exists for this staff member");
                 });
 
         PosShiftEntity shift = new PosShiftEntity();
@@ -43,46 +50,58 @@ public class ShiftService {
 
     public ShiftDto closeShift(Long shiftId, CloseShiftRequest request) {
         PosShiftEntity shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new IllegalArgumentException("Shift not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("POS_002", "Shift not found"));
 
         if (!"OPEN".equals(shift.getStatus())) {
-            throw new IllegalStateException("Shift is not open");
+            throw new BusinessException("POS_001", "Shift is not open");
         }
 
-        BigDecimal endingCash = request.resolvedEndingCash();
-        if (endingCash == null) {
-            throw new IllegalArgumentException("Ending cash is required");
+        BigDecimal actualCash = request.resolvedEndingCash();
+        if (actualCash == null) {
+            throw new BusinessException("POS_001", "Ending cash is required");
         }
-        shift.setEndingCash(endingCash);
+        BigDecimal expectedCash = request.getExpectedCash() != null ? request.getExpectedCash() : expectedCash(shift.getId());
+
         shift.setEndTime(OffsetDateTime.now());
         shift.setStatus("CLOSED");
 
+        CashReconciliationEntity reconciliation = reconciliationRepository.findByShift_Id(shiftId)
+                .orElseGet(CashReconciliationEntity::new);
+        reconciliation.setShift(shift);
+        reconciliation.setExpectedCash(expectedCash);
+        reconciliation.setActualCash(actualCash);
+        reconciliation.setVarianceAmount(actualCash.subtract(expectedCash));
+        reconciliation.setReason(request.getReason());
+        reconciliation.setApprovedBy(shift.getStaffId());
+        reconciliation.setApprovedAt(OffsetDateTime.now());
+        reconciliationRepository.save(reconciliation);
+
         PosShiftEntity saved = shiftRepository.save(shift);
-        return mapToDto(saved);
+        ShiftDto dto = mapToDto(saved);
+        dto.setEndingCash(actualCash);
+        dto.setExpectedCash(expectedCash);
+        return dto;
     }
 
     public ShiftDto getShift(Long shiftId) {
         PosShiftEntity shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new IllegalArgumentException("Shift not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("POS_002", "Shift not found"));
         return mapToDto(shift);
     }
 
     public ShiftDto getCurrentShift(Long staffId) {
         PosShiftEntity shift = shiftRepository.findByStaffIdAndStatus(staffId, "OPEN")
-                .orElseThrow(() -> new IllegalArgumentException("No active shift found"));
+                .orElseThrow(() -> new BusinessException("POS_002", "No active shift found"));
         return mapToDto(shift);
     }
 
     private ShiftDto mapToDto(PosShiftEntity entity) {
-        var transactions = transactionRepository.findByShiftId(entity.getId());
-        BigDecimal cardTotal = transactions.stream()
-                .filter(transaction -> "CARD".equalsIgnoreCase(transaction.getTransactionType()))
-                .map(transaction -> transaction.getAmount() == null ? BigDecimal.ZERO : transaction.getAmount())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal cashSales = transactions.stream()
-                .filter(transaction -> "CASH".equalsIgnoreCase(transaction.getTransactionType()))
-                .map(transaction -> transaction.getAmount() == null ? BigDecimal.ZERO : transaction.getAmount())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        var receipts = receiptRepository.findByShift_Id(entity.getId());
+        BigDecimal cardTotal = receiptRepository.sumTotalByShiftIdAndPaymentMethod(entity.getId(), "CARD");
+        BigDecimal expectedCash = expectedCash(entity.getId());
+        BigDecimal actualCash = reconciliationRepository.findByShift_Id(entity.getId())
+                .map(CashReconciliationEntity::getActualCash)
+                .orElse(entity.getEndingCash());
 
         ShiftDto dto = new ShiftDto();
         dto.setId(entity.getId());
@@ -90,14 +109,18 @@ public class ShiftService {
         dto.setLocationId(entity.getLocationId());
         dto.setStartTime(entity.getStartTime());
         dto.setEndTime(entity.getEndTime());
-        dto.setStartingCash(entity.getStartingCash());
-        dto.setEndingCash(entity.getEndingCash());
+        dto.setStartingCash(BigDecimal.ZERO);
+        dto.setEndingCash(actualCash);
         dto.setStatus(entity.getStatus());
         dto.setRegisterName("Location " + entity.getLocationId());
         dto.setOpenedAt(entity.getStartTime());
-        dto.setTransactionCount(transactions.size());
+        dto.setTransactionCount(receipts.size());
         dto.setCardPaymentsTotal(cardTotal);
-        dto.setExpectedCash((entity.getStartingCash() == null ? BigDecimal.ZERO : entity.getStartingCash()).add(cashSales));
+        dto.setExpectedCash(expectedCash);
         return dto;
+    }
+
+    private BigDecimal expectedCash(Long shiftId) {
+        return receiptRepository.sumTotalByShiftIdAndPaymentMethod(shiftId, "CASH");
     }
 }

@@ -1,9 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { RootLayout } from '@/app/layouts/RootLayout';
 import { PublicLayout } from '@/app/layouts/PublicLayout';
-import { ProtectedRoute } from '@/features/auth/ui/ProtectedRoute';
-import { LoginPage } from '@/features/auth/ui/LoginPage';
-import { RegisterPage } from '@/features/auth/ui/RegisterPage';
+import { LoginPage, ProtectedRoute, RegisterPage } from '@/features/auth';
 import { AdminDashboard } from '@/pages/admin/Dashboard';
 import { AuditLogs } from '@/pages/admin/AuditLogs';
 import { LocationsManagement } from '@/pages/admin/LocationsManagement';

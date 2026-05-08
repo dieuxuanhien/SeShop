@@ -3,6 +3,7 @@ package com.seshop.inventory.application;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
 import com.seshop.inventory.api.dto.CreateTransferRequest;
+import com.seshop.inventory.api.dto.InventoryAdjustmentResponse;
 import com.seshop.inventory.api.dto.InventoryBalanceDto;
 import com.seshop.inventory.api.dto.InventoryAdjustmentRequest;
 import com.seshop.inventory.api.dto.LocationAvailabilityDto;
@@ -11,6 +12,8 @@ import com.seshop.inventory.api.dto.ReceiveTransferRequest;
 import com.seshop.inventory.api.dto.StockTransferDto;
 import com.seshop.inventory.infrastructure.persistence.*;
 import com.seshop.shared.api.PageResponse;
+import com.seshop.shared.exception.BusinessException;
+import com.seshop.shared.exception.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -93,12 +96,15 @@ public class InventoryService {
         return mapVariant(variant);
     }
 
-    public void adjustInventory(InventoryAdjustmentRequest request) {
+    public InventoryAdjustmentResponse adjustInventory(InventoryAdjustmentRequest request) {
+        productVariantRepository.findById(request.getVariantId())
+                .orElseThrow(() -> new ResourceNotFoundException("CAT_404", "Variant not found"));
+
         LocationEntity location = locationRepository.findById(request.getLocationId())
-                .orElseThrow(() -> new IllegalArgumentException("Location not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("INV_003", "Location not found"));
 
         InventoryBalanceEntity balance = balanceRepository
-                .findByVariantIdAndLocationId(request.getVariantId(), location.getId())
+                .findForUpdateByVariantIdAndLocationId(request.getVariantId(), location.getId())
                 .orElseGet(() -> {
                     InventoryBalanceEntity newBalance = new InventoryBalanceEntity();
                     newBalance.setVariantId(request.getVariantId());
@@ -111,17 +117,21 @@ public class InventoryService {
         balance.setOnHandQty(balance.getOnHandQty() + request.getDeltaQty());
         
         if (balance.getOnHandQty() < balance.getReservedQty()) {
-            throw new IllegalStateException("Adjustment would result in available quantity less than 0");
+            throw new BusinessException("INV_001", "Adjustment would result in available quantity less than 0");
         }
 
-        balanceRepository.save(balance);
+        return mapAdjustment(balanceRepository.save(balance));
     }
 
     public Long createTransfer(CreateTransferRequest request, Long createdBy) {
         LocationEntity source = locationRepository.findById(request.getSourceLocationId())
-                .orElseThrow(() -> new IllegalArgumentException("Source location not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("INV_003", "Source location not found"));
         LocationEntity destination = locationRepository.findById(request.getDestinationLocationId())
-                .orElseThrow(() -> new IllegalArgumentException("Destination location not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("INV_003", "Destination location not found"));
+
+        if (source.getId().equals(destination.getId())) {
+            throw new BusinessException("INV_002", "Source and destination locations must be different");
+        }
 
         InventoryTransferEntity transfer = new InventoryTransferEntity();
         transfer.setSourceLocation(source);
@@ -143,21 +153,20 @@ public class InventoryService {
 
     public void approveTransfer(Long transferId) {
         InventoryTransferEntity transfer = transferRepository.findById(transferId)
-                .orElseThrow(() -> new IllegalArgumentException("Transfer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("INV_002", "Transfer not found"));
 
         if (!"DRAFT".equals(transfer.getStatus())) {
-            throw new IllegalStateException("Transfer must be in DRAFT state to approve");
+            throw new BusinessException("INV_002", "Transfer must be in DRAFT state to approve");
         }
 
-        // Deduct from source location
         for (InventoryTransferItemEntity item : transfer.getItems()) {
             InventoryBalanceEntity balance = balanceRepository
-                    .findByVariantIdAndLocationId(item.getVariantId(), transfer.getSourceLocation().getId())
-                    .orElseThrow(() -> new IllegalStateException("Source balance not found for variant"));
+                    .findForUpdateByVariantIdAndLocationId(item.getVariantId(), transfer.getSourceLocation().getId())
+                    .orElseThrow(() -> new BusinessException("INV_001", "Source balance not found for variant"));
             
             balance.setOnHandQty(balance.getOnHandQty() - item.getQty());
             if (balance.getOnHandQty() < balance.getReservedQty()) {
-                throw new IllegalStateException("Insufficient available stock at source location");
+                throw new BusinessException("INV_001", "Insufficient available stock at source location");
             }
             balanceRepository.save(balance);
         }
@@ -168,24 +177,23 @@ public class InventoryService {
 
     public void receiveTransfer(Long transferId, ReceiveTransferRequest request) {
         InventoryTransferEntity transfer = transferRepository.findById(transferId)
-                .orElseThrow(() -> new IllegalArgumentException("Transfer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("INV_002", "Transfer not found"));
 
         if (!"IN_TRANSIT".equals(transfer.getStatus())) {
-            throw new IllegalStateException("Transfer must be in IN_TRANSIT state to receive");
+            throw new BusinessException("INV_002", "Transfer must be in IN_TRANSIT state to receive");
         }
 
-        // Add to destination location and update items
         for (ReceiveTransferRequest.ReceivedItemDto receivedItem : request.getReceivedItems()) {
             InventoryTransferItemEntity item = transfer.getItems().stream()
                     .filter(i -> i.getVariantId().equals(receivedItem.getVariantId()))
                     .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Variant not found in transfer"));
+                    .orElseThrow(() -> new BusinessException("INV_002", "Variant not found in transfer"));
 
             item.setReceivedQty(receivedItem.getReceivedQty());
             item.setDamagedQty(receivedItem.getDamagedQty());
 
             InventoryBalanceEntity balance = balanceRepository
-                    .findByVariantIdAndLocationId(item.getVariantId(), transfer.getDestinationLocation().getId())
+                    .findForUpdateByVariantIdAndLocationId(item.getVariantId(), transfer.getDestinationLocation().getId())
                     .orElseGet(() -> {
                         InventoryBalanceEntity newBalance = new InventoryBalanceEntity();
                         newBalance.setVariantId(item.getVariantId());
@@ -219,6 +227,15 @@ public class InventoryService {
             dto.setProductName(variant.getProduct().getName());
         });
         return dto;
+    }
+
+    private InventoryAdjustmentResponse mapAdjustment(InventoryBalanceEntity entity) {
+        InventoryAdjustmentResponse response = new InventoryAdjustmentResponse();
+        response.setInventoryBalanceId(entity.getId());
+        response.setOnHandQty(entity.getOnHandQty());
+        response.setReservedQty(entity.getReservedQty());
+        response.setAvailableQty(entity.getOnHandQty() - entity.getReservedQty());
+        return response;
     }
 
     private StockTransferDto mapTransfer(InventoryTransferEntity entity) {

@@ -1,30 +1,44 @@
 @startuml
-actor Staff
-actor "Super Admin" as Admin
+autonumber
+actor "Authorized Staff" as Staff
+actor "Approver" as Approver
 participant "Backoffice UI" as UI
-participant "Inventory Service" as IS
-participant "Audit Service" as AS
-database "SESHOP DB" as DB
+participant "Inventory Service" as Inventory
+participant "Audit Service" as Audit
+database "PostgreSQL" as DB
 
-Staff -> UI: Submit transfer request
-UI -> IS: createTransfer(source, destination, items)
-IS -> DB: validate stock and insert transfer(DRAFT)
-DB --> IS: transferId
-IS -> AS: log(action=create_transfer)
-AS -> DB: insert audit_logs
-IS --> UI: requestSubmitted
+Staff -> UI: Create transfer request
+UI -> Inventory: createTransfer(source, destination, items)
+Inventory -> DB: validate source and destination
+Inventory -> DB: insert transfer(status=DRAFT) and items
+Inventory -> Audit: log create_transfer
+Audit -> DB: insert audit_logs
+Inventory --> UI: transferCreated(transferId)
 
-Admin -> UI: Open pending transfer
-UI -> IS: approveTransfer(transferId)
-IS -> DB: update transfer status=IN_TRANSIT
-IS -> DB: deduct source on_hand_qty
-IS -> AS: log(action=approve_transfer)
-AS -> DB: insert audit_logs
-
-opt destination confirms receipt
-	IS -> DB: update transfer status=COMPLETED
-	IS -> DB: add destination on_hand_qty
-	IS --> UI: transferCompleted
-	UI --> Staff: Notify transfer completed
+Approver -> UI: Approve transfer
+UI -> Inventory: approveTransfer(transferId)
+Inventory -> DB: begin transaction
+Inventory -> DB: SELECT source inventory_balances FOR UPDATE
+alt source stock available
+  Inventory -> DB: decrement source on_hand_qty
+  Inventory -> DB: update transfer status=IN_TRANSIT
+  Inventory -> Audit: log approve_transfer
+  Audit -> DB: insert audit_logs
+  Inventory -> DB: commit transaction
+  Inventory --> UI: transferInTransit
+else source stock unavailable
+  Inventory -> DB: rollback transaction
+  Inventory --> UI: 409 INV_TRANSFER_STOCK_CHANGED
 end
+
+Staff -> UI: Receive stock at destination
+UI -> Inventory: receiveTransfer(transferId, receivedQty)
+Inventory -> DB: begin transaction
+Inventory -> DB: increment destination on_hand_qty
+Inventory -> DB: update transfer status=COMPLETED
+Inventory -> Audit: log receive_transfer
+Audit -> DB: insert audit_logs
+Inventory -> DB: commit transaction
+Inventory --> UI: transferCompleted
+UI --> Staff: Show completed transfer
 @enduml

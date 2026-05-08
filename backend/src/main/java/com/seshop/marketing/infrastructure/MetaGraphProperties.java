@@ -8,11 +8,11 @@ import org.springframework.stereotype.Component;
 public class MetaGraphProperties {
 
     private boolean enabled = false;
-    private String baseUrl = "https://graph.facebook.com/v20.0";
+    private String baseUrl = "https://graph.facebook.com/v25.0";
     private String appId;
     private String appSecret;
     private String redirectUri;
-    private String scopes = "instagram_basic,pages_show_list,business_management";
+    private String scopes = "instagram_basic,pages_show_list,pages_read_engagement,instagram_content_publish";
 
     public boolean isEnabled() {
         return enabled;

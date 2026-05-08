@@ -1,5 +1,5 @@
 import { PageScaffold } from '@/shared/ui/PageScaffold';
-import { useAuth } from '@/features/auth/model/useAuth';
+import { useAuth } from '@/features/auth';
 
 export function Profile() {
   const { user } = useAuth();

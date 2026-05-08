@@ -1,7 +1,7 @@
 # 📋 SESHOP - TÓMLƯỢC KẾHOẠCH TRIỂN KHAI
 
-**Ngày**: 2026-04-29  
-**Status**: ✅ Kế hoạch hoàn thành
+**Ngày**: 2026-05-07
+**Status**: ✅ Kế hoạch và cấu trúc mã đã cập nhật
 
 ---
 
@@ -31,30 +31,37 @@
    - 🔄 State management
    - 🧪 Testing strategy
 
+### 4. **[docs/3.Design/SESHOP Folder Structure.md](docs/3.Design/SESHOP%20Folder%20Structure.md)**
+   - 📁 Quy tắc cấu trúc thư mục hiện tại
+   - 🔎 Nguồn tham khảo chính thức cho Spring Boot, Spring Modulith, Maven, và Feature-Sliced Design
+   - 🧭 Quy ước thêm module backend và slice frontend mới
+
 ---
 
 ## 📁 Cấu trúc Thư Mục
 
 ```
 KTPM/
-├── backend/                     ✅ Tạo mới
-│   └── README.md                ✅ Backend guideline
+├── backend/
+│   ├── src/main/java/com/seshop/  ✅ Modular monolith theo domain
+│   └── README.md                  ✅ Backend guideline
 │
-├── frontend/                    ✅ Tạo mới
-│   └── README.md                ✅ Frontend guideline
+├── frontend/
+│   ├── src/                       ✅ App/pages/features/entities/shared
+│   └── README.md                  ✅ Frontend guideline
 │
-├── docs/                        (Hiện tại - Không thay đổi)
+├── docs/
 │   ├── 1. BRD/
 │   ├── 10.SRS/
 │   ├── 2. Diagrams/
 │   ├── 3.Design/
 │   │   ├── SESHOP API Spec.md
-│   │   ├── SESHOP HLD.md
-│   │   └── SESHOP LLD.md
+│   │   ├── SESHOP ADD.md
+│   │   ├── SESHOP SAD.md
+│   │   └── SESHOP Folder Structure.md
 │   ├── 4. View descriptions/
 │   ├── 5.Database/
-│   ├── 6-9. [Other docs]/
-│   └── Other/
+│   └── [Other docs]/
 │
 └── IMPLEMENTATION_PLAN.md       ✅ Master plan
 
@@ -64,38 +71,20 @@ KTPM/
 
 ## 🎯 Backend - Các Domain & Modules
 
-### 8 Domain Modules:
-1. **Auth** - Authentication & RBAC
-   - 4 use cases (UC1-4)
-   - Roles, Permissions, Users
-
-2. **Catalog** - Product Management
-   - UC5: Add products & SKUs
-   - Search, Filter, Categories
-
-3. **Inventory** - Stock Management
-   - UC6, UC7, UC16, UC25
-   - Multi-location, Transfers, Reconciliation
-
-4. **Commerce** - Shopping
-   - UC13, UC14, UC15
-   - Browse, AI Chat, Checkout
-
-5. **Order** - Order Processing
-   - UC15, UC19, UC20, UC23
-   - Creation, Tracking, Allocation, Fulfillment
-
-6. **POS** - Point of Sale
-   - UC8, UC26
-   - Sales, Payments, Shift Management
-
-7. **Return** - Returns & Refunds
-   - UC9, UC24
-   - Return Processing, Refund Management
-
-8. **Marketing** - Promotions & Social
-   - UC10, UC11, UC21
-   - Discounts, Instagram, AI Recommendations
+### Current direct modules under `com.seshop`:
+1. **identity** - Authentication, users, roles, permissions
+2. **audit** - Audit log APIs, dashboard metrics, audit persistence
+3. **catalog** - Product, variant, category management
+4. **inventory** - Stock balances, transfers, cycle counts, procurement
+5. **commerce** - Cart, checkout, orders, invoices, payments records
+6. **pos** - POS receipts, returns, shifts
+7. **refund** - Return and refund API surface
+8. **marketing** - Discounts, Instagram drafts, AI recommendations
+9. **review** - Product reviews
+10. **payment** - Payment provider integration
+11. **shipping** - Shipping provider/webhook integration
+12. **notification** - Notification extension point
+13. **shared** - Cross-cutting API, config, security, exception, utility code
 
 ---
 
@@ -437,4 +426,3 @@ Kế hoạch triển khai chi tiết đã được xây dựng với:
 - ✅ Development guidelines chi tiết
 
 **Sẵn sàng bắt đầu phát triển!** 🚀
-

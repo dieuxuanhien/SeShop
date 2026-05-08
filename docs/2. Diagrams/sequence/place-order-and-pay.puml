@@ -1,49 +1,57 @@
 @startuml
+autonumber
 actor Customer
 participant "Storefront UI" as UI
-participant "Order Service" as OS
-participant "Inventory Service" as IS
-participant "Payment Service" as PS
-participant "Payment Gateway" as PG
-participant "Shipment Service" as SS
-database "SESHOP DB" as DB
+participant "Commerce Service" as Commerce
+participant "Inventory Service" as Inventory
+participant "Payment Adapter" as Payment
+participant "Stripe" as Stripe
+participant "Shipment Service" as Shipment
+participant "Audit Service" as Audit
+database "PostgreSQL" as DB
 
-Customer -> UI: Click Checkout
-UI -> OS: createPendingOrder(cart, shipping, paymentMethod)
-OS -> IS: validateAndReserveStock(items)
-IS -> DB: select/update inventory_balances
-DB --> IS: stock reserved
-IS --> OS: reserveSuccess
-
-alt payment method = CARD/STRIPE
-  OS -> PS: createPayment(orderId, amount, method=CARD)
-  PS -> PG: authorize(amount, callbackUrl)
-  PG --> PS: authorizationResult
-
-  alt payment success
-    PS -> DB: update payments(status=COMPLETED)
-    PS --> OS: paymentCompleted
-    OS -> DB: update orders(status=ALLOCATED)
-    OS -> SS: createShipment(orderId)
-    SS -> DB: insert shipments
-    OS --> UI: orderConfirmed(orderNumber)
-    UI --> Customer: Show success and tracking
-  else payment failed
-    PS -> DB: update payments(status=FAILED)
-    OS -> IS: releaseReservation(items)
-    IS -> DB: rollback reserved_qty
-    OS -> DB: update orders(status=CANCELLED)
-    OS --> UI: paymentFailed(message)
-    UI --> Customer: Show payment failed
+Customer -> UI: Submit checkout
+UI -> Commerce: POST /api/v1/checkout\nIdempotency-Key
+Commerce -> Commerce: Validate cart, address, discount
+Commerce -> Inventory: reserveStock(orderItems)
+Inventory -> DB: SELECT inventory_balances FOR UPDATE
+DB --> Inventory: current on_hand/reserved quantities
+alt stock available
+  Inventory -> DB: update reserved_qty
+  Inventory --> Commerce: reservationConfirmed
+  Commerce -> DB: insert order, order_items,\npayment(status=PENDING)
+  alt card payment
+    Commerce -> Payment: authorize(orderId, amount)
+    Payment -> Stripe: create payment intent / charge
+    Stripe --> Payment: payment result
+    alt payment approved
+      Payment -> DB: update payment status=PAID
+      Commerce -> Shipment: createShipment(orderId)
+      Shipment -> DB: insert shipment
+      Commerce -> Audit: log checkout success
+      Audit -> DB: insert audit_logs
+      Commerce --> UI: orderConfirmed(orderNumber)
+      UI --> Customer: Show confirmation and tracking
+    else payment failed
+      Payment -> DB: update payment status=FAILED
+      Commerce -> Inventory: releaseReservation(orderItems)
+      Inventory -> DB: decrement reserved_qty
+      Commerce -> DB: update order status=CANCELLED
+      Commerce --> UI: paymentFailed(message)
+      UI --> Customer: Show retry guidance
+    end
+  else cash on delivery
+    Payment -> DB: insert payment(status=PENDING, method=COD)
+    Commerce -> Shipment: createShipment(orderId)
+    Shipment -> DB: insert shipment
+    Commerce -> Audit: log COD checkout
+    Audit -> DB: insert audit_logs
+    Commerce --> UI: orderConfirmed(orderNumber)
+    UI --> Customer: Show confirmation and tracking
   end
-else payment method = COD
-  OS -> PS: createPayment(orderId, amount, method=COD)
-  PS -> DB: insert payments(status=PENDING)
-  PS --> OS: paymentPending
-  OS -> DB: update orders(status=ALLOCATED)
-  OS -> SS: createShipment(orderId)
-  SS -> DB: insert shipments
-  OS --> UI: orderConfirmed(orderNumber)
-  UI --> Customer: Show success and tracking
+else insufficient stock
+  Inventory --> Commerce: insufficientStock
+  Commerce --> UI: 409 ORD_INSUFFICIENT_STOCK
+  UI --> Customer: Show stock error
 end
 @enduml

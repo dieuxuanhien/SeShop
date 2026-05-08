@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seshop.shared.exception.BusinessException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -12,6 +13,8 @@ import org.springframework.web.client.RestClient;
 
 @Component
 public class MetaGraphClient {
+
+    private static final String INSTAGRAM_ACCOUNT_FIELDS = "id,name,access_token,instagram_business_account{id,username}";
 
     private final MetaGraphProperties properties;
     private final ObjectMapper objectMapper;
@@ -23,7 +26,7 @@ public class MetaGraphClient {
 
     public String buildAuthorizationUrl(String state) {
         ensureConfigured();
-        return properties.getBaseUrl() + "/oauth/authorize"
+        return authorizationDialogBaseUrl()
                 + "?client_id=" + encode(properties.getAppId())
                 + "&redirect_uri=" + encode(properties.getRedirectUri())
                 + "&scope=" + encode(properties.getScopes())
@@ -68,21 +71,39 @@ public class MetaGraphClient {
                 .build()
                 .get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/me")
-                        .queryParam("fields", "id,username")
+                        .path("/me/accounts")
+                        .queryParam("fields", "{fields}")
                         .queryParam("access_token", accessToken)
-                        .build())
+                        .build(Map.of("fields", INSTAGRAM_ACCOUNT_FIELDS)))
                 .retrieve()
                 .body(String.class);
 
         try {
             Map<String, Object> payload = objectMapper.readValue(response, new TypeReference<>() {});
-            String id = (String) payload.get("id");
-            String username = (String) payload.getOrDefault("username", "instagram_account");
-            if (!StringUtils.hasText(id)) {
-                throw new BusinessException("SOC_001", "Meta Graph did not return account id");
+            Object data = payload.get("data");
+            if (data instanceof List<?> pages) {
+                for (Object pageNode : pages) {
+                    if (!(pageNode instanceof Map<?, ?> page)) {
+                        continue;
+                    }
+                    Object instagramNode = page.get("instagram_business_account");
+                    if (!(instagramNode instanceof Map<?, ?> instagramAccount)) {
+                        continue;
+                    }
+
+                    String accountId = asString(instagramAccount.get("id"));
+                    String username = asString(instagramAccount.get("username"));
+                    String pageAccessToken = asString(page.get("access_token"));
+                    if (StringUtils.hasText(accountId) && StringUtils.hasText(pageAccessToken)) {
+                        return new MetaAccountResult(
+                                accountId,
+                                StringUtils.hasText(username) ? username : "instagram_account",
+                                pageAccessToken
+                        );
+                    }
+                }
             }
-            return new MetaAccountResult(id, username);
+            throw new BusinessException("SOC_001", "No Instagram business account found on accessible Facebook pages");
         } catch (BusinessException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -105,9 +126,19 @@ public class MetaGraphClient {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
+    private String asString(Object value) {
+        return value instanceof String text ? text : null;
+    }
+
+    private String authorizationDialogBaseUrl() {
+        return properties.getBaseUrl()
+                .replace("://graph.facebook.com/", "://www.facebook.com/")
+                + "/dialog/oauth";
+    }
+
     public record MetaTokenResult(String accessToken, long expiresInSeconds) {
     }
 
-    public record MetaAccountResult(String accountId, String username) {
+    public record MetaAccountResult(String accountId, String username, String accessToken) {
     }
 }

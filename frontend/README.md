@@ -1,12 +1,58 @@
 # SESHOP Frontend - Hướng dẫn Triển khai
 
 **Frontend**: React + TypeScript + Vite + Tailwind CSS  
-**Status**: Planning Phase  
-**Last Updated**: 2026-04-29
+**Status**: Implementation Phase
+**Last Updated**: 2026-05-07
 
 ---
 
 ## 📋 Cấu trúc Frontend
+
+Authoritative folder rules are tracked in [SESHOP Folder Structure](../docs/3.Design/SESHOP%20Folder%20Structure.md). The frontend uses a Feature-Sliced Design-inspired structure instead of the older `components/services/hooks` planning layout.
+
+```text
+frontend/src/
+├── app/
+│   ├── layouts/          # App shells and navigation chrome
+│   ├── providers/        # React Query and app-level providers
+│   └── router/           # Route composition
+├── pages/
+│   ├── admin/            # Admin route screens
+│   ├── customer/         # Customer route screens
+│   ├── marketing/        # Marketing/Instagram route screens
+│   └── staff/            # Staff route screens
+├── features/
+│   ├── auth/             # Auth API, model, UI, public API
+│   ├── admin/            # Admin APIs
+│   ├── cart/             # Cart model
+│   ├── catalog/          # Catalog API and hooks
+│   ├── commerce/         # Cart/checkout/order APIs
+│   ├── marketing/        # Assistant, discount, Instagram APIs
+│   └── staff/            # Staff inventory/order/POS APIs
+├── entities/
+│   ├── inventory/
+│   ├── order/
+│   ├── product/
+│   └── user/
+├── shared/
+│   ├── api/              # Axios client
+│   ├── config/           # Environment config
+│   ├── lib/              # Generic helpers
+│   ├── types/            # Generic API types
+│   └── ui/               # Reusable UI components
+├── styles/
+└── test/
+```
+
+### Import conventions
+
+- Use a slice public API when another layer consumes a feature, for example `@/features/auth`.
+- Keep code inside a slice importing sibling files with relative paths, such as `../api/authApi`.
+- Keep direct imports for `shared/ui` components, for example `@/shared/ui/Button`, until shared components are moved into per-component folders.
+- Add new workflow logic under the owning feature slice instead of creating global `services/` or `hooks/` folders.
+
+<details>
+<summary>Archived initial planning tree</summary>
 
 ```
 src/
@@ -234,6 +280,8 @@ Dockerfile
 .dockerignore
 README.md
 ```
+
+</details>
 
 ---
 
@@ -709,4 +757,3 @@ xl: 1280px
 - **Virtual Lists**: For large product/order lists
 - **Caching**: API response caching with React Query
 - **Bundle Analysis**: Monitor with Vite analysis tools
-

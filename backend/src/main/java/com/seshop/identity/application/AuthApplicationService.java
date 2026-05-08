@@ -4,8 +4,11 @@ import com.seshop.audit.application.AuditService;
 import com.seshop.audit.domain.AuditAction;
 import com.seshop.identity.domain.UserStatus;
 import com.seshop.identity.domain.UserType;
+import com.seshop.identity.infrastructure.persistence.RolePermissionRepository;
 import com.seshop.identity.infrastructure.persistence.UserEntity;
 import com.seshop.identity.infrastructure.persistence.UserRepository;
+import com.seshop.identity.infrastructure.persistence.UserRoleEntity;
+import com.seshop.identity.infrastructure.persistence.UserRoleRepository;
 import com.seshop.shared.exception.DuplicateResourceException;
 import com.seshop.shared.security.JwtTokenProvider;
 import java.util.List;
@@ -18,17 +21,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthApplicationService {
 
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final RolePermissionRepository rolePermissionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuditService auditService;
 
     public AuthApplicationService(
             UserRepository userRepository,
+            UserRoleRepository userRoleRepository,
+            RolePermissionRepository rolePermissionRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenProvider jwtTokenProvider,
             AuditService auditService
     ) {
         this.userRepository = userRepository;
+        this.userRoleRepository = userRoleRepository;
+        this.rolePermissionRepository = rolePermissionRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.auditService = auditService;
@@ -59,7 +68,18 @@ public class AuthApplicationService {
                 .filter(found -> passwordEncoder.matches(command.password(), found.getPasswordHash()))
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-        List<String> permissions = List.of();
+        List<UserRoleEntity> activeRoles = userRoleRepository.findByUserIdAndRevokedAtIsNull(user.getId());
+        List<String> roles = activeRoles.stream()
+                .map(userRole -> userRole.getRole().getName())
+                .distinct()
+                .sorted()
+                .toList();
+        List<String> permissions = activeRoles.stream()
+                .flatMap(userRole -> rolePermissionRepository.findByRoleId(userRole.getRole().getId()).stream())
+                .map(rolePermission -> rolePermission.getPermission().getCode())
+                .distinct()
+                .sorted()
+                .toList();
         String token = jwtTokenProvider.generateToken(
                 user.getId(),
                 user.getUsername(),
@@ -71,7 +91,7 @@ public class AuthApplicationService {
 
         return new LoginResult(
                 token,
-                new LoginResult.UserSummary(user.getId(), user.getUsername(), user.getUserType().name(), List.of(), permissions)
+                new LoginResult.UserSummary(user.getId(), user.getUsername(), user.getUserType().name(), roles, permissions)
         );
     }
 

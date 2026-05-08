@@ -12,22 +12,22 @@ public class PosShiftEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "staff_id", nullable = false)
+    @Column(name = "cashier_user_id", nullable = false)
     private Long staffId;
 
     @Column(name = "location_id", nullable = false)
     private Long locationId;
 
-    @Column(name = "start_time", nullable = false)
+    @Column(name = "opened_at", nullable = false)
     private OffsetDateTime startTime;
 
-    @Column(name = "end_time")
+    @Column(name = "closed_at")
     private OffsetDateTime endTime;
 
-    @Column(name = "starting_cash", nullable = false, precision = 12, scale = 2)
+    @Transient
     private BigDecimal startingCash;
 
-    @Column(name = "ending_cash", precision = 12, scale = 2)
+    @Transient
     private BigDecimal endingCash;
 
     @Column(nullable = false, length = 20)

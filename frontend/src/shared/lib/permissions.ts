@@ -11,5 +11,5 @@ export function hasRole(user: AuthUser | null, role?: string) {
   if (!role) {
     return true;
   }
-  return user?.roles.includes(role) || user?.userType === role;
+  return user?.userType === 'ADMIN' || user?.roles.includes('SUPER_ADMIN') || user?.roles.includes(role) || user?.userType === role;
 }

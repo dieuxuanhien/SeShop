@@ -2,6 +2,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: seshop-postgres
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-seshop}
       POSTGRES_USER: ${POSTGRES_USER:-seshop}
@@ -26,6 +28,8 @@ services:
     build:
       context: ./backend
     container_name: seshop-backend
+    env_file:
+      - .env
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,11 +56,11 @@ services:
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
       GEMINI_BASE_URL: ${GEMINI_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
       META_ENABLED: ${META_ENABLED:-false}
-      META_BASE_URL: ${META_BASE_URL:-https://graph.facebook.com/v20.0}
+      META_BASE_URL: ${META_BASE_URL:-https://graph.facebook.com/v25.0}
       META_APP_ID: ${META_APP_ID:-}
       META_APP_SECRET: ${META_APP_SECRET:-}
       META_REDIRECT_URI: ${META_REDIRECT_URI:-http://localhost:8080/api/v1/webhooks/instagram/callback}
-      META_SCOPES: ${META_SCOPES:-instagram_basic,pages_show_list,business_management}
+      META_SCOPES: ${META_SCOPES:-instagram_basic,pages_show_list,pages_read_engagement,instagram_content_publish}
     ports:
       - "8080:8080"
 
@@ -66,6 +70,8 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
     container_name: seshop-frontend
+    env_file:
+      - .env
     depends_on:
       - backend
     ports:

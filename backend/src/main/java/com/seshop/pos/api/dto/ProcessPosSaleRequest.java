@@ -10,6 +10,7 @@ import java.util.List;
 
 public class ProcessPosSaleRequest {
     private Long shiftId;
+    private Long customerUserId;
 
     @NotNull(message = "Payment method is required")
     private String paymentMethod;
@@ -28,6 +29,14 @@ public class ProcessPosSaleRequest {
 
     public void setShiftId(Long shiftId) {
         this.shiftId = shiftId;
+    }
+
+    public Long getCustomerUserId() {
+        return customerUserId;
+    }
+
+    public void setCustomerUserId(Long customerUserId) {
+        this.customerUserId = customerUserId;
     }
 
     public String getPaymentMethod() {
@@ -62,6 +71,9 @@ public class ProcessPosSaleRequest {
         @Positive(message = "Quantity must be positive")
         private Integer qty;
 
+        @Positive(message = "Unit price must be positive")
+        private BigDecimal unitPrice;
+
         public Long getVariantId() {
             return variantId;
         }
@@ -76,6 +88,14 @@ public class ProcessPosSaleRequest {
 
         public void setQty(Integer qty) {
             this.qty = qty;
+        }
+
+        public BigDecimal getUnitPrice() {
+            return unitPrice;
+        }
+
+        public void setUnitPrice(BigDecimal unitPrice) {
+            this.unitPrice = unitPrice;
         }
     }
 }

@@ -4,15 +4,24 @@ This document serves as the active progress tracker for the SeShop project. It i
 
 ## 🎯 Backend - Các Domain & Modules
 
-### 8 Domain Modules:
-1. **Auth** - Authentication & RBAC (UC1-4)
-2. **Catalog** - Product Management (UC5)
-3. **Inventory** - Stock Management (UC6, UC7, UC16, UC25)
-4. **Commerce** - Shopping (UC13, UC14, UC15)
-5. **Order** - Order Processing (UC15, UC19, UC20, UC23)
-6. **POS** - Point of Sale (UC8, UC26)
-7. **Return** - Returns & Refunds (UC9, UC24)
-8. **Marketing** - Promotions & Social (UC10, UC11, UC21)
+The implementation now follows a Spring Boot modular monolith structure. `SeShopApplication` is the root package entrypoint at `com.seshop`, while direct sub-packages represent modules.
+
+Current modules:
+1. **identity** - Authentication & RBAC (UC1-4, UC12)
+2. **audit** - Audit logs and admin dashboard support (UC4)
+3. **catalog** - Product Management (UC5, UC13)
+4. **inventory** - Stock Management (UC6, UC7, UC16, UC22, UC25)
+5. **commerce** - Shopping, checkout, orders, invoices (UC15, UC17, UC19, UC20, UC23, UC27)
+6. **pos** - Point of Sale, returns, shifts (UC8, UC9, UC24, UC26)
+7. **refund** - Return/refund API boundary
+8. **marketing** - Discounts, Instagram, AI recommendations (UC10, UC11, UC14, UC21)
+9. **review** - Reviews & ratings (UC18)
+10. **payment** - Payment provider integration
+11. **shipping** - Shipment provider integration
+12. **notification** - Notification extension point
+13. **shared** - Cross-cutting API/config/security/exception/util code
+
+Folder structure rules are documented in [docs/3.Design/SESHOP Folder Structure.md](docs/3.Design/SESHOP%20Folder%20Structure.md).
 
 ## 📊 Use Case Mapping & Status
 
@@ -110,10 +119,15 @@ This document serves as the active progress tracker for the SeShop project. It i
 ### 9. Integration Testing (Weeks 4-5)
 - [x] API testing
   - [x] Add backend API contract tests for staff inventory and POS endpoints
-- [ ] Component testing
+- [x] Component testing
+  - [x] Add checkout component test for live cart, discount validation, and order submission flow
+  - [x] Add POS component test for SKU lookup and cash-sale receipt flow
 - [ ] E2E testing
 - [x] Frontend mock API cleanup for catalog, checkout, and staff order flows
-- [ ] Complete live backend endpoints for staff inventory and POS flows
+- [x] Complete live backend endpoints for staff inventory and POS flows
+  - [x] Align POS receipt and shift persistence with Flyway schema
+  - [x] Decrement inventory balances when POS receipts are created
+  - [x] Persist cash reconciliation data when shifts close
 
 ### 10. Deployment (Week 8)
 - [ ] Docker build & push

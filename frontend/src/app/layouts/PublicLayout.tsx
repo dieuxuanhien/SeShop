@@ -1,6 +1,6 @@
 import { LogOut, Search, ShoppingBag, User } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/features/auth/model/useAuth';
+import { useAuth } from '@/features/auth';
 import { useCartStore } from '@/features/cart/model/cartStore';
 
 export function PublicLayout() {

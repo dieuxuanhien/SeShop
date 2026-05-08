@@ -85,7 +85,7 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public Page<ProductDto> getPublishedProducts(String keyword, String brand, Pageable pageable) {
-        return productRepository.findPublishedProducts(keyword, brand, pageable)
+        return productRepository.findPublishedProducts(normalizeFilter(keyword), normalizeFilter(brand), pageable)
                 .map(this::mapToDto);
     }
     
@@ -141,5 +141,9 @@ public class CatalogService {
         }
         
         return dto;
+    }
+
+    private String normalizeFilter(String value) {
+        return value == null || value.isBlank() ? "" : value.trim();
     }
 }

@@ -1,0 +1,37 @@
+@startuml
+autonumber
+actor "Authorized Staff" as Staff
+participant "POS UI" as UI
+participant "POS Service" as POS
+participant "Inventory Service" as Inventory
+participant "Payment Device/Processor" as Pay
+participant "Audit Service" as Audit
+database "PostgreSQL" as DB
+
+Staff -> UI: Scan items and submit sale
+UI -> POS: POST /api/v1/pos/receipts\nIdempotency-Key
+POS -> POS: Verify active shift and permissions
+POS -> DB: begin transaction
+POS -> DB: insert pos_receipt and line items
+POS -> Inventory: decrementStock(location, items)
+Inventory -> DB: SELECT inventory_balances FOR UPDATE
+alt stock available
+  Inventory -> DB: update on_hand_qty
+  alt card payment
+    POS -> Pay: authorize amount
+    Pay --> POS: approved
+  else cash payment
+    POS -> POS: validate cash received and change
+  end
+  POS -> Audit: log POS sale
+  Audit -> DB: insert audit_logs
+  POS -> DB: commit transaction
+  POS --> UI: receiptCreated
+  UI --> Staff: Print/display receipt
+else insufficient stock
+  Inventory --> POS: insufficientStock
+  POS -> DB: rollback transaction
+  POS --> UI: 409 INV_INSUFFICIENT_STOCK
+  UI --> Staff: Show stock correction message
+end
+@enduml

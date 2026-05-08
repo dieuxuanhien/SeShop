@@ -2,90 +2,112 @@ package com.seshop.pos.application;
 
 import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
+import com.seshop.inventory.infrastructure.persistence.InventoryBalanceEntity;
+import com.seshop.inventory.infrastructure.persistence.InventoryBalanceRepository;
 import com.seshop.pos.api.dto.ProcessPosSaleRequest;
 import com.seshop.pos.api.dto.ProcessPosSaleResponse;
 import com.seshop.pos.api.dto.ReceiptDto;
 import com.seshop.pos.infrastructure.persistence.PosReceiptEntity;
+import com.seshop.pos.infrastructure.persistence.PosReceiptItemEntity;
 import com.seshop.pos.infrastructure.persistence.PosReceiptRepository;
 import com.seshop.pos.infrastructure.persistence.PosShiftEntity;
 import com.seshop.pos.infrastructure.persistence.PosShiftRepository;
-import com.seshop.pos.infrastructure.persistence.PosTransactionEntity;
-import com.seshop.pos.infrastructure.persistence.PosTransactionRepository;
+import com.seshop.shared.exception.BusinessException;
+import com.seshop.shared.exception.ForbiddenOperationException;
+import com.seshop.shared.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.UUID;
+import java.util.Locale;
 
 @Service
 @Transactional
 public class ReceiptService {
 
     private final PosReceiptRepository receiptRepository;
-    private final PosTransactionRepository transactionRepository;
     private final PosShiftRepository shiftRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final InventoryBalanceRepository balanceRepository;
 
     public ReceiptService(PosReceiptRepository receiptRepository,
-                          PosTransactionRepository transactionRepository,
                           PosShiftRepository shiftRepository,
-                          ProductVariantRepository productVariantRepository) {
+                          ProductVariantRepository productVariantRepository,
+                          InventoryBalanceRepository balanceRepository) {
         this.receiptRepository = receiptRepository;
-        this.transactionRepository = transactionRepository;
         this.shiftRepository = shiftRepository;
         this.productVariantRepository = productVariantRepository;
+        this.balanceRepository = balanceRepository;
     }
 
     @Transactional(readOnly = true)
     public ReceiptDto getReceipt(String receiptNumber) {
-        PosReceiptEntity receipt = receiptRepository.findByReceiptNumber(receiptNumber)
-                .orElseThrow(() -> new IllegalArgumentException("Receipt not found"));
-        
-        return mapToDto(receipt);
+        return getReceipt(parseReceiptId(receiptNumber));
     }
 
     @Transactional(readOnly = true)
     public ReceiptDto getReceipt(Long receiptId) {
         PosReceiptEntity receipt = receiptRepository.findById(receiptId)
-                .orElseThrow(() -> new IllegalArgumentException("Receipt not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("POS_404", "Receipt not found"));
         return mapToDto(receipt);
     }
 
     public ProcessPosSaleResponse createReceipt(ProcessPosSaleRequest request, Long staffId) {
+        String paymentMethod = normalizePaymentMethod(request.getPaymentMethod());
         PosShiftEntity shift = request.getShiftId() != null
-                ? shiftRepository.findById(request.getShiftId()).orElseThrow(() -> new IllegalArgumentException("Shift not found"))
-                : shiftRepository.findByStaffIdAndStatus(staffId, "OPEN").orElseThrow(() -> new IllegalArgumentException("No active shift found"));
+                ? shiftRepository.findById(request.getShiftId())
+                        .orElseThrow(() -> new ResourceNotFoundException("POS_002", "Shift not found"))
+                : shiftRepository.findByStaffIdAndStatus(staffId, "OPEN")
+                        .orElseThrow(() -> new BusinessException("POS_002", "No active shift found"));
 
-        BigDecimal total = request.getItems().stream()
-                .map(item -> {
-                    ProductVariantEntity variant = productVariantRepository.findById(item.getVariantId())
-                            .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
-                    return variant.getPrice().multiply(BigDecimal.valueOf(item.getQty()));
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        if ("CASH".equalsIgnoreCase(request.getPaymentMethod()) && request.getAmountPaid().compareTo(total) < 0) {
-            throw new IllegalArgumentException("Amount paid is less than receipt total");
+        if (!"OPEN".equals(shift.getStatus())) {
+            throw new BusinessException("POS_002", "Active shift required");
+        }
+        if (!shift.getStaffId().equals(staffId)) {
+            throw new ForbiddenOperationException("Shift belongs to another staff member");
         }
 
-        PosTransactionEntity transaction = new PosTransactionEntity();
-        transaction.setShift(shift);
-        transaction.setOrderId(0L);
-        transaction.setTransactionType(request.getPaymentMethod().toUpperCase());
-        transaction.setAmount(total);
-        transaction.setStatus("COMPLETED");
-        PosTransactionEntity savedTransaction = transactionRepository.save(transaction);
-
         PosReceiptEntity receipt = new PosReceiptEntity();
-        receipt.setTransaction(savedTransaction);
-        receipt.setReceiptNumber("POS-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        receipt.setReceiptContent("Receipt total: " + total);
+        receipt.setShift(shift);
+        receipt.setCustomerUserId(request.getCustomerUserId());
+        receipt.setPaymentMethod(paymentMethod);
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (ProcessPosSaleRequest.Item item : request.getItems()) {
+            ProductVariantEntity variant = productVariantRepository.findById(item.getVariantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("CAT_404", "Variant not found"));
+            BigDecimal lineTotal = variant.getPrice().multiply(BigDecimal.valueOf(item.getQty()));
+            total = total.add(lineTotal);
+
+            InventoryBalanceEntity balance = balanceRepository
+                    .findForUpdateByVariantIdAndLocationId(item.getVariantId(), shift.getLocationId())
+                    .orElseThrow(() -> new BusinessException("INV_001", "Insufficient stock at POS location"));
+            int availableQty = balance.getOnHandQty() - balance.getReservedQty();
+            if (availableQty < item.getQty()) {
+                throw new BusinessException("INV_001", "Insufficient stock at POS location");
+            }
+            balance.setOnHandQty(balance.getOnHandQty() - item.getQty());
+            balanceRepository.save(balance);
+
+            PosReceiptItemEntity receiptItem = new PosReceiptItemEntity();
+            receiptItem.setReceipt(receipt);
+            receiptItem.setVariantId(item.getVariantId());
+            receiptItem.setQty(item.getQty());
+            receiptItem.setUnitPrice(variant.getPrice());
+            receipt.getItems().add(receiptItem);
+        }
+
+        if ("CASH".equals(paymentMethod) && request.getAmountPaid().compareTo(total) < 0) {
+            throw new BusinessException("POS_003", "Amount paid is less than receipt total");
+        }
+
+        receipt.setTotalAmount(total);
         PosReceiptEntity savedReceipt = receiptRepository.save(receipt);
 
         ProcessPosSaleResponse response = new ProcessPosSaleResponse();
         response.setReceiptId(savedReceipt.getId());
-        response.setReceiptNumber(savedReceipt.getReceiptNumber());
-        response.setChangeDue("CASH".equalsIgnoreCase(request.getPaymentMethod())
+        response.setReceiptNumber(formatReceiptNumber(savedReceipt.getId()));
+        response.setChangeDue("CASH".equals(paymentMethod)
                 ? request.getAmountPaid().subtract(total)
                 : BigDecimal.ZERO);
         return response;
@@ -94,10 +116,36 @@ public class ReceiptService {
     private ReceiptDto mapToDto(PosReceiptEntity entity) {
         ReceiptDto dto = new ReceiptDto();
         dto.setId(entity.getId());
-        dto.setTransactionId(entity.getTransaction().getId());
-        dto.setReceiptNumber(entity.getReceiptNumber());
-        dto.setReceiptContent(entity.getReceiptContent());
-        dto.setIssuedAt(entity.getIssuedAt());
+        dto.setReceiptNumber(formatReceiptNumber(entity.getId()));
+        dto.setReceiptContent("Receipt total: " + entity.getTotalAmount() + " (" + entity.getPaymentMethod() + ")");
+        dto.setIssuedAt(entity.getCreatedAt());
         return dto;
+    }
+
+    private String normalizePaymentMethod(String paymentMethod) {
+        String normalized = paymentMethod.trim().toUpperCase(Locale.ROOT);
+        if (!"CASH".equals(normalized) && !"CARD".equals(normalized)) {
+            throw new BusinessException("PAY_002", "Unsupported payment method");
+        }
+        return normalized;
+    }
+
+    private Long parseReceiptId(String receiptNumber) {
+        if (receiptNumber == null || receiptNumber.isBlank()) {
+            throw new ResourceNotFoundException("POS_404", "Receipt not found");
+        }
+        String normalized = receiptNumber.trim().toUpperCase(Locale.ROOT);
+        if (normalized.startsWith("POS-")) {
+            normalized = normalized.substring(4);
+        }
+        try {
+            return Long.parseLong(normalized);
+        } catch (NumberFormatException exception) {
+            throw new ResourceNotFoundException("POS_404", "Receipt not found");
+        }
+    }
+
+    private String formatReceiptNumber(Long receiptId) {
+        return String.format(Locale.ROOT, "POS-%08d", receiptId);
     }
 }

@@ -1,6 +1,6 @@
 import { LogOut, Menu, ShoppingCart } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/features/auth/model/useAuth';
+import { useAuth } from '@/features/auth';
 import { useCartStore } from '@/features/cart/model/cartStore';
 import { Button } from '@/shared/ui/Button';
 

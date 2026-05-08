@@ -1,10 +1,13 @@
-# SeShop — Architecture Design Document (ADD)
+# SeShop - Architecture Design Document (ADD)
 
-**Project:** SeShop
-**Domain:** Omnichannel clothing & accessories platform
-**Standard:** SEI / Carnegie Mellon — Attribute-Driven Design 3.0
-**Version:** 1.0
-**Date:** 2026-04-30
+| Field | Value |
+|---|---|
+| Project | SeShop |
+| Domain | Omnichannel clothing and accessories platform |
+| Document Type | Architecture Design Document |
+| Template Source | [Template/ADD.docx](../../Template/ADD.docx) |
+| Version | 1.1 |
+| Date | 2026-05-07 |
 
 ---
 
@@ -13,322 +16,360 @@
 | Date | Version | Author | Description |
 |---|---:|---|---|
 | 2026-04-30 | 1.0 | Architecture Team | Initial ADD using iterative decomposition from ASR |
+| 2026-05-07 | 1.1 | Architecture Team | Reformatted to match ADD.docx structure: design constraints, quality attribute requirements, and architectural representation |
 
 ---
 
 ## Table of Contents
 
-1. [Purpose](#1-purpose)
-2. [Design Inputs](#2-design-inputs)
-3. [ADD Process Overview](#3-add-process-overview)
-4. [Iteration 1 — Establish Overall System Structure](#4-iteration-1--establish-overall-system-structure)
-5. [Iteration 2 — Address Reliability and Consistency](#5-iteration-2--address-reliability-and-consistency)
-6. [Iteration 3 — Address Security and Auditability](#6-iteration-3--address-security-and-auditability)
-7. [Iteration 4 — Address Performance and Scalability](#7-iteration-4--address-performance-and-scalability)
-8. [Iteration 5 — Address Modifiability and Testability](#8-iteration-5--address-modifiability-and-testability)
-9. [Design Summary](#9-design-summary)
-10. [Verification Against ASR](#10-verification-against-asr)
+1. [Design Constraints](#1-design-constraints)
+2. [Quality Attribute Requirements](#2-quality-attribute-requirements)
+   1. [Security](#21-security)
+   2. [Performance](#22-performance)
+   3. [Usability](#23-usability)
+   4. [Interoperability](#24-interoperability)
+   5. [Modifiability](#25-modifiability)
+   6. [Availability](#26-availability)
+3. [Architectural Representation](#3-architectural-representation)
+   1. [Logical View](#31-logical-view)
+   2. [Implementation View](#32-implementation-view)
+   3. [Deployment View](#33-deployment-view)
+   4. [Data View](#34-data-view)
 
 ---
 
-## 1. Purpose
+# 1. Design Constraints
 
-This document records the architectural design process for SeShop using the Attribute-Driven Design (ADD) method as defined by the Software Engineering Institute (SEI). ADD is an iterative decomposition method where each iteration selects a subset of quality attribute scenarios and produces design decisions that address them.
+The following constraints define the allowed architecture space for SeShop. They are derived from the [BRD](../1.BRD/SESHOP%20BRD.md), [SRS](../10.SRS/SESHOP%20SRS.md), [ASR](SESHOP%20ASR.md), [API specification](SESHOP%20API%20Spec.md), and database schema.
 
-This document does **not** repeat the architecture itself — for the full architecture description, see the [SAD](SESHOP%20SAD.md). For quality attribute requirements, see the [ASR](SESHOP%20ASR.md). For detailed system decomposition, see the [HLD](SESHOP%20HLD.md) and [LLD](SESHOP%20LLD.md).
-
----
-
-## 2. Design Inputs
-
-### 2.1 Primary Functional Requirements
-
-The system must support 27 use cases (UC1–UC27) across three actor classes (Customer, Authorized Staff, Super Admin), as defined in the [SRS](../10.SRS/SESHOP%20SRS.md). Key functional drivers include:
-
-- Omnichannel commerce (online checkout + in-store POS)
-- Multi-location inventory management with real-time stock synchronization
-- Configurable RBAC with granular permissions
-- External integrations (payment, shipping, Instagram, AI recommendations)
-- Social marketing draft workflows
-
-### 2.2 Quality Attribute Scenarios (from ASR)
-
-The following scenarios from [SESHOP ASR.md](SESHOP%20ASR.md) are prioritized as design drivers:
-
-| Priority | ID | Quality Attribute | Brief |
-|---|---|---|---|
-| Critical | QAS-3 | Reliability | Checkout consistency under concurrency |
-| Critical | QAS-5 | Security | RBAC enforcement — zero privilege escalation |
-| Critical | QAS-7 | Auditability | Immutable append-only audit trail |
-| High | QAS-1 | Performance | Product search ≤ 2s (p95) |
-| High | QAS-2 | Performance | Inventory update ≤ 500ms |
-| High | QAS-9 | Modifiability | Module boundary independence |
-
-### 2.3 Constraints
-
-Constraints CON-1 through CON-10 from the [ASR](SESHOP%20ASR.md) Section 4 are binding throughout all iterations.
+- **Architecture style:** The backend is a modular monolith. Domain boundaries are enforced inside one deployable Spring Boot application instead of separate microservices.
+- **Backend technology:** Java 21 and Spring Boot 3.3 are required.
+- **Frontend technology:** React 18, TypeScript 5, and Vite are required.
+- **Database technology:** PostgreSQL 15 is the transactional system of record.
+- **Cache technology:** Redis may be used for hot catalog and availability reads, but it is not a source of truth.
+- **API style:** External application communication uses REST/JSON over HTTPS under the `/api/v1` namespace.
+- **Module isolation:** Backend modules must communicate through application service interfaces or domain events. A module must not directly access another module's owned tables.
+- **Stock consistency:** Checkout, POS sale, refund, transfer, cycle count, goods receipt, and allocation operations must update stock inside a database transaction.
+- **Availability calculation:** `available_qty` is computed as `on_hand_qty - reserved_qty`; it must not be stored as an independent column.
+- **Payment scope:** Version 1 supports Stripe, Cash on Delivery, and in-store POS payment.
+- **Social publishing scope:** Instagram support is compose-first. The system prepares and stores drafts but does not auto-publish without manual review.
+- **Auditability:** Sensitive staff/admin and stock/money operations must create append-only audit records.
+- **Localization:** Customer-facing and back-office interfaces must support Vietnamese and English text.
+- **Migration management:** Database migrations are versioned and reviewed through Flyway-compatible scripts.
 
 ---
 
-## 3. ADD Process Overview
+# 2. Quality Attribute Requirements
 
-ADD proceeds through iterative refinement:
+Each quality attribute requirement follows the ADD template format: stimulus, source, environment, artifact, response, and response measure.
 
-```
-Iteration 1: Decompose the system into coarse-grained elements
-Iteration 2: Refine elements to address highest-priority quality attributes
-Iteration 3–N: Continue refinement until all ASRs are addressed
-```
+## 2.1 Security
 
-Each iteration follows:
-1. **Select element to decompose** — choose the element being refined
-2. **Choose drivers** — select ASRs to address
-3. **Choose design concepts** — select architectural patterns/tactics
-4. **Instantiate elements** — map concepts to concrete design elements
-5. **Record rationale** — document why each choice was made
+### 2.1.1 Authentication and Authorization
 
----
-
-## 4. Iteration 1 — Establish Overall System Structure
-
-### 4.1 Element to Decompose
-
-The entire SeShop system (greenfield).
-
-### 4.2 Selected Drivers
-
-- QAS-9 (Modifiability — Module Boundaries)
-- QAS-3 (Reliability — Checkout Consistency)
-- CON-1 through CON-4 (Technology and architecture style constraints)
-
-### 4.3 Design Concepts Chosen
-
-| Concept | Rationale |
+| **Element** | **Statement** |
 |---|---|
-| **Modular Monolith** (CON-4) | Single deployable unit reduces operational complexity while providing internal module boundaries. Cross-domain transactions (checkout touches cart + order + payment + inventory + shipment) are ACID-safe without distributed coordination. |
-| **Domain-Driven Decomposition** | Modules are organized by business capability (Identity, Catalog, Inventory, Commerce, POS, Marketing, Engagement, Shared), not by technical layer. This aligns change frequency with business rule ownership. |
-| **3-tier web topology** | React SPA frontend → Spring Boot REST API → PostgreSQL database. Clean separation of presentation, logic, and persistence. |
+| Stimulus | A user signs in or invokes an API endpoint that requires authentication and permission checks. |
+| Stimulus source | Customer, Authorized Staff, or Super Admin. |
+| Environment | Normal web operation through the React SPA or direct API access. |
+| Artifact | Spring Security layer, Identity & RBAC module, JWT/session handling, permission catalog. |
+| Response | The system authenticates the user, computes effective permissions from assigned active roles, enforces server-side authorization, returns `403 FORBIDDEN` for unauthorized actions, and records suspicious denied attempts. |
+| Response measure | 100% of protected endpoints enforce authorization on the backend; unauthorized requests perform no side effects; permission checks add no more than 200 ms to normal request processing. |
 
-### 4.4 Instantiated Elements
+### 2.1.2 Data Protection
 
-| Element | Technology | Responsibility |
-|---|---|---|
-| React Frontend | React 18, TypeScript 5, Vite | Customer, Staff, and Admin UI |
-| Java Backend API | Java 21, Spring Boot 3.3 | Business logic, security, orchestration |
-| PostgreSQL Database | PostgreSQL 15 | System of record for all transactional data |
-| Redis Cache | Redis | Read optimization for catalog and availability |
-| Object Storage | S3-compatible | Product/review images, Instagram media |
-| Async Worker | Spring @Async / scheduled jobs | Notifications, media processing, reports |
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | Sensitive data is stored, transmitted, or used by an integration. |
+| Stimulus source | Customers, staff users, payment gateway, Instagram OAuth flow, shipping provider, AI service. |
+| Environment | Production runtime, backups, logs, and external API calls. |
+| Artifact | PostgreSQL database, transport layer, external integration adapters, application logs. |
+| Response | Passwords are stored as salted hashes; external tokens and secrets are encrypted at rest; all client and partner communication uses HTTPS/TLS; logs exclude plaintext secrets and payment tokens. |
+| Response measure | Zero plaintext passwords or OAuth/payment secrets in database and logs; 100% external-facing endpoints require TLS; credential scan has no high-severity findings before release. |
 
-### 4.5 Domain Module Decomposition
+### 2.1.3 Auditability
 
-Eight bounded contexts as defined in [HLD Section 7](SESHOP%20HLD.md):
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | A sensitive operation changes access rights, stock, money, orders, refunds, POS shifts, invoices, Instagram connections, or audit-relevant configuration. |
+| Stimulus source | Super Admin, Authorized Staff, or automated background process. |
+| Environment | Normal business operation and compliance review. |
+| Artifact | Audit subsystem and `audit_logs` table. |
+| Response | The system creates an append-only audit record containing actor, action, target, timestamp, trace metadata, and before/after values when available. |
+| Response measure | 100% coverage of sensitive operations; no application endpoint exposes audit UPDATE or DELETE behavior; audit records are searchable by actor, action, target, and date range. |
 
-1. **Identity & RBAC** — users, roles, permissions, audit
-2. **Catalog** — products, variants, categories, images
-3. **Inventory** — locations, balances, transfers, cycle counts, procurement
-4. **Commerce** — carts, orders, payments, shipments, discounts
-5. **POS & Returns** — shifts, receipts, refunds, exchanges, invoices
-6. **Marketing & Social** — Instagram connections, drafts
-7. **Customer Engagement** — reviews, AI recommendation chat
-8. **Shared Platform Services** — audit dispatch, notifications, file storage, utilities
+## 2.2 Performance
 
-### 4.6 Inter-Module Communication Rule
+### 2.2.1 Product Search and Browsing
 
-Modules communicate through:
-- **Application service interfaces** (synchronous, in-process method calls)
-- **Domain events** (asynchronous, for side effects like notifications and audit)
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | A customer searches, filters, sorts, or paginates the product catalog by category, size, color, price, or availability. |
+| Stimulus source | Customer. |
+| Environment | Normal daily load with concurrent browsing traffic. |
+| Artifact | Catalog module, PostgreSQL indexes, optional Redis read-through cache, React storefront. |
+| Response | The system returns a paginated product list with variant and availability information using indexed queries and cached hot reads where appropriate. |
+| Response measure | 95th percentile response time is less than or equal to 2 seconds for normal product search and browse requests. |
 
-Modules must **not** directly access each other's database tables.
+### 2.2.2 Inventory Mutation Latency
 
-### 4.7 Rationale
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | Staff submits an inventory adjustment, transfer confirmation, POS stock decrement, checkout reservation, refund restock, cycle count posting, or goods receipt. |
+| Stimulus source | Authorized Staff, Super Admin, Customer checkout, or background workflow. |
+| Environment | Normal operations with concurrent stock-affecting actions. |
+| Artifact | Inventory module, Commerce module, POS module, PostgreSQL `inventory_balances` table. |
+| Response | The system validates the command, locks affected rows when required, commits the stock mutation atomically, and writes audit/domain-event records. |
+| Response measure | Standard stock mutation commit latency is less than or equal to 500 ms; no stock mutation leaves partial state after failure. |
 
-**Why not microservices?** Checkout (UC15) and POS (UC8) are cross-domain transactions touching 4–6 modules each. In a microservice architecture, these would require distributed sagas, eventual consistency, and compensating transactions — adding complexity disproportionate to the single-business scope. The modular monolith provides the same module isolation benefits without network overhead.
+### 2.2.3 Scalability for Locations and SKUs
 
-**Alternatives considered:** See [HLD Section 17](SESHOP%20HLD.md) (Trade-offs and Alternatives).
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | Business operations add new store/storage locations, product variants, or catalog categories. |
+| Stimulus source | Authorized Staff or Super Admin. |
+| Environment | Normal production operation without planned downtime. |
+| Artifact | Catalog, Inventory, and PostgreSQL schema. |
+| Response | New locations, SKUs, and category mappings are added as data records rather than schema changes. List endpoints remain paginated and indexed. |
+| Response measure | Adding a location or SKU requires zero schema migrations; QAS product search and inventory latency targets remain satisfied after growth within expected v1 scale. |
+
+## 2.3 Usability
+
+### 2.3.1 Staff Operational Workflow
+
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | Trained staff perform routine POS, inventory, order fulfillment, refund, or social draft work. |
+| Stimulus source | Authorized Staff. |
+| Environment | Store or back-office workday with repeated task execution. |
+| Artifact | Staff-facing React screens, API validation, workflow state models. |
+| Response | The UI presents dense but scannable operational forms, immediate validation feedback, keyboard-friendly POS paths, and clear status transitions. |
+| Response measure | A trained cashier can complete a 3-item POS sale in less than or equal to 60 seconds; common validation errors appear within 500 ms of field blur or submit. |
+
+### 2.3.2 Customer Checkout Experience
+
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | A customer proceeds from cart to order confirmation. |
+| Stimulus source | Customer. |
+| Environment | Normal web use on desktop or mobile. |
+| Artifact | Customer checkout UI, Commerce module, Payment adapter, Inventory reservation logic. |
+| Response | The system guides the customer through shipping, discount, payment, and confirmation steps with no page reloads, clear error messages, and accurate stock/payment state. |
+| Response measure | Checkout requires no more than 5 major steps; validation feedback appears within 500 ms; failed payment or insufficient stock produces no paid order. |
+
+## 2.4 Interoperability
+
+### 2.4.1 Third-Party System Integration
+
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | The platform sends requests to or receives callbacks from Stripe, shipping providers, Instagram, object storage, or an AI recommendation service. |
+| Stimulus source | External service, customer checkout, staff workflow, or background job. |
+| Environment | Normal operation and degraded partner availability. |
+| Artifact | Infrastructure adapters, API clients, webhook/callback handlers. |
+| Response | Integration calls use HTTPS, provider-specific authentication, bounded retries, timeouts, idempotency for money/stock effects, and clear error mapping into the API error model. |
+| Response measure | External failure creates zero internal data corruption; users receive an actionable error within 5 seconds of timeout; provider swap changes are localized to adapter implementations. |
+
+### 2.4.2 Internal Module Communication
+
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | One domain module requires data or side effects from another module, such as Commerce reserving stock or POS writing audit records. |
+| Stimulus source | Backend application services and domain events. |
+| Environment | Runtime inside the modular monolith. |
+| Artifact | Application service interfaces, domain events, outbox/event dispatch mechanism. |
+| Response | Synchronous in-process calls are used for command-critical results; asynchronous events are used for notifications, audit side effects, and eventual read updates. Modules do not bypass ownership by querying foreign tables directly. |
+| Response measure | Cross-module business rule changes are limited to published interfaces/events; command-critical calls complete inside the request transaction when consistency is required. |
+
+## 2.5 Modifiability
+
+### 2.5.1 Business Requirement Changes
+
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | Product or operations stakeholders request a change to a business rule, such as discount policy, refund eligibility, stock allocation, or transfer approval. |
+| Stimulus source | Business stakeholders and development team. |
+| Environment | Development and maintenance. |
+| Artifact | Backend domain modules, application services, React feature modules, API contract. |
+| Response | The modular monolith confines the change to the relevant bounded context and its tests. Shared contracts are updated only when cross-module behavior must change. |
+| Response measure | A single business rule change affects one primary backend module in the normal case; regression tests cover the changed module before release. |
+
+### 2.5.2 External Integration Replacement and Testability
+
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | The team replaces a payment, shipping, Instagram, object storage, or AI provider, or needs to test domain behavior without real infrastructure. |
+| Stimulus source | Business decision, vendor outage, QA/development team. |
+| Environment | Development, CI, or production evolution. |
+| Artifact | Ports and adapters, infrastructure clients, domain services, repository interfaces. |
+| Response | Provider-specific logic is isolated behind adapter interfaces. Domain services depend on ports and can be tested with in-memory or mock implementations. |
+| Response measure | Provider replacement requires zero domain-layer changes; domain/application test suites run without network access and without a shared test database. |
+
+## 2.6 Availability
+
+### 2.6.1 Fault Tolerance and System Recovery
+
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | An application instance, cache, external API, or non-primary component fails. |
+| Stimulus source | Infrastructure fault, software defect, network issue, or partner outage. |
+| Environment | Production runtime. |
+| Artifact | Spring Boot API, PostgreSQL, Redis, object storage, external adapters, health probes, backups. |
+| Response | Critical data remains in PostgreSQL; stateless API instances can be restarted or scaled; degraded integrations fail gracefully; health checks expose service status; backups support recovery. |
+| Response measure | Core commerce target is 99.9% monthly availability; recovery procedures keep data loss within approved backup policy; Redis failure does not lose committed business state. |
+
+### 2.6.2 Automated Payment, Shipping, and Reservation Handling
+
+| **Element** | **Statement** |
+|---|---|
+| Stimulus | The system receives payment/shipping callbacks or detects expired reservations and failed external operations. |
+| Stimulus source | Stripe, shipping provider, scheduled reservation cleanup, customer retry. |
+| Environment | After checkout, refund, fulfillment, or retryable failure. |
+| Artifact | Commerce module, Payment adapter, Shipment workflow, Inventory reservation records, background workers. |
+| Response | Callback handlers validate authenticity and idempotency, update payment/shipment/order status, release expired reservations, and notify users or staff when action is required. |
+| Response measure | Duplicate callbacks do not duplicate payments or shipments; expired reservations are released by scheduled cleanup; failed external operations leave no orphaned paid or allocated order state. |
 
 ---
 
-## 5. Iteration 2 — Address Reliability and Consistency
+# 3. Architectural Representation
 
-### 5.1 Element to Decompose
+The SeShop architecture is represented through four complementary views: logical, implementation, deployment, and data. The detailed SAD expands these views using the Views-and-Beyond documentation style.
 
-Commerce module (orders, payments, inventory reservation) and POS module.
+## 3.1 Logical View
 
-### 5.2 Selected Drivers
+The logical view decomposes SeShop into business-aligned bounded contexts. Each context owns its rules, tables, and public application interfaces.
 
-- QAS-3 (Checkout consistency under concurrency) — **Critical**
-- QAS-4 (99.9% monthly availability) — **High**
-- QAS-14 (Graceful external failure handling) — **Medium**
+| Subsystem | Responsibility |
+|---|---|
+| Identity & RBAC | Authentication, users, roles, permissions, effective access, audit identity. |
+| Catalog | Products, variants/SKUs, categories, product images, catalog publishing state. |
+| Inventory | Locations, balances, transfers, cycle counts, procurement receiving, stock reservations. |
+| Commerce | Cart, online orders, payments, discounts, shipment orchestration, checkout lifecycle. |
+| POS & Returns | POS shifts, receipts, cash reconciliation, refunds, exchanges, invoices, adjustment notes. |
+| Marketing & Social | Instagram connection lifecycle, compose-ready draft generation, review/publish handoff. |
+| Customer Engagement | Reviews and AI recommendation interactions. |
+| Shared Platform Services | Audit dispatch, notifications, file storage, exception handling, configuration, utilities. |
 
-### 5.3 Design Concepts Chosen
+```plantuml
+@startuml
+left to right direction
+skinparam componentStyle rectangle
 
-| Tactic | Addresses | Description |
-|---|---|---|
-| **ACID transactions** | QAS-3 | All stock-affecting writes (checkout, POS, transfer, refund) execute within a single database transaction. If any step fails, the entire operation rolls back. |
-| **Pessimistic locking on inventory rows** | QAS-3 | `SELECT ... FOR UPDATE` on `inventory_balances` during reservation and decrement operations prevents concurrent oversell. |
-| **Idempotency keys** | QAS-3, QAS-14 | Checkout, payment, refund, and transfer confirmation endpoints require an `Idempotency-Key` header. Retried requests produce the same result without duplication. |
-| **Reservation with timeout** | QAS-3 | Stock is reserved in `reserved_qty` during checkout. If payment is not confirmed within 15 minutes, a background worker releases the reservation. |
-| **Adapter + retry with bounded retries** | QAS-14 | External calls (Stripe, shipping, Instagram) are wrapped in adapters with configurable retry limits and exponential backoff. Failures return clear error codes without corrupting internal state. |
-| **Outbox pattern for domain events** | QAS-4 | Domain events (e.g., `OrderPaid`, `StockReserved`) are written to an outbox table within the same transaction. A background poller delivers them, ensuring reliable event propagation. |
-| **Health check endpoints** | QAS-4 | Liveness and readiness probes enable container orchestration to detect and replace unhealthy instances. |
+package "SeShop Backend" {
+  [Identity & RBAC] as Identity
+  [Catalog] as Catalog
+  [Inventory] as Inventory
+  [Commerce] as Commerce
+  [POS & Returns] as POS
+  [Marketing & Social] as Marketing
+  [Customer Engagement] as Engagement
+  [Shared Platform Services] as Shared
+}
 
-### 5.4 Instantiated Design Rules
-
-1. **Transaction boundaries** are defined in [HLD Section 9](SESHOP%20HLD.md) (Transaction Boundaries): checkout, payment confirmation, POS sale, transfer confirmation, refund, cycle count post, and invoice issuance.
-2. **State machines** with explicit legal transitions for Order, Transfer, Draft, and Refund lifecycles as defined in [LLD — Detailed State Models](SESHOP%20LLD.md).
-3. **No "fire and forget" for money/stock operations** — every mutation is either committed or rolled back within the request scope.
-
-### 5.5 Rationale
-
-The modular monolith (Iteration 1) enables ACID transactions across module boundaries using a single PostgreSQL connection. This is the primary architectural advantage over microservices for the reliability driver. The alternative (distributed sagas) was rejected because it introduces complexity that exceeds the team's operational capacity.
-
----
-
-## 6. Iteration 3 — Address Security and Auditability
-
-### 6.1 Element to Decompose
-
-Identity & RBAC module, and cross-cutting security infrastructure.
-
-### 6.2 Selected Drivers
-
-- QAS-5 (RBAC enforcement — zero privilege escalation) — **Critical**
-- QAS-6 (Sensitive data protection) — **High**
-- QAS-7 (Immutable audit trail) — **Critical**
-
-### 6.3 Design Concepts Chosen
-
-| Tactic | Addresses | Description |
-|---|---|---|
-| **Permission-driven RBAC (not role-name-driven)** | QAS-5 | Authorization checks are performed against atomic permission codes (e.g., `inventory.adjust`), not role names. A user's effective permissions are the union of all assigned active roles. |
-| **Server-side enforcement** | QAS-5 | Every API controller validates permissions via Spring Security filters. Frontend hiding is cosmetic only — the backend is authoritative. |
-| **JWT with short-lived access tokens** | QAS-5, QAS-6 | Stateless authentication with configurable token TTL. Token revocation for critical role changes. |
-| **Salted password hashing** | QAS-6 | Passwords stored using bcrypt with per-user salt. |
-| **Token encryption at rest** | QAS-6 | Instagram OAuth tokens and external API keys encrypted in database using AES-256. |
-| **TLS everywhere** | QAS-6 | All API traffic encrypted in transit. |
-| **Append-only audit log** | QAS-7 | `audit_logs` table has no UPDATE or DELETE operations exposed at any layer. Service, API, and database constraints enforce append-only semantics. |
-| **AOP-based audit capture** | QAS-7 | An `@Auditable` annotation and `AuditAspect` automatically capture actor, action, target, and metadata for annotated service methods. |
-
-### 6.4 Instantiated Design Rules
-
-1. **Sensitive operations requiring audit** are enumerated in [HLD Section 13](SESHOP%20HLD.md) (Sensitive Actions to Audit).
-2. **Permission codes** follow a canonical `domain.action` format (e.g., `role.create`, `inventory.adjust`, `refund.process`) as listed in the [API Spec](SESHOP%20API%20Spec.md) Section 5.
-3. **Access matrix** mapping functions to actor types is defined in [SRS Section 3.1](../10.SRS/SESHOP%20SRS.md).
-
-### 6.5 Rationale
-
-Permission-driven (not role-name-driven) authorization allows the business to create custom roles with arbitrary permission combinations without code changes. This directly supports BG-4 (secure governance) and QAS-5. The audit log is intentionally separated from technical application logs to prevent noise and ensure compliance reviewability.
-
----
-
-## 7. Iteration 4 — Address Performance and Scalability
-
-### 7.1 Element to Decompose
-
-Catalog read path, Inventory query path, and data access patterns.
-
-### 7.2 Selected Drivers
-
-- QAS-1 (Product search ≤ 2s p95) — **High**
-- QAS-2 (Inventory update ≤ 500ms) — **High**
-- QAS-8 (Location/SKU growth without schema change) — **Medium**
-
-### 7.3 Design Concepts Chosen
-
-| Tactic | Addresses | Description |
-|---|---|---|
-| **Database indexing strategy** | QAS-1, QAS-2 | Composite indexes on high-frequency query paths: `(variant_id, location_id)` on `inventory_balances`, `(customer_user_id, created_at)` on `orders`, etc. Full index list in [schema.sql](../5.Database/SESHOP%20schema.sql). |
-| **Redis caching for hot reads** | QAS-1 | Product catalog browsing and location availability use Redis as a read-through cache. Cache invalidation on product/inventory mutation. |
-| **Computed availability (not stored)** | QAS-2, QAS-8 | `available_qty = on_hand_qty - reserved_qty` is computed at query time. This eliminates update races on a stored derived field and supports CON-7. |
-| **Pagination on all list endpoints** | QAS-1 | Standard `page/size/sort` parameters prevent unbounded result sets. API convention defined in [API Spec](SESHOP%20API%20Spec.md) Section 8. |
-| **Horizontal scaling at application tier** | QAS-8 | Stateless backend (JWT, no server-side sessions) allows multiple instances behind a load balancer. |
-| **Normalized schema with extension-safe design** | QAS-8 | Adding new locations or SKUs is a data insert, not a schema change. The `locations` and `product_variants` tables use no hardcoded enum constraints on business-variable attributes. |
-
-### 7.4 Rationale
-
-The ≤ 2s product search target (QAS-1) is achievable with proper indexing and optional Redis caching. The modular monolith avoids the network latency that microservices would add to catalog queries that join products, variants, categories, and availability. Direct SQL joins on a single PostgreSQL instance outperform API composition patterns for this scale.
-
----
-
-## 8. Iteration 5 — Address Modifiability and Testability
-
-### 8.1 Element to Decompose
-
-Internal structure of each backend module.
-
-### 8.2 Selected Drivers
-
-- QAS-9 (Module boundary independence) — **High**
-- QAS-10 (External integration replacement) — **Medium**
-- QAS-13 (Domain logic isolation for testing) — **Medium**
-
-### 8.3 Design Concepts Chosen
-
-| Tactic | Addresses | Description |
-|---|---|---|
-| **Hexagonal Architecture (Ports & Adapters) per module** | QAS-9, QAS-10, QAS-13 | Each module has four internal layers: `api` → `application` → `domain` → `infrastructure`. Domain layer has no dependency on infrastructure — it defines interfaces (ports) that infrastructure implements (adapters). |
-| **Strategy pattern for business policies** | QAS-9, QAS-10 | Pricing, discount application, payment processing, allocation, and recommendation policies are implemented as strategy interfaces. Swapping a payment provider means implementing a new adapter — zero changes to domain. |
-| **Domain events for cross-module side effects** | QAS-9 | When one module needs to trigger behavior in another (e.g., `OrderPaid` → send notification), it publishes a domain event. The consuming module subscribes independently. No direct service-to-service coupling. |
-| **Repository pattern for data access** | QAS-13 | Domain services depend on repository interfaces, not JPA entities. Tests can provide in-memory implementations. |
-| **Testcontainers for integration tests** | QAS-13 | Integration tests use Testcontainers to spin up PostgreSQL and Redis in Docker — no shared test database required. |
-
-### 8.4 Module Internal Layer Dependency Rule
-
+Commerce --> Inventory : reserve/release stock
+Commerce --> Catalog : product and price reads
+Commerce --> Shared : audit, notification
+POS --> Inventory : decrement/restock
+POS --> Shared : audit, invoice notification
+Marketing --> Catalog : media and product metadata
+Engagement --> Catalog : review aggregate updates
+Identity --> Shared : security events
+@enduml
 ```
-api → application → domain ← infrastructure
-                       ↑
-              (interfaces defined here,
-               implemented by infrastructure)
+
+## 3.2 Implementation View
+
+The implementation view maps logical modules to code organization. Each backend module follows hexagonal architecture so domain logic remains independent from web, database, and integration details.
+
+```text
+com.seshop
+├── identity/
+│   ├── api/
+│   ├── application/
+│   ├── domain/
+│   └── infrastructure/
+├── catalog/
+├── inventory/
+├── commerce/
+├── pos/
+├── marketing/
+├── engagement/
+└── shared/
+    ├── security/
+    ├── audit/
+    ├── exception/
+    ├── config/
+    └── util/
 ```
 
-The `domain` layer is the core with zero outward dependencies. `application` orchestrates domain services. `api` handles HTTP. `infrastructure` implements persistence and external adapters.
-
-This is detailed in [LLD — Backend Package and Module Structure](SESHOP%20LLD.md) and [HLD Section 9](SESHOP%20HLD.md).
-
-### 8.5 Rationale
-
-Hexagonal architecture with the dependency inversion rule means that domain logic (the most business-critical and frequently changing code) is testable in isolation. Integration adapters (the most volatile external dependency) can be replaced without modifying business rules. This directly addresses the modifiability, testability, and integration-swap ASRs.
-
----
-
-## 9. Design Summary
-
-| Iteration | Focus | Key Decision | Primary Tactic |
-|---|---|---|---|
-| 1 | System Structure | Modular Monolith with 8 bounded contexts | Domain decomposition; 3-tier topology |
-| 2 | Reliability | ACID transactions across modules; pessimistic locking | Transaction management; idempotency; outbox |
-| 3 | Security & Audit | Permission-driven RBAC; append-only audit log | Least privilege; AOP audit; token encryption |
-| 4 | Performance | Indexed queries; Redis caching; computed availability | Caching; indexing; pagination |
-| 5 | Modifiability | Hexagonal architecture per module; strategy pattern | Ports & adapters; dependency inversion |
-
-### Cross-Cutting Design Decisions
-
-| Decision | Scope | Reference |
+| Layer | Contents | Dependency Rule |
 |---|---|---|
-| REST API with `/api/v1` versioning | All modules | [API Spec](SESHOP%20API%20Spec.md) |
-| Standard error envelope (`code`, `message`, `details`, `traceId`) | All modules | [API Spec](SESHOP%20API%20Spec.md) Section 7 |
-| Structured logging with correlation IDs | All modules | [HLD Section 15](SESHOP%20HLD.md) |
-| Flyway for migration management | Database | CON-8 |
-| Vi/En localization | UI & messages | CON-10, [SRS Section 3.3](../10.SRS/SESHOP%20SRS.md) |
+| `api` | Controllers, DTOs, request validation, HTTP mapping | Depends on `application` only. |
+| `application` | Use cases, transactions, commands, queries, orchestration | Depends on `domain` ports and services. |
+| `domain` | Entities, value objects, domain services, policies, port interfaces | No dependency on framework or persistence code. |
+| `infrastructure` | JPA repositories, external clients, cache adapters, storage adapters | Implements interfaces defined by `domain` or `application`. |
 
----
+**Dependency direction:** `api -> application -> domain <- infrastructure`
 
-## 10. Verification Against ASR
+## 3.3 Deployment View
 
-| ASR | Addressed In | Design Decision | Verification Method |
-|---|---|---|---|
-| QAS-1 (Search ≤ 2s) | Iteration 4 | Indexing + Redis cache | Load test product search endpoint |
-| QAS-2 (Inventory ≤ 500ms) | Iteration 4 | Direct SQL with indexes | Benchmark inventory adjustment latency |
-| QAS-3 (Checkout consistency) | Iteration 2 | ACID + pessimistic locks + idempotency | Concurrent checkout stress test |
-| QAS-4 (99.9% availability) | Iteration 2 | Health probes + horizontal scaling | Uptime monitoring |
-| QAS-5 (RBAC enforcement) | Iteration 3 | Permission-driven auth, server-enforced | Penetration test; role-based API test suite |
-| QAS-6 (Data protection) | Iteration 3 | Hashing, encryption, TLS | Security audit; credential scan |
-| QAS-7 (Audit trail) | Iteration 3 | Append-only table + AOP | Verify no DELETE/UPDATE on `audit_logs`; coverage test |
-| QAS-8 (Scalability) | Iteration 4 | Normalized schema; stateless app | Add location/SKU without migration |
-| QAS-9 (Module boundaries) | Iteration 1 + 5 | Domain decomposition + hexagonal | Compile-time dependency analysis |
-| QAS-10 (Integration swap) | Iteration 5 | Strategy + adapter pattern | Implement mock adapter; verify zero domain changes |
-| QAS-11 (Staff UX) | Iteration 1 | Keyboard-first POS design | UX testing with trained staff |
-| QAS-12 (Checkout UX) | Iteration 1 | Multi-step SPA flow | Usability testing |
-| QAS-13 (Testability) | Iteration 5 | Repository interfaces + Testcontainers | Run domain tests without DB |
-| QAS-14 (External failure) | Iteration 2 | Bounded retry + adapter | Fault injection testing |
+SeShop deploys as a React SPA plus one or more stateless Spring Boot API instances backed by PostgreSQL, Redis, object storage, and approved external providers.
+
+```plantuml
+@startuml
+node "CDN / Static Hosting" {
+  [React SPA Bundle]
+}
+
+node "Application Tier" {
+  [Spring Boot API]
+  [Async Worker]
+}
+
+database "Managed PostgreSQL" as DB
+database "Managed Redis" as Redis
+cloud "Object Storage" as Storage
+cloud "Stripe" as Stripe
+cloud "Shipping Provider" as Shipping
+cloud "Instagram API" as Instagram
+cloud "AI Service" as AI
+
+[React SPA Bundle] --> [Spring Boot API] : HTTPS REST/JSON
+[Spring Boot API] --> DB : JDBC
+[Spring Boot API] --> Redis : cache reads/writes
+[Spring Boot API] --> Storage : media upload/read
+[Spring Boot API] --> Stripe : payment adapter
+[Spring Boot API] --> Shipping : shipment adapter
+[Spring Boot API] --> Instagram : OAuth + media draft support
+[Spring Boot API] --> AI : recommendation adapter
+[Spring Boot API] --> [Async Worker] : scheduled/async jobs
+@enduml
+```
+
+| Environment | Purpose | Notes |
+|---|---|---|
+| Development | Local implementation and feature testing | Docker Compose may provide PostgreSQL and Redis. |
+| Staging/UAT | Acceptance validation before release | Same architecture shape as production with controlled test data. |
+| Production | Live customer and staff operation | Managed database/cache/storage, monitored API instances, reviewed migrations. |
+
+## 3.4 Data View
+
+The data view is organized around table ownership. PostgreSQL is the source of truth, and each module owns a defined subset of tables.
+
+| Module | Owned Tables |
+|---|---|
+| Identity & RBAC | `users`, `roles`, `permissions`, `role_permissions`, `user_roles`, `audit_logs` |
+| Catalog | `categories`, `products`, `product_categories`, `product_variants`, `product_images` |
+| Inventory | `locations`, `inventory_balances`, `inventory_transfers`, `inventory_transfer_items`, `cycle_counts`, `cycle_count_items`, `suppliers`, `purchase_orders`, `purchase_order_items`, `goods_receipts`, `goods_receipt_items` |
+| Commerce | `carts`, `cart_items`, `orders`, `order_items`, `order_allocations`, `shipments`, `payments`, `discount_codes`, `discount_redemptions` |
+| POS & Returns | `pos_shifts`, `pos_receipts`, `pos_receipt_items`, `cash_reconciliations`, `return_requests`, `return_items`, `refunds`, `exchanges`, `tax_invoices`, `invoice_adjustment_notes` |
+| Marketing & Social | `instagram_connections`, `instagram_drafts` |
+| Customer Engagement | `reviews` |
+
+Data rules:
+
+- Tables have one owning module.
+- Cross-module reads and writes go through application services, not direct table access.
+- Stock-affecting commands use transaction boundaries and row locks where required.
+- Business identifiers such as `orderNumber`, `skuCode`, `poNumber`, and `invoiceNumber` are exposed for user-facing workflows while numeric IDs remain internal identifiers.
+- Media files are stored in object storage; PostgreSQL stores metadata and URLs.

@@ -2,6 +2,7 @@ package com.seshop.inventory.api;
 
 import com.seshop.inventory.api.dto.CreateTransferRequest;
 import com.seshop.inventory.api.dto.InventoryAdjustmentRequest;
+import com.seshop.inventory.api.dto.InventoryAdjustmentResponse;
 import com.seshop.inventory.api.dto.ReceiveTransferRequest;
 import com.seshop.inventory.application.InventoryService;
 import com.seshop.shared.api.ApiResponse;
@@ -36,13 +37,9 @@ public class StaffInventoryController {
     }
 
     @PostMapping("/adjustments")
-    public ResponseEntity<Map<String, Object>> adjustInventory(@Valid @RequestBody InventoryAdjustmentRequest request) {
-        inventoryService.adjustInventory(request);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Inventory adjusted successfully");
-        
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<InventoryAdjustmentResponse> adjustInventory(@Valid @RequestBody InventoryAdjustmentRequest request) {
+        return ApiResponse.success(inventoryService.adjustInventory(request));
     }
 
     @PostMapping("/transfers")

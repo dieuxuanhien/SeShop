@@ -10,6 +10,10 @@ public class CloseShiftRequest {
 
     @PositiveOrZero(message = "Actual cash cannot be negative")
     private BigDecimal actualCash;
+
+    @PositiveOrZero(message = "Expected cash cannot be negative")
+    private BigDecimal expectedCash;
+
     private String reason;
 
     // Getters and Setters
@@ -17,6 +21,8 @@ public class CloseShiftRequest {
     public void setEndingCash(BigDecimal endingCash) { this.endingCash = endingCash; }
     public BigDecimal getActualCash() { return actualCash; }
     public void setActualCash(BigDecimal actualCash) { this.actualCash = actualCash; }
+    public BigDecimal getExpectedCash() { return expectedCash; }
+    public void setExpectedCash(BigDecimal expectedCash) { this.expectedCash = expectedCash; }
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
 

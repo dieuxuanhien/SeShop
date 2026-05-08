@@ -68,7 +68,7 @@ public class InstagramService {
         InstagramConnectionEntity entity = connectionRepository.findByUserId(userId).orElse(new InstagramConnectionEntity());
         entity.setUserId(userId);
         entity.setAccountId(account.accountId());
-        entity.setTokenEncrypted(tokenResult.accessToken());
+        entity.setTokenEncrypted(account.accessToken());
         entity.setTokenExpiresAt(OffsetDateTime.now().plusSeconds(tokenResult.expiresInSeconds()));
         entity.setStatus("CONNECTED");
         return mapConnectionToDto(connectionRepository.save(entity));

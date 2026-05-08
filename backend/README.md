@@ -1,12 +1,55 @@
 # SESHOP Backend - Hướng dẫn Triển khai
 
 **Backend**: Java + Spring Boot + PostgreSQL  
-**Status**: Planning Phase  
-**Last Updated**: 2026-04-29
+**Status**: Implementation Phase
+**Last Updated**: 2026-05-07
 
 ---
 
 ## 📋 Cấu trúc Backend
+
+Authoritative folder rules are tracked in [SESHOP Folder Structure](../docs/3.Design/SESHOP%20Folder%20Structure.md). The backend follows a Spring Boot modular monolith layout: `SeShopApplication` stays at the root package `com.seshop`, and each direct sub-package is a business module or cross-cutting shared module.
+
+```text
+backend/src/main/java/com/seshop/
+├── SeShopApplication.java
+├── audit/
+│   ├── api/
+│   ├── application/
+│   ├── domain/
+│   └── infrastructure/persistence/
+├── catalog/
+├── commerce/
+├── identity/
+├── inventory/
+├── marketing/
+├── notification/
+├── payment/
+├── pos/
+├── refund/
+├── review/
+├── shipping/
+└── shared/
+    ├── api/
+    ├── config/
+    ├── domain/
+    ├── exception/
+    ├── security/
+    └── util/
+```
+
+### Module conventions
+
+- `api/`: REST controllers and request/response DTOs.
+- `application/`: use cases, orchestration, transaction boundaries.
+- `domain/`: enums, policies, domain contracts, and business terms.
+- `infrastructure/`: persistence entities/repositories and external adapters.
+- `shared/`: generic framework plumbing only; business-owned concepts stay in their owning module.
+
+The duplicate `com.seshop.shared.audit` package was removed. Audit logging now has a single home in `com.seshop.audit`, preventing duplicate Spring bean names and keeping the module boundary clear.
+
+<details>
+<summary>Archived initial planning tree</summary>
 
 ```
 src/main/java/com/seshop/
@@ -224,6 +267,8 @@ src/main/java/com/seshop/
 │       └── IdempotencyUtils.java
 ```
 
+</details>
+
 ---
 
 ## 🎯 Use Cases & API Reference
@@ -257,4 +302,3 @@ RBAC and permission definitions are defined in:
 ## 📚 Implementation Order
 
 See [IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md) for the implementation sequence.
-
