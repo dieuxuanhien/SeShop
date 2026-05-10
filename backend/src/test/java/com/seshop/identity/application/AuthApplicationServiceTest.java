@@ -1,0 +1,172 @@
+package com.seshop.identity.application;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+
+import com.seshop.audit.application.AuditService;
+import com.seshop.identity.domain.UserStatus;
+import com.seshop.identity.domain.UserType;
+import com.seshop.identity.infrastructure.persistence.RolePermissionRepository;
+import com.seshop.identity.infrastructure.persistence.UserEntity;
+import com.seshop.identity.infrastructure.persistence.UserRepository;
+import com.seshop.identity.infrastructure.persistence.UserRoleRepository;
+import com.seshop.shared.exception.DuplicateResourceException;
+import com.seshop.shared.security.JwtTokenProvider;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+/**
+ * UC12: Register account – BR34 (unique identity), BR35 (verification), BR36 (password).
+ * Login: valid credentials, wrong password, inactive user.
+ */
+@ExtendWith(MockitoExtension.class)
+class AuthApplicationServiceTest {
+
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private UserRoleRepository userRoleRepository;
+    @Mock
+    private RolePermissionRepository rolePermissionRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
+    @Mock
+    private AuditService auditService;
+
+    private AuthApplicationService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new AuthApplicationService(
+                userRepository,
+                userRoleRepository,
+                rolePermissionRepository,
+                passwordEncoder,
+                jwtTokenProvider,
+                auditService
+        );
+    }
+
+    // ── register ────────────────────────────────────────────────────────────
+
+    @Test
+    void registerCreatesCustomerUserAndReturnsResult() {
+        given(userRepository.existsByUsername("alice")).willReturn(false);
+        given(userRepository.existsByEmail("alice@example.com")).willReturn(false);
+        given(userRepository.existsByPhoneNumber("+84901000001")).willReturn(false);
+        given(passwordEncoder.encode("P@ssw0rd!")).willReturn("hashed");
+        given(userRepository.save(any(UserEntity.class))).willAnswer(inv -> {
+            UserEntity u = inv.getArgument(0);
+            u.setId(100L);
+            return u;
+        });
+
+        RegisterResult result = service.register(new RegisterCommand(
+                "alice", "alice@example.com", "+84901000001", "P@ssw0rd!"
+        ));
+
+        assertThat(result.userId()).isEqualTo(100L);
+        assertThat(result.userType()).isEqualTo("CUSTOMER");
+        assertThat(result.status()).isEqualTo("ACTIVE");
+        then(auditService).should().write(any(), any(), any(), any());
+    }
+
+    @Test
+    void registerRejectsDuplicateUsername() {
+        given(userRepository.existsByUsername("alice")).willReturn(true);
+
+        assertThatThrownBy(() -> service.register(
+                new RegisterCommand("alice", "new@example.com", "+84901000002", "P@ssw0rd!")
+        )).isInstanceOf(DuplicateResourceException.class);
+    }
+
+    @Test
+    void registerRejectsDuplicateEmail() {
+        given(userRepository.existsByUsername("bob")).willReturn(false);
+        given(userRepository.existsByEmail("dup@example.com")).willReturn(true);
+
+        assertThatThrownBy(() -> service.register(
+                new RegisterCommand("bob", "dup@example.com", "+84901000003", "P@ssw0rd!")
+        )).isInstanceOf(DuplicateResourceException.class);
+    }
+
+    @Test
+    void registerRejectsDuplicatePhone() {
+        given(userRepository.existsByUsername("charlie")).willReturn(false);
+        given(userRepository.existsByEmail("charlie@example.com")).willReturn(false);
+        given(userRepository.existsByPhoneNumber("+84901000001")).willReturn(true);
+
+        assertThatThrownBy(() -> service.register(
+                new RegisterCommand("charlie", "charlie@example.com", "+84901000001", "P@ssw0rd!")
+        )).isInstanceOf(DuplicateResourceException.class);
+    }
+
+    // ── login ───────────────────────────────────────────────────────────────
+
+    @Test
+    void loginReturnsTokenForValidCredentials() {
+        UserEntity user = activeUser(42L, "alice", "alice@example.com");
+        given(userRepository.findByUsernameOrEmail("alice", "alice")).willReturn(Optional.of(user));
+        given(passwordEncoder.matches("P@ssw0rd!", "hashed")).willReturn(true);
+        given(userRoleRepository.findByUserIdAndRevokedAtIsNull(42L)).willReturn(List.of());
+        given(jwtTokenProvider.generate(any())).willReturn("jwt-token");
+
+        LoginResult result = service.login(new LoginCommand("alice", "P@ssw0rd!"));
+
+        assertThat(result.accessToken()).isEqualTo("jwt-token");
+    }
+
+    @Test
+    void loginRejectsWrongPassword() {
+        UserEntity user = activeUser(42L, "alice", "alice@example.com");
+        given(userRepository.findByUsernameOrEmail("alice", "alice")).willReturn(Optional.of(user));
+        given(passwordEncoder.matches("wrong", "hashed")).willReturn(false);
+
+        assertThatThrownBy(() -> service.login(new LoginCommand("alice", "wrong")))
+                .isInstanceOf(BadCredentialsException.class);
+    }
+
+    @Test
+    void loginRejectsInactiveUser() {
+        UserEntity user = activeUser(99L, "disabled", "disabled@example.com");
+        user.setStatus(UserStatus.INACTIVE);
+        given(userRepository.findByUsernameOrEmail("disabled", "disabled")).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> service.login(new LoginCommand("disabled", "any")))
+                .isInstanceOf(BadCredentialsException.class);
+    }
+
+    @Test
+    void loginRejectsUnknownUser() {
+        given(userRepository.findByUsernameOrEmail("ghost", "ghost")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.login(new LoginCommand("ghost", "pass")))
+                .isInstanceOf(BadCredentialsException.class);
+    }
+
+    // ── helpers ─────────────────────────────────────────────────────────────
+
+    private UserEntity activeUser(Long id, String username, String email) {
+        UserEntity u = new UserEntity();
+        u.setId(id);
+        u.setUsername(username);
+        u.setEmail(email);
+        u.setPhoneNumber("+84900000000");
+        u.setPasswordHash("hashed");
+        u.setUserType(UserType.CUSTOMER);
+        u.setStatus(UserStatus.ACTIVE);
+        return u;
+    }
+}

@@ -28,21 +28,20 @@ export function ProductDetail() {
   const [cartError, setCartError] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  if (isLoading) return <ProductDetailSkeleton />;
-  if (!product) return <div className="py-20 text-center text-surface/50">Product not found.</div>;
-
-  // Derive variant options
-  const sizes = [...new Set(product.variants.filter((v) => v.size).map((v) => v.size!))];
-  const colorOptions = product.variants.reduce<Record<string, string>>((acc, v) => {
+  const sizes = product ? [...new Set(product.variants.filter((v) => v.size).map((v) => v.size!))] : [];
+  const colorOptions = product ? product.variants.reduce<Record<string, string>>((acc, v) => {
     if (v.color && v.colorHex && !acc[v.color]) acc[v.color] = v.colorHex;
     return acc;
-  }, {});
+  }, {}) : {};
   const colorKeys = Object.keys(colorOptions);
 
   useEffect(() => {
     if (!selectedSize && sizes.length > 0) setSelectedSize(sizes[0]);
     if (!selectedColor && colorKeys.length > 0) setSelectedColor(colorKeys[0]);
   }, [colorKeys, selectedColor, selectedSize, sizes]);
+
+  if (isLoading) return <ProductDetailSkeleton />;
+  if (!product) return <div className="py-20 text-center text-surface/50">Product not found.</div>;
 
   // Find matching variant
   const matchedVariant: ProductVariant | undefined = product.variants.find(

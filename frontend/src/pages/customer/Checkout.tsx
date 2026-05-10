@@ -81,7 +81,7 @@ export function Checkout() {
         discountCode: discountAmount > 0 ? discountCode : undefined,
       };
       const res = await processCheckout(req);
-      setOrderResponse(res);
+      setOrderResponse({ ...res, totalAmount: total });
       clearCart();
       setStep(3); // success
     } catch (err) {
@@ -100,7 +100,7 @@ export function Checkout() {
         </p>
         <div className="mb-8 inline-block rounded-md border border-primary/20 bg-surface p-6 text-left text-ink">
           <p><strong>Payment Status:</strong> {orderResponse.paymentStatus}</p>
-          <p><strong>Total:</strong> {total.toLocaleString()} VND</p>
+          <p><strong>Total:</strong> {orderResponse.totalAmount?.toLocaleString() ?? 0} VND</p>
         </div>
         <div>
           <Button onClick={() => navigate('/orders')}>View My Orders</Button>
