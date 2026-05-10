@@ -12,9 +12,12 @@ import com.seshop.pos.infrastructure.persistence.PosReceiptItemEntity;
 import com.seshop.pos.infrastructure.persistence.PosReceiptRepository;
 import com.seshop.pos.infrastructure.persistence.PosShiftEntity;
 import com.seshop.pos.infrastructure.persistence.PosShiftRepository;
+import com.seshop.shared.api.PageResponse;
 import com.seshop.shared.exception.BusinessException;
 import com.seshop.shared.exception.ForbiddenOperationException;
 import com.seshop.shared.exception.ResourceNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +53,17 @@ public class ReceiptService {
         PosReceiptEntity receipt = receiptRepository.findById(receiptId)
                 .orElseThrow(() -> new ResourceNotFoundException("POS_404", "Receipt not found"));
         return mapToDto(receipt);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ReceiptDto> listReceipts(int page, int size) {
+        Page<PosReceiptEntity> receipts = receiptRepository.findAll(PageRequest.of(page, size));
+        return new PageResponse<>(
+                receipts.getContent().stream().map(this::mapToDto).toList(),
+                receipts.getNumber(),
+                receipts.getSize(),
+                receipts.getTotalElements(),
+                receipts.getTotalPages());
     }
 
     public ProcessPosSaleResponse createReceipt(ProcessPosSaleRequest request, Long staffId) {

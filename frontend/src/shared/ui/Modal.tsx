@@ -42,12 +42,12 @@ export function Modal({ open, isOpen, onClose, children, className = '', title }
 
       {/* Content */}
       <div
-        className={`relative z-10 max-h-[90vh] overflow-auto rounded-lg border border-primary/10 bg-ink shadow-soft animate-fade-in-up ${className}`}
+        className={`relative z-10 max-h-[90vh] overflow-auto rounded-md border border-primary/20 bg-surface text-ink shadow-soft animate-fade-in-up ${className}`}
       >
-        {title ? <div className="border-b border-primary/10 px-6 py-4 pr-12 text-lg font-semibold text-surface">{title}</div> : null}
+        {title ? <div className="border-b border-primary/10 px-6 py-4 pr-12 text-lg font-semibold text-ink">{title}</div> : null}
         <button
           onClick={onClose}
-          className="absolute right-3 top-3 z-20 rounded-full p-1.5 text-surface/60 hover:bg-surface/10 hover:text-surface transition-colors"
+          className="absolute right-3 top-3 z-20 rounded-full p-1.5 text-ink/60 transition-colors hover:bg-ink/10 hover:text-ink"
           aria-label="Close"
         >
           <X size={18} />

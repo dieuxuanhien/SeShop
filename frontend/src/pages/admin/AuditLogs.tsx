@@ -10,6 +10,9 @@ import { getAuditLogs, type AuditLog } from '@/features/admin/api/adminApi';
 export function AuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [actor, setActor] = useState('');
+  const [action, setAction] = useState('');
+  const [status, setStatus] = useState('ALL');
 
   useEffect(() => {
     getAuditLogs()
@@ -18,20 +21,36 @@ export function AuditLogs() {
       .finally(() => setIsLoading(false));
   }, []);
 
+  const filteredLogs = logs.filter((log) => {
+    const actorMatches = actor ? log.actor.toLowerCase().includes(actor.toLowerCase()) : true;
+    const actionMatches = action ? log.action.toLowerCase().includes(action.toLowerCase()) : true;
+    const statusMatches = status === 'ALL' ? true : log.status === status;
+    return actorMatches && actionMatches && statusMatches;
+  });
+
+  function handleExport() {
+    const csv = [
+      'id,action,actor,target,status,createdAt',
+      ...filteredLogs.map((log) => [log.id, log.action, log.actor, log.target, log.status, log.createdAt].join(',')),
+    ].join('\n');
+    navigator.clipboard?.writeText(csv).catch(() => undefined);
+  }
+
   return (
     <PageScaffold
       title="Audit & Compliance Logs"
       viewCode="ADMIN_004"
-      purpose="Read-only audit table with filters for actor, action, target, and time range."
-      endpoints={['GET /admin/audit-logs']}
+      purpose="Review sensitive actions with actor, target, and status filters."
     >
       <div className="grid gap-6">
         <Card className="border border-primary/20 bg-surface/95 p-5">
           <div className="grid gap-4 lg:grid-cols-[repeat(4,minmax(0,1fr))_140px]">
-            <Input label="Actor" placeholder="Search by user" />
-            <Input label="Action" placeholder="action type" />
+            <Input label="Actor" placeholder="Search by user" value={actor} onChange={(event) => setActor(event.target.value)} />
+            <Input label="Action" placeholder="action type" value={action} onChange={(event) => setAction(event.target.value)} />
             <Select
               label="Status"
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
               options={[
                 { label: 'All', value: 'ALL' },
                 { label: 'OK', value: 'OK' },
@@ -40,7 +59,7 @@ export function AuditLogs() {
             />
             <Input label="Date Range" placeholder="Last 24 hours" />
             <div className="flex items-end">
-              <Button variant="secondary" className="w-full">Apply</Button>
+              <Button variant="secondary" className="w-full" onClick={() => undefined}>Apply</Button>
             </div>
           </div>
         </Card>
@@ -51,7 +70,7 @@ export function AuditLogs() {
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Audit Stream</h2>
               <p className="mt-1 text-xs text-ink/50">Immutable trail of sensitive actions.</p>
             </div>
-            <Button variant="secondary">Export</Button>
+            <Button variant="secondary" onClick={handleExport}>Export</Button>
           </div>
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -70,11 +89,11 @@ export function AuditLogs() {
                   <tr>
                     <td colSpan={6} className="px-3 py-6 text-center text-sm text-ink/60">Loading audit logs...</td>
                   </tr>
-                ) : logs.length === 0 ? (
+                ) : filteredLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-ink/60">No audit logs returned by the API.</td>
+                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-ink/60">No audit logs match the current filters.</td>
                   </tr>
-                ) : logs.map((log) => (
+                ) : filteredLogs.map((log) => (
                   <tr key={log.id} className="text-ink/80">
                     <td className="px-3 py-3 font-semibold text-ink">AUD-{log.id}</td>
                     <td className="px-3 py-3">{log.action}</td>

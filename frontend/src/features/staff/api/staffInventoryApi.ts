@@ -22,6 +22,26 @@ export type StockTransfer = {
   createdAt: string;
 };
 
+export type TransferItemRequest = {
+  variantId: number;
+  qty: number;
+};
+
+export type CreateTransferRequest = {
+  sourceLocationId: number;
+  destinationLocationId: number;
+  reason?: string;
+  items: TransferItemRequest[];
+};
+
+export type ReceiveTransferRequest = {
+  receivedItems: Array<{
+    variantId: number;
+    receivedQty: number;
+    damagedQty: number;
+  }>;
+};
+
 export async function getInventoryBalances(page = 1, size = 20): Promise<PageResponse<InventoryBalance>> {
   const response = await apiClient.get<ApiResponse<PageResponse<InventoryBalance>>>('/staff/inventory/balances', {
     params: { page: page - 1, size },
@@ -46,4 +66,17 @@ export async function getStockTransfers(page = 1, size = 20): Promise<PageRespon
   });
   const data = response.data.data;
   return { ...data, page: data.page + 1 };
+}
+
+export async function createStockTransfer(request: CreateTransferRequest): Promise<{ transferId: number }> {
+  const response = await apiClient.post<ApiResponse<{ transferId: number }>>('/staff/inventory/transfers', request);
+  return response.data.data;
+}
+
+export async function approveStockTransfer(transferId: number): Promise<void> {
+  await apiClient.post(`/staff/inventory/transfers/${transferId}/approve`);
+}
+
+export async function receiveStockTransfer(transferId: number, request: ReceiveTransferRequest): Promise<void> {
+  await apiClient.post(`/staff/inventory/transfers/${transferId}/receive`, request);
 }

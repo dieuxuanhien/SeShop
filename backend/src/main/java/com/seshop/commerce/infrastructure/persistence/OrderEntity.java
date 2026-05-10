@@ -14,7 +14,7 @@ public class OrderEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "customer_id", nullable = false)
+    @Column(name = "customer_user_id", nullable = false)
     private Long customerId;
 
     @Column(name = "order_number", nullable = false, unique = true, length = 50)

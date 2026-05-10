@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, NavLink } from 'react-router-dom';
 import { ChevronRight, Heart, MapPin, Minus, Plus, ShoppingBag, Star, Truck } from 'lucide-react';
 import { useProduct } from '@/features/catalog/model/catalogHooks';
@@ -37,23 +37,20 @@ export function ProductDetail() {
     if (v.color && v.colorHex && !acc[v.color]) acc[v.color] = v.colorHex;
     return acc;
   }, {});
+  const colorKeys = Object.keys(colorOptions);
+
+  useEffect(() => {
+    if (!selectedSize && sizes.length > 0) setSelectedSize(sizes[0]);
+    if (!selectedColor && colorKeys.length > 0) setSelectedColor(colorKeys[0]);
+  }, [colorKeys, selectedColor, selectedSize, sizes]);
 
   // Find matching variant
   const matchedVariant: ProductVariant | undefined = product.variants.find(
-    (v) => v.size === selectedSize && v.color === selectedColor,
+    (v) => (sizes.length === 0 || v.size === selectedSize) && (colorKeys.length === 0 || v.color === selectedColor),
   );
   const displayPrice = matchedVariant?.price ?? product.variants[0]?.price ?? 0;
   const compareAt = matchedVariant?.compareAtPrice ?? product.variants[0]?.compareAtPrice;
   const hasDiscount = compareAt && compareAt > displayPrice;
-
-  // Auto-select first options
-  if (!selectedSize && sizes.length > 0 && selectedSize === null) {
-    setTimeout(() => setSelectedSize(sizes[0]), 0);
-  }
-  const colorKeys = Object.keys(colorOptions);
-  if (!selectedColor && colorKeys.length > 0 && selectedColor === null) {
-    setTimeout(() => setSelectedColor(colorKeys[0]), 0);
-  }
 
   async function handleAddToCart() {
     if (!matchedVariant) return;
@@ -102,11 +99,17 @@ export function ProductDetail() {
               onClick={() => setLightboxUrl(heroImage ?? null)}
               className="relative aspect-[3/4] w-full overflow-hidden bg-surface/5 cursor-zoom-in group"
             >
-              <img
-                src={heroImage}
-                alt={product.name}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
+              {heroImage ? (
+                <img
+                  src={heroImage}
+                  alt={product.name}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-widest text-surface/40">
+                  No image
+                </div>
+              )}
               {hasDiscount && (
                 <Badge variant="sale" className="absolute top-4 left-4">Sale</Badge>
               )}
@@ -176,7 +179,7 @@ export function ProductDetail() {
             {sizes.length > 0 && (
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-surface/60 mb-3">
-                  Size — <span className="text-surface/80">{selectedSize}</span>
+                  Size - <span className="text-surface/80">{selectedSize}</span>
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {sizes.map((size) => (
@@ -200,7 +203,7 @@ export function ProductDetail() {
             {colorKeys.length > 0 && (
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-surface/60 mb-3">
-                  Color — <span className="text-surface/80">{selectedColor}</span>
+                  Color - <span className="text-surface/80">{selectedColor}</span>
                 </h3>
                 <div className="flex flex-wrap gap-3">
                   {colorKeys.map((color) => (
@@ -268,7 +271,7 @@ export function ProductDetail() {
             <div className="space-y-3 pt-2">
               <div className="flex items-center gap-3 text-sm text-surface/60">
                 <Truck size={16} className="text-primary/70" />
-                <span>Complimentary shipping on orders over 2.000.000₫</span>
+                <span>Complimentary shipping on orders over 2.000.000 VND</span>
               </div>
               <NavLink
                 to={`/products/${product.id}/availability`}
@@ -321,17 +324,17 @@ export function ProductDetail() {
             )}
             {activeTab === 'shipping' && (
               <div className="space-y-4 text-sm text-surface/70">
-                <p>• Standard shipping: 3–5 business days</p>
-                <p>• Express shipping: 1–2 business days</p>
-                <p>• Free shipping on orders over 2.000.000₫</p>
-                <p>• Returns accepted within 30 days of purchase</p>
-                <p>• Please refer to the care label attached to the garment for specific care instructions.</p>
+                <p>Standard shipping: 3-5 business days</p>
+                <p>Express shipping: 1-2 business days</p>
+                <p>Free shipping on orders over 2.000.000 VND</p>
+                <p>Returns accepted within 30 days of purchase</p>
+                <p>Please refer to the care label attached to the garment for specific care instructions.</p>
               </div>
             )}
             {activeTab === 'reviews' && (
-              <div className="text-sm text-surface/50 italic">
-                Reviews will be available in Phase 3. Check back soon.
-              </div>
+              <NavLink to={`/products/${product.id}/reviews`} className="text-sm text-primary hover:underline">
+                Read and write reviews for this product.
+              </NavLink>
             )}
           </div>
         </div>

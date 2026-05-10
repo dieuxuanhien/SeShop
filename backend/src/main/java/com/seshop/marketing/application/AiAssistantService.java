@@ -1,5 +1,7 @@
 package com.seshop.marketing.application;
 
+import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
+import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
 import com.seshop.marketing.api.dto.AiRecommendationRequest;
 import com.seshop.marketing.api.dto.AiRecommendationResponse;
 import com.seshop.marketing.infrastructure.GeminiClient;
@@ -7,14 +9,17 @@ import com.seshop.shared.exception.SeShopValidationException;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Comparator;
 
 @Service
 public class AiAssistantService {
 
     private final GeminiClient geminiClient;
+    private final ProductVariantRepository productVariantRepository;
 
-    public AiAssistantService(GeminiClient geminiClient) {
+    public AiAssistantService(GeminiClient geminiClient, ProductVariantRepository productVariantRepository) {
         this.geminiClient = geminiClient;
+        this.productVariantRepository = productVariantRepository;
     }
 
     public AiRecommendationResponse getRecommendations(AiRecommendationRequest request) {
@@ -33,12 +38,16 @@ public class AiAssistantService {
         AiRecommendationResponse response = new AiRecommendationResponse();
         response.setAnswer(answer);
         
-        AiRecommendationResponse.RecommendedItem item = new AiRecommendationResponse.RecommendedItem();
-        item.setProductId(501L);
-        item.setVariantId(7001L);
-        item.setReason("In stock and closest to your request");
-        
-        response.setItems(Collections.singletonList(item));
+        productVariantRepository.findAll().stream()
+                .filter(variant -> "ACTIVE".equals(variant.getStatus()))
+                .min(Comparator.comparing(ProductVariantEntity::getId))
+                .ifPresentOrElse(variant -> {
+                    AiRecommendationResponse.RecommendedItem item = new AiRecommendationResponse.RecommendedItem();
+                    item.setProductId(variant.getProduct().getId());
+                    item.setVariantId(variant.getId());
+                    item.setReason("Available in the current catalog and closest to your request");
+                    response.setItems(Collections.singletonList(item));
+                }, () -> response.setItems(Collections.emptyList()));
         return response;
     }
 

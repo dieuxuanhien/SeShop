@@ -42,41 +42,41 @@ export function OrdersManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Orders Management</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage order fulfillment workflow.</p>
+          <h1 className="font-display text-2xl font-semibold text-surface">Orders Management</h1>
+          <p className="mt-1 text-sm text-surface/60">Manage order fulfillment workflow.</p>
         </div>
       </div>
 
-      <Card>
+      <Card className="border-primary/20 bg-surface/95">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-primary/10">
+            <thead className="bg-ink/[0.03]">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Order</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Customer</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Total</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Payment</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Status</th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-ink/50">Action</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-primary/10 bg-surface">
               {orders.map((order) => (
                 <tr key={order.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.orderNumber}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.shippingAddress}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.totalAmount.toLocaleString()} VND</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">API</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">{order.orderNumber}</td>
+                  <td className="max-w-xs truncate px-6 py-4 whitespace-nowrap text-sm text-ink/60">{order.shippingAddress}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">{order.totalAmount.toLocaleString()} VND</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">Gateway</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <Badge variant={order.status === 'SHIPPED' || order.status === 'DELIVERED' ? 'success' : order.status === 'CANCELLED' ? 'danger' : 'warning'}>
                       {order.status}
@@ -103,7 +103,7 @@ export function OrdersManagement() {
               ))}
               {orders.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-ink/55">
                     No orders found.
                   </td>
                 </tr>

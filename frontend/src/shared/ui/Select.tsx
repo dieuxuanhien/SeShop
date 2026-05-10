@@ -18,14 +18,14 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className={`grid gap-1.5 ${className}`}>
         {label ? (
-          <label className="text-xs font-semibold uppercase tracking-wide text-surface/70">
+          <label className="text-xs font-semibold uppercase tracking-wide text-ink/55">
             {label}
           </label>
         ) : null}
         <div className="relative">
           <select
             ref={ref}
-            className={`w-full appearance-none rounded-md border bg-ink/80 px-3 py-2.5 pr-9 text-sm text-surface outline-none transition ${
+            className={`w-full appearance-none rounded-md border bg-surface px-3 py-2.5 pr-9 text-sm text-ink outline-none transition ${
               error
                 ? 'border-danger focus:ring-1 focus:ring-danger'
                 : 'border-primary/20 focus:border-primary focus:ring-1 focus:ring-primary/30'
@@ -40,7 +40,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           </select>
           <ChevronDown
             size={14}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-surface/50"
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink/45"
           />
         </div>
         {error ? <p className="text-xs text-danger">{error}</p> : null}

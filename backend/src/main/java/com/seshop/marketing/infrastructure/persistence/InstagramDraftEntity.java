@@ -2,6 +2,8 @@ package com.seshop.marketing.infrastructure.persistence;
 
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "instagram_drafts")
@@ -24,6 +26,7 @@ public class InstagramDraftEntity {
     private String hashtags;
 
     @Column(name = "media_order_json", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String mediaOrderJson;
 
     @Column(nullable = false, length = 20)

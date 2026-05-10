@@ -3,11 +3,13 @@ package com.seshop.review.api;
 import com.seshop.review.api.dto.CreateReviewRequest;
 import com.seshop.review.api.dto.ReviewDto;
 import com.seshop.review.application.ReviewService;
+import com.seshop.shared.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,8 +28,11 @@ public class ReviewController {
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> create(@Valid @RequestBody CreateReviewRequest request) {
-        ReviewDto dto = reviewService.createReview(request);
+    public ResponseEntity<Map<String, Object>> create(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @Valid @RequestBody CreateReviewRequest request
+    ) {
+        ReviewDto dto = reviewService.createReview(user.userId(), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", dto));
     }
 

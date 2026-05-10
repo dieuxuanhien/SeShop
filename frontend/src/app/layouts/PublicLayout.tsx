@@ -1,4 +1,5 @@
-import { LogOut, Search, ShoppingBag, User } from 'lucide-react';
+import { LogOut, Menu, Search, ShoppingBag, User, X } from 'lucide-react';
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { useCartStore } from '@/features/cart/model/cartStore';
@@ -6,6 +7,7 @@ import { useCartStore } from '@/features/cart/model/cartStore';
 export function PublicLayout() {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const itemCount = useCartStore((state) => state.items.reduce((sum, item) => sum + item.qty, 0));
 
   function handleLogout() {
@@ -22,9 +24,12 @@ export function PublicLayout() {
           {/* Left Navigation */}
           <nav className="hidden md:flex items-center gap-8 text-sm uppercase tracking-widest text-surface/80">
             <NavLink to="/products" className={({isActive}) => isActive ? 'text-primary' : 'hover:text-primary transition-colors'}>Collection</NavLink>
-            <NavLink to="/products?category=accessories" className="hover:text-primary transition-colors">Accessories</NavLink>
+            <NavLink to="/products?q=accessories" className="hover:text-primary transition-colors">Accessories</NavLink>
             <NavLink to="/ai-chat" className="hover:text-primary transition-colors">AI Stylist</NavLink>
           </nav>
+          <button className="md:hidden text-surface hover:text-primary" aria-label="Open navigation" onClick={() => setMobileOpen(true)}>
+            <Menu size={22} strokeWidth={1.5} />
+          </button>
 
           {/* Center Logo */}
           <NavLink to="/" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-display text-2xl tracking-widest text-highlight">
@@ -33,7 +38,7 @@ export function PublicLayout() {
 
           {/* Right Icons */}
           <div className="flex items-center gap-6 text-surface">
-            <button className="hover:text-primary transition-colors" aria-label="Search">
+            <button className="hover:text-primary transition-colors" aria-label="Search" onClick={() => navigate('/products')}>
               <Search size={20} strokeWidth={1.5} />
             </button>
             
@@ -65,6 +70,22 @@ export function PublicLayout() {
             </NavLink>
           </div>
         </div>
+        {mobileOpen && (
+          <div className="border-t border-primary/10 px-6 py-4 md:hidden">
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-xs uppercase tracking-widest text-surface/50">Menu</span>
+              <button aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="text-surface/70 hover:text-primary">
+                <X size={18} />
+              </button>
+            </div>
+            <nav className="grid gap-3 text-sm uppercase tracking-widest text-surface/80">
+              <NavLink to="/products" onClick={() => setMobileOpen(false)} className="hover:text-primary">Collection</NavLink>
+              <NavLink to="/products?q=accessories" onClick={() => setMobileOpen(false)} className="hover:text-primary">Accessories</NavLink>
+              <NavLink to="/ai-chat" onClick={() => setMobileOpen(false)} className="hover:text-primary">AI Stylist</NavLink>
+              {token ? <NavLink to="/orders" onClick={() => setMobileOpen(false)} className="hover:text-primary">Orders</NavLink> : null}
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
@@ -99,7 +120,7 @@ export function PublicLayout() {
           </div>
         </div>
         <div className="border-t border-surface/5 py-6 text-center text-xs text-surface/40">
-          <p>&copy; {new Date().getFullYear()} SeShop Vintage. All rights reserved.</p>
+          <p>{new Date().getFullYear()} SeShop Vintage. All rights reserved.</p>
         </div>
       </footer>
     </div>

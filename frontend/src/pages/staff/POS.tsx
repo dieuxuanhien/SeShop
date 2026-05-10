@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { processPosSale, lookupProductBySku, type PosItem } from '@/features/staff/api/staffPosApi';
@@ -74,19 +75,19 @@ export function POS() {
 
   if (receipt) {
     return (
-      <div className="h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-        <div className="bg-white w-full max-w-md p-8 rounded shadow text-center">
-          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+      <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-md border border-primary/20 bg-surface p-8 text-center shadow-soft">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-success/10 text-success">
+            <CheckCircle2 size={34} />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Sale Complete</h2>
-          <p className="text-gray-500 mb-6">Receipt #{receipt.id}</p>
+          <h2 className="mb-2 text-2xl font-bold text-ink">Sale Complete</h2>
+          <p className="mb-6 text-ink/55">Receipt #{receipt.id}</p>
           
           {paymentMethod === 'CASH' && (
-            <div className="bg-gray-50 p-4 rounded mb-6 text-left">
+            <div className="mb-6 rounded-md bg-ink/[0.03] p-4 text-left text-ink/70">
               <div className="flex justify-between mb-2"><span>Total:</span> <span>{total.toLocaleString()} VND</span></div>
               <div className="flex justify-between mb-2"><span>Paid:</span> <span>{Number(amountPaid).toLocaleString()} VND</span></div>
-              <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200"><span>Change Due:</span> <span>{receipt.changeDue.toLocaleString()} VND</span></div>
+              <div className="flex justify-between border-t border-primary/15 pt-2 text-lg font-bold text-ink"><span>Change Due:</span> <span>{receipt.changeDue.toLocaleString()} VND</span></div>
             </div>
           )}
 
@@ -100,16 +101,16 @@ export function POS() {
   }
 
   return (
-    <div className="h-screen bg-gray-100 flex flex-col">
-      <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
+    <div className="flex min-h-[calc(100vh-7rem)] flex-col overflow-hidden rounded-md border border-primary/20 bg-surface text-ink shadow-soft">
+      <div className="flex items-center justify-between border-b border-primary/15 bg-surface p-4">
         <h1 className="text-xl font-bold">SeShop POS</h1>
-        <div className="text-sm text-gray-500">Register: REG-01 | Operator: Staff User</div>
+        <div className="text-sm text-ink/55">Register: REG-01 | Operator: Staff User</div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left Side: Cart */}
-        <div className="flex-1 flex flex-col bg-white border-r border-gray-200">
-          <div className="p-4 border-b border-gray-200">
+        <div className="flex flex-1 flex-col border-r border-primary/15 bg-surface">
+          <div className="border-b border-primary/15 p-4">
             <form onSubmit={handleAddSku} className="flex gap-2">
               <div className="flex-1">
                 <Input
@@ -121,7 +122,7 @@ export function POS() {
                   disabled={isProcessing}
                 />
                 {skuError && (
-                  <p className="text-red-600 text-sm mt-1">{skuError}</p>
+                  <p className="mt-1 text-sm text-danger">{skuError}</p>
                 )}
               </div>
               <Button type="submit" disabled={isProcessing}>
@@ -132,16 +133,16 @@ export function POS() {
 
           <div className="flex-1 overflow-y-auto p-4">
             {items.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-gray-400">
+              <div className="flex h-full items-center justify-center text-ink/40">
                 Cart is empty. Scan an item to begin.
               </div>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-primary/10">
                 {items.map((item, idx) => (
                   <li key={idx} className="py-3 flex justify-between items-center">
                     <div>
                       <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-gray-500">{item.skuCode}</p>
+                      <p className="text-sm text-ink/55">{item.skuCode}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
@@ -150,9 +151,10 @@ export function POS() {
                       </div>
                       <button 
                         onClick={() => setItems(items.filter((_, i) => i !== idx))}
-                        className="text-red-500 hover:text-red-700 font-bold px-2"
+                        className="px-2 text-danger hover:text-danger/80"
+                        aria-label={`Remove ${item.name}`}
                       >
-                        &times;
+                        <X size={18} />
                       </button>
                     </div>
                   </li>
@@ -163,14 +165,14 @@ export function POS() {
         </div>
 
         {/* Right Side: Payment Checkout */}
-        <div className="w-96 bg-gray-50 flex flex-col">
+        <div className="flex w-96 flex-col bg-surfaceMuted/40">
           <div className="flex-1 p-6">
-            <div className="bg-white p-4 rounded shadow-sm mb-6">
-              <div className="flex justify-between text-gray-500 mb-2"><span>Subtotal</span><span>{total.toLocaleString()}</span></div>
-              <div className="flex justify-between text-gray-500 mb-2"><span>Tax</span><span>Included</span></div>
-              <div className="flex justify-between text-2xl font-bold mt-4 pt-4 border-t border-gray-200">
+            <div className="mb-6 rounded-md border border-primary/15 bg-surface p-4 shadow-sm">
+              <div className="mb-2 flex justify-between text-ink/55"><span>Subtotal</span><span>{total.toLocaleString()}</span></div>
+              <div className="mb-2 flex justify-between text-ink/55"><span>Tax</span><span>Included</span></div>
+              <div className="mt-4 flex justify-between border-t border-primary/15 pt-4 text-2xl font-bold">
                 <span>Total</span>
-                <span>{total.toLocaleString()} ₫</span>
+                <span>{total.toLocaleString()} VND</span>
               </div>
             </div>
 
@@ -178,13 +180,13 @@ export function POS() {
               <h3 className="font-medium mb-3">Payment Method</h3>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  className={`p-3 rounded border text-center font-medium ${paymentMethod === 'CASH' ? 'bg-brand-dark text-white border-brand-dark' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+                  className={`rounded-md border p-3 text-center font-medium ${paymentMethod === 'CASH' ? 'border-primary bg-primary text-ink' : 'border-primary/20 bg-surface hover:bg-primary/10'}`}
                   onClick={() => setPaymentMethod('CASH')}
                 >
                   Cash
                 </button>
                 <button
-                  className={`p-3 rounded border text-center font-medium ${paymentMethod === 'CARD' ? 'bg-brand-dark text-white border-brand-dark' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+                  className={`rounded-md border p-3 text-center font-medium ${paymentMethod === 'CARD' ? 'border-primary bg-primary text-ink' : 'border-primary/20 bg-surface hover:bg-primary/10'}`}
                   onClick={() => setPaymentMethod('CARD')}
                 >
                   Card
@@ -205,7 +207,7 @@ export function POS() {
             )}
           </div>
 
-          <div className="p-4 bg-white border-t border-gray-200">
+          <div className="border-t border-primary/15 bg-surface p-4">
             <Button 
               className="w-full h-14 text-lg" 
               onClick={handleCheckout}

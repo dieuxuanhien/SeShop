@@ -5,6 +5,7 @@ import com.seshop.pos.api.dto.ProcessPosSaleResponse;
 import com.seshop.pos.api.dto.ReceiptDto;
 import com.seshop.pos.application.ReceiptService;
 import com.seshop.shared.api.ApiResponse;
+import com.seshop.shared.api.PageResponse;
 import com.seshop.shared.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,13 @@ public class ReceiptController {
     }
 
     @GetMapping
+    public ApiResponse<PageResponse<ReceiptDto>> listReceipts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.success(receiptService.listReceipts(page, size));
+    }
+
+    @GetMapping(params = "receiptNumber")
     public ResponseEntity<Map<String, Object>> getReceiptByNumber(@RequestParam String receiptNumber) {
         ReceiptDto receipt = receiptService.getReceipt(receiptNumber);
 

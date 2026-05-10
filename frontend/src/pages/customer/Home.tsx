@@ -29,7 +29,7 @@ export function Home() {
             <NavLink to="/products" className="group flex items-center gap-3 bg-primary text-ink px-8 py-4 uppercase tracking-widest text-sm font-semibold hover:bg-primaryStrong transition-colors">
               Shop Now <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </NavLink>
-            <NavLink to="/products?category=accessories" className="group flex items-center gap-3 bg-transparent border border-surface/30 text-surface px-8 py-4 uppercase tracking-widest text-sm font-semibold hover:bg-surface/10 transition-colors">
+            <NavLink to="/products?q=accessories" className="group flex items-center gap-3 bg-transparent border border-surface/30 text-surface px-8 py-4 uppercase tracking-widest text-sm font-semibold hover:bg-surface/10 transition-colors">
               Accessories
             </NavLink>
           </div>
@@ -77,4 +77,3 @@ export function Home() {
     </div>
   );
 }
-

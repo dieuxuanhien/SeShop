@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
-import { Select } from '@/shared/ui/Select';
 import { validateDiscount, processCheckout, type CheckoutRequest, type CheckoutResponse } from '@/features/commerce/api/checkoutApi';
 import { getMyCart } from '@/features/commerce/api/cartApi';
 import { useCartStore } from '@/features/cart/model/cartStore';
@@ -94,12 +93,12 @@ export function Checkout() {
 
   if (step === 3 && orderResponse) {
     return (
-      <div className="max-w-2xl mx-auto py-16 px-4 sm:px-6 lg:px-8 text-center">
-        <h1 className="text-3xl font-serif text-brand-dark mb-4">Order Confirmed</h1>
-        <p className="text-gray-600 mb-8">
+      <div className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6 lg:px-8">
+        <h1 className="font-display mb-4 text-3xl text-highlight">Order Confirmed</h1>
+        <p className="mb-8 text-surface/70">
           Thank you for your purchase. Your order number is <strong>{orderResponse.orderNumber}</strong>.
         </p>
-        <div className="bg-gray-50 p-6 rounded-lg mb-8 inline-block text-left">
+        <div className="mb-8 inline-block rounded-md border border-primary/20 bg-surface p-6 text-left text-ink">
           <p><strong>Payment Status:</strong> {orderResponse.paymentStatus}</p>
           <p><strong>Total:</strong> {total.toLocaleString()} VND</p>
         </div>
@@ -111,21 +110,21 @@ export function Checkout() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-serif text-brand-dark mb-8">Checkout</h1>
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <h1 className="font-display mb-8 text-3xl text-highlight">Checkout</h1>
       
       <div className="flex flex-col lg:flex-row gap-12">
         <div className="flex-1 space-y-8">
           {error && (
-            <div className="p-4 bg-red-50 text-red-600 border border-red-200 rounded">
+            <div className="rounded-md border border-danger/30 bg-danger/10 p-4 text-danger">
               {error}
             </div>
           )}
 
           {/* Step 1: Shipping */}
           <section className={`transition-opacity ${step === 2 ? 'opacity-50 pointer-events-none' : ''}`}>
-            <h2 className="text-xl font-medium mb-4">1. Shipping Address</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <h2 className="mb-4 text-xl font-medium text-surface">1. Shipping Address</h2>
+            <div className="grid grid-cols-1 gap-4 rounded-md border border-primary/20 bg-surface p-5 md:grid-cols-2">
               <Input
                 label="Full Name"
                 value={address.fullName}
@@ -174,30 +173,30 @@ export function Checkout() {
           {/* Step 2: Payment */}
           {step === 2 && (
             <section className="animate-fade-in">
-              <h2 className="text-xl font-medium mb-4">2. Payment Method</h2>
+              <h2 className="mb-4 text-xl font-medium text-surface">2. Payment Method</h2>
               <div className="space-y-4">
-                <label className="flex items-center space-x-3 p-4 border rounded cursor-pointer hover:bg-gray-50">
+                <label className="flex cursor-pointer items-center space-x-3 rounded-md border border-primary/20 bg-surface p-4 text-ink hover:bg-surfaceMuted">
                   <input
                     type="radio"
                     checked={paymentMethod === 'STRIPE'}
                     onChange={() => setPaymentMethod('STRIPE')}
-                    className="h-4 w-4 text-brand-dark border-gray-300 focus:ring-brand-dark"
+                    className="h-4 w-4 accent-primary"
                   />
                   <span>Credit Card (Stripe)</span>
                 </label>
-                <label className="flex items-center space-x-3 p-4 border rounded cursor-pointer hover:bg-gray-50">
+                <label className="flex cursor-pointer items-center space-x-3 rounded-md border border-primary/20 bg-surface p-4 text-ink hover:bg-surfaceMuted">
                   <input
                     type="radio"
                     checked={paymentMethod === 'COD'}
                     onChange={() => setPaymentMethod('COD')}
-                    className="h-4 w-4 text-brand-dark border-gray-300 focus:ring-brand-dark"
+                    className="h-4 w-4 accent-primary"
                   />
                   <span>Cash on Delivery</span>
                 </label>
               </div>
 
               <div className="mt-6 flex justify-between items-center">
-                <button type="button" onClick={() => setStep(1)} className="text-sm text-gray-500 hover:text-brand-dark underline">
+                <button type="button" onClick={() => setStep(1)} className="text-sm text-surface/60 underline hover:text-primary">
                   Back to Shipping
                 </button>
                 <Button onClick={handleCheckout} isLoading={isLoading}>
@@ -210,25 +209,25 @@ export function Checkout() {
 
         {/* Order Summary Sidebar */}
         <div className="w-full lg:w-96">
-          <div className="bg-gray-50 p-6 rounded-lg sticky top-8">
-            <h2 className="text-lg font-medium mb-4">Order Summary</h2>
+          <div className="sticky top-24 rounded-md border border-primary/20 bg-surface p-6 text-ink">
+            <h2 className="mb-4 text-lg font-medium">Order Summary</h2>
             
             <div className="space-y-4 mb-6">
               {cartItems.length > 0 ? cartItems.map((item) => (
                 <div key={item.variantId} className="flex gap-4">
-                  <div className="w-16 h-20 rounded bg-gray-200" />
+                  <div className="h-20 w-16 rounded-md bg-ink/10" />
                   <div>
                     <h3 className="text-sm font-medium">{item.name}</h3>
-                    <p className="text-xs text-gray-500">Qty: {item.qty}</p>
+                    <p className="text-xs text-ink/55">Qty: {item.qty}</p>
                     <p className="text-sm mt-1">{item.unitPrice.toLocaleString()} VND</p>
                   </div>
                 </div>
               )) : (
-                <p className="text-sm text-gray-500">Your cart is empty.</p>
+                <p className="text-sm text-ink/55">Your cart is empty.</p>
               )}
             </div>
 
-            <div className="border-t border-gray-200 pt-4 space-y-2 text-sm">
+            <div className="space-y-2 border-t border-primary/15 pt-4 text-sm">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>{subtotal.toLocaleString()} VND</span>
@@ -238,20 +237,19 @@ export function Checkout() {
                 <span>Free</span>
               </div>
               {discountAmount > 0 && (
-                <div className="flex justify-between text-green-600">
+                <div className="flex justify-between text-success">
                   <span>Discount</span>
                   <span>-{discountAmount.toLocaleString()} VND</span>
                 </div>
               )}
-              <div className="flex justify-between font-medium text-lg pt-2 border-t border-gray-200">
+              <div className="flex justify-between border-t border-primary/15 pt-2 text-lg font-medium">
                 <span>Total</span>
                 <span>{total.toLocaleString()} VND</span>
               </div>
             </div>
 
             {/* Discount Code Form */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Discount Code</label>
+            <div className="mt-6 border-t border-primary/15 pt-6">
               <div className="flex gap-2">
                 <Input
                   label="Discount Code"

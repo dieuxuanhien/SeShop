@@ -3,18 +3,39 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { PageScaffold } from '@/shared/ui/PageScaffold';
-import { getInstagramStatus, type InstagramConnection as InstagramConnectionData } from '@/features/marketing/api/marketingApi';
+import {
+  getInstagramStatus,
+  reconnectInstagram,
+  startInstagramConnection,
+  type InstagramConnection as InstagramConnectionData,
+} from '@/features/marketing/api/marketingApi';
 
 export function InstagramConnection() {
   const [connection, setConnection] = useState<InstagramConnectionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState('');
 
-  useEffect(() => {
+  function loadStatus() {
+    setIsLoading(true);
     getInstagramStatus()
       .then(setConnection)
       .catch(() => setConnection(null))
       .finally(() => setIsLoading(false));
+  }
+
+  useEffect(() => {
+    loadStatus();
   }, []);
+
+  async function handleConnect(reconnect = false) {
+    setMessage('');
+    try {
+      const { authorizationUrl } = reconnect ? await reconnectInstagram() : await startInstagramConnection();
+      window.location.assign(authorizationUrl);
+    } catch {
+      setMessage('Instagram authorization could not be started.');
+    }
+  }
 
   const status = connection?.status ?? 'DISCONNECTED';
 
@@ -22,8 +43,7 @@ export function InstagramConnection() {
     <PageScaffold
       title="Instagram Account Connection"
       viewCode="STAFF_010"
-      purpose="OAuth connection status, token expiry, reconnect action, and integration health surface."
-      endpoints={['POST /marketing/instagram/connect', 'POST /marketing/instagram/reconnect', 'GET /marketing/instagram/status']}
+      purpose="Monitor account authorization, token expiry, and publishing permissions."
     >
       <div className="grid gap-6">
         <Card className="border border-primary/20 bg-surface/95 p-5">
@@ -53,10 +73,10 @@ export function InstagramConnection() {
           </div>
           )}
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="secondary">Verify Connection</Button>
-            <Button variant="secondary">Reconnect</Button>
-            <Button variant="danger">Disconnect</Button>
+            <Button variant="secondary" onClick={loadStatus}>Verify Connection</Button>
+            <Button variant="secondary" onClick={() => handleConnect(status === 'CONNECTED')}>{status === 'CONNECTED' ? 'Reconnect' : 'Connect'}</Button>
           </div>
+          {message ? <p className="mt-4 text-sm text-ink/65">{message}</p> : null}
         </Card>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -77,9 +97,12 @@ export function InstagramConnection() {
           <Card className="border border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Permissions</h2>
             <ul className="mt-4 grid gap-2 text-sm text-ink/70">
-              <li className="rounded-md border border-primary/15 bg-ink/5 p-2">
-                OAuth scopes are configured by the backend integration settings.
-              </li>
+              {['instagram_basic', 'pages_show_list', 'instagram_content_publish'].map((scope) => (
+                <li key={scope} className="flex items-center justify-between rounded-md border border-primary/15 bg-ink/5 p-2">
+                  <span>{scope}</span>
+                  <Badge variant={status === 'CONNECTED' ? 'success' : 'warning'}>{status === 'CONNECTED' ? 'Ready' : 'Pending'}</Badge>
+                </li>
+              ))}
             </ul>
           </Card>
         </div>

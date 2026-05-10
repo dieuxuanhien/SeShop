@@ -11,8 +11,8 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 
 const sortOptions = [
   { label: 'Newest', value: 'newest' },
-  { label: 'Price: Low → High', value: 'price_asc' },
-  { label: 'Price: High → Low', value: 'price_desc' },
+  { label: 'Price: Low to High', value: 'price_asc' },
+  { label: 'Price: High to Low', value: 'price_desc' },
   { label: 'Most Popular', value: 'popular' },
 ] as const;
 
@@ -28,6 +28,7 @@ export function Products() {
       sort: (searchParams.get('sort') as ProductListParams['sort']) ?? 'newest',
       search: searchParams.get('q') ?? undefined,
       categoryId: searchParams.get('cat') ? Number(searchParams.get('cat')) : undefined,
+      brand: searchParams.get('brand') ?? undefined,
     }),
     [searchParams],
   );
@@ -82,7 +83,7 @@ export function Products() {
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface/40" />
               <input
                 type="text"
-                placeholder="Search collection…"
+                placeholder="Search collection..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full rounded-md border border-primary/20 bg-transparent py-2 pl-9 pr-3 text-sm text-surface placeholder:text-surface/30 outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition"
@@ -97,7 +98,7 @@ export function Products() {
 
           {/* Center: Result count */}
           <span className="hidden md:block text-xs text-surface/50 tracking-wide">
-            {data ? `${data.totalElements} pieces` : '—'}
+            {data ? `${data.totalElements} pieces` : 'Loading'}
           </span>
 
           {/* Right: Sort + Filter toggle */}
@@ -123,7 +124,7 @@ export function Products() {
       </div>
 
       {/* Active Filters */}
-      {(params.search || params.categoryId) && (
+      {(params.search || params.categoryId || params.brand) && (
         <div className="mx-auto max-w-7xl px-6 lg:px-12 py-3 flex items-center gap-2 flex-wrap">
           <span className="text-xs text-surface/40">Active:</span>
           {params.search && (
@@ -134,6 +135,11 @@ export function Products() {
           {activeCategory && (
             <button onClick={() => updateParam('cat', null)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 px-3 py-1 text-xs text-surface/80 hover:border-danger/40 hover:text-danger transition">
               {activeCategory.name} <X size={12} />
+            </button>
+          )}
+          {params.brand && (
+            <button onClick={() => updateParam('brand', null)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 px-3 py-1 text-xs text-surface/80 hover:border-danger/40 hover:text-danger transition">
+              {params.brand} <X size={12} />
             </button>
           )}
         </div>

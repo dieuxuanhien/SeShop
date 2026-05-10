@@ -86,7 +86,7 @@ export function StockAvailability() {
               to={`/products/${product.id}`}
               className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
             >
-              ← Back to {product.name}
+              Back to {product.name}
             </NavLink>
           </div>
         )}

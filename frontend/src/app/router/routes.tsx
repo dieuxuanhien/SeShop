@@ -11,6 +11,7 @@ import { AiChat } from '@/pages/customer/AiChat';
 import { Cart } from '@/pages/customer/Cart';
 import { Checkout } from '@/pages/customer/Checkout';
 import { Home } from '@/pages/customer/Home';
+import { InfoPage } from '@/pages/customer/InfoPage';
 import { OrderTracking } from '@/pages/customer/OrderTracking';
 import { Orders } from '@/pages/customer/Orders';
 import { ProductDetail } from '@/pages/customer/ProductDetail';
@@ -46,6 +47,9 @@ export function AppRoutes() {
         <Route path="products/:productId/availability" element={<StockAvailability />} />
         <Route path="cart" element={<Cart />} />
         <Route path="ai-chat" element={<AiChat />} />
+        <Route path="contact" element={<InfoPage type="contact" />} />
+        <Route path="shipping" element={<InfoPage type="shipping" />} />
+        <Route path="faq" element={<InfoPage type="faq" />} />
 
         <Route element={<ProtectedRoute role="CUSTOMER" />}>
           <Route path="checkout" element={<Checkout />} />
@@ -82,7 +86,7 @@ export function AppRoutes() {
         </Route>
 
         <Route path="access-denied" element={<EmptyState title="Access denied" description="Your account does not have access to this route." />} />
-        <Route path="*" element={<EmptyState title="Page not found" description="The requested route is not part of the SeShop shell." />} />
+        <Route path="*" element={<EmptyState title="Page not found" description="The requested route is not available in SeShop." />} />
       </Route>
     </Routes>
   );

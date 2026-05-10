@@ -34,10 +34,9 @@ export function AdminDashboard() {
       <PageScaffold
         title="Dashboard Overview"
         viewCode="ADMIN_001"
-        purpose="Super Admin overview for business metrics, inventory alerts, order activity, staff presence, and system health."
-        endpoints={['GET /admin/dashboard/metrics', 'GET /admin/system/status']}
+        purpose="Monitor revenue, order load, inventory alerts, and platform health."
       >
-        <div className="text-gray-600">Loading dashboard...</div>
+        <Card className="border-primary/20 bg-surface/95 p-5 text-sm text-ink/60">Loading dashboard...</Card>
       </PageScaffold>
     );
   }
@@ -47,10 +46,9 @@ export function AdminDashboard() {
       <PageScaffold
         title="Dashboard Overview"
         viewCode="ADMIN_001"
-        purpose="Super Admin overview for business metrics, inventory alerts, order activity, staff presence, and system health."
-        endpoints={['GET /admin/dashboard/metrics', 'GET /admin/system/status']}
+        purpose="Monitor revenue, order load, inventory alerts, and platform health."
       >
-        <div className="text-red-600">Failed to load dashboard metrics. Please try again.</div>
+        <Card className="border-primary/20 bg-surface/95 p-5 text-sm text-danger">Failed to load dashboard metrics. Please try again.</Card>
       </PageScaffold>
     );
   }
@@ -73,8 +71,7 @@ export function AdminDashboard() {
     <PageScaffold
       title="Dashboard Overview"
       viewCode="ADMIN_001"
-      purpose="Super Admin overview for business metrics, inventory alerts, order activity, staff presence, and system health."
-      endpoints={['GET /admin/dashboard/metrics', 'GET /admin/system/status']}
+      purpose="Monitor revenue, order load, inventory alerts, and platform health."
     >
       <div className="grid gap-6">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

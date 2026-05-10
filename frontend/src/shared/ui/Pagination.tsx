@@ -25,7 +25,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       {pages.map((page, idx) =>
         page === '...' ? (
           <span key={`ellipsis-${idx}`} className="px-2 text-surface/40">
-            …
+            ...
           </span>
         ) : (
           <button

@@ -20,6 +20,14 @@ type BackendProduct = {
   brand?: string;
   description?: string;
   status: string;
+  images?: Array<{
+    id: number;
+    url: string;
+    altText?: string;
+    sortOrder?: number;
+    instagramReady?: boolean;
+    isInstagramReady?: boolean;
+  }>;
   variants: Array<{
     id: number;
     skuCode: string;
@@ -40,14 +48,22 @@ type BackendPage<T> = {
 };
 
 function toFrontendProduct(product: BackendProduct): Product {
+  const images = (product.images ?? []).map((image, index) => ({
+    id: image.id,
+    url: image.url,
+    altText: image.altText ?? product.name,
+    sortOrder: image.sortOrder ?? index,
+    isInstagramReady: image.instagramReady ?? image.isInstagramReady ?? false,
+  }));
+
   return {
     id: product.id,
     name: product.name,
     brand: product.brand,
     description: product.description,
     status: product.status === 'PUBLISHED' ? 'PUBLISHED' : product.status === 'ARCHIVED' ? 'ARCHIVED' : 'DRAFT',
-    thumbnailUrl: undefined,
-    images: [],
+    thumbnailUrl: images[0]?.url,
+    images,
     variants: product.variants.map((variant) => ({
       id: variant.id,
       skuCode: variant.skuCode,
@@ -95,4 +111,45 @@ export async function getProductAvailability(productId: number): Promise<StockAv
 export async function getCategories(): Promise<Category[]> {
   const response = await apiClient.get<ApiResponse<Category[]>>('/categories');
   return response.data.data;
+}
+
+export type ProductMutationRequest = {
+  name: string;
+  brand?: string;
+  description?: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+};
+
+export type VariantMutationRequest = {
+  skuCode: string;
+  size?: string;
+  color?: string;
+  price: number;
+  status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type ProductImageRequest = {
+  url: string;
+  sortOrder?: number;
+  isInstagramReady?: boolean;
+};
+
+export async function createProduct(request: ProductMutationRequest): Promise<Product> {
+  const response = await apiClient.post<ApiResponse<BackendProduct>>('/staff/products', request);
+  return toFrontendProduct(response.data.data);
+}
+
+export async function updateProduct(productId: number, request: ProductMutationRequest): Promise<Product> {
+  const response = await apiClient.put<ApiResponse<BackendProduct>>(`/staff/products/${productId}`, request);
+  return toFrontendProduct(response.data.data);
+}
+
+export async function createProductVariants(productId: number, variants: VariantMutationRequest[]): Promise<Product> {
+  const response = await apiClient.post<ApiResponse<BackendProduct>>(`/staff/products/${productId}/variants`, { variants });
+  return toFrontendProduct(response.data.data);
+}
+
+export async function registerProductImage(productId: number, request: ProductImageRequest): Promise<Product> {
+  const response = await apiClient.post<ApiResponse<BackendProduct>>(`/staff/products/${productId}/images`, request);
+  return toFrontendProduct(response.data.data);
 }

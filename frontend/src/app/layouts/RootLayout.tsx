@@ -1,4 +1,5 @@
-import { LogOut, Menu, ShoppingCart } from 'lucide-react';
+import { LogOut, Menu, ShoppingCart, X } from 'lucide-react';
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { useCartStore } from '@/features/cart/model/cartStore';
@@ -35,6 +36,7 @@ const navGroups = [
 export function RootLayout() {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const itemCount = useCartStore((state) => state.items.reduce((sum, item) => sum + item.qty, 0));
 
   function handleLogout() {
@@ -47,7 +49,7 @@ export function RootLayout() {
       <header className="sticky top-0 z-20 border-b border-primary/20 bg-ink/95 backdrop-blur">
         <div className="flex min-h-16 items-center justify-between gap-4 px-4 lg:px-6">
           <div className="flex items-center gap-3">
-            <Button variant="secondary" className="px-3 lg:hidden" aria-label="Open navigation" icon={<Menu size={18} />} />
+            <Button variant="secondary" className="px-3 lg:hidden" aria-label="Open navigation" icon={mobileOpen ? <X size={18} /> : <Menu size={18} />} onClick={() => setMobileOpen((open) => !open)} />
             <NavLink to="/" className="font-display text-lg font-semibold text-highlight">
               SeShop Vintage
             </NavLink>
@@ -73,6 +75,33 @@ export function RootLayout() {
       </header>
 
       <div className="grid lg:grid-cols-[260px_minmax(0,1fr)]">
+        {mobileOpen ? (
+          <aside className="border-b border-primary/20 bg-ink/95 p-4 lg:hidden">
+            <nav className="grid gap-6">
+              {navGroups.map((group) => (
+                <section key={group.label}>
+                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface/60">{group.label}</h2>
+                  <div className="grid gap-1">
+                    {group.links.map(([to, label]) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        onClick={() => setMobileOpen(false)}
+                        className={({ isActive }) =>
+                          `rounded-md px-3 py-2 text-sm transition ${
+                            isActive ? 'bg-primary/15 font-medium text-highlight' : 'text-surface/80 hover:bg-primary/10'
+                          }`
+                        }
+                      >
+                        {label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </nav>
+          </aside>
+        ) : null}
         <aside className="hidden border-r border-primary/20 bg-ink/90 p-4 lg:block">
           <nav className="grid gap-6">
             {navGroups.map((group) => (

@@ -22,17 +22,14 @@ public class PublicInventoryController {
     @GetMapping("/{productId}/availability")
     public ResponseEntity<Map<String, Object>> getProductAvailability(
             @PathVariable Long productId,
-            @RequestParam Long variantId) {
-        
-        List<LocationAvailabilityDto> locations = inventoryService.getAvailabilityByVariant(variantId);
-        
-        Map<String, Object> data = new HashMap<>();
-        data.put("productId", productId);
-        data.put("variantId", variantId);
-        data.put("locations", locations);
+            @RequestParam(required = false) Long variantId) {
+
+        List<LocationAvailabilityDto> locations = variantId == null
+                ? inventoryService.getAvailabilityByProduct(productId)
+                : inventoryService.getAvailabilityByVariant(variantId);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("data", data);
+        response.put("data", locations);
 
         return ResponseEntity.ok(response);
     }

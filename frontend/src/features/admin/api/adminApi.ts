@@ -32,6 +32,23 @@ export async function getRoles(): Promise<Role[]> {
   return response.data.data.items;
 }
 
+export async function createRole(name: string, description?: string): Promise<Role> {
+  const response = await apiClient.post<ApiResponse<Role>>('/admin/roles', { name, description });
+  return response.data.data;
+}
+
+export async function assignPermissions(roleId: number, permissionCodes: string[]): Promise<void> {
+  await apiClient.post(`/admin/roles/${roleId}/permissions`, { permissionCodes });
+}
+
+export async function assignRoleToUser(userId: number, roleId: number): Promise<void> {
+  await apiClient.post(`/admin/users/${userId}/roles`, { roleId });
+}
+
+export async function revokeRoleFromUser(userId: number, assignmentId: number): Promise<void> {
+  await apiClient.delete(`/admin/users/${userId}/roles/${assignmentId}`);
+}
+
 export type LocationSummary = {
   id: number;
   name: string;

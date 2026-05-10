@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,6 +55,27 @@ public class InventoryService {
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<LocationAvailabilityDto> getAvailabilityByProduct(Long productId) {
+        Map<Long, LocationAvailabilityDto> byLocation = productVariantRepository.findAll().stream()
+                .filter(variant -> variant.getProduct().getId().equals(productId))
+                .flatMap(variant -> getAvailabilityByVariant(variant.getId()).stream())
+                .collect(Collectors.toMap(
+                        LocationAvailabilityDto::getLocationId,
+                        location -> location,
+                        (left, right) -> {
+                            left.setAvailableQty(left.getAvailableQty() + right.getAvailableQty());
+                            if (right.getUpdatedAt() != null
+                                    && (left.getUpdatedAt() == null || right.getUpdatedAt().isAfter(left.getUpdatedAt()))) {
+                                left.setUpdatedAt(right.getUpdatedAt());
+                            }
+                            return left;
+                        }));
+        return byLocation.values().stream()
+                .sorted((left, right) -> left.getLocationName().compareToIgnoreCase(right.getLocationName()))
+                .toList();
     }
 
     @Transactional(readOnly = true)

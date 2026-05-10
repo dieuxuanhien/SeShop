@@ -30,6 +30,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      localstack:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: dev
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-seshop}
@@ -58,6 +60,12 @@ services:
       META_APP_SECRET: ${META_APP_SECRET:-}
       META_REDIRECT_URI: ${META_REDIRECT_URI:-http://localhost:8080/api/v1/webhooks/instagram/callback}
       META_SCOPES: ${META_SCOPES:-instagram_basic,pages_show_list,pages_read_engagement,instagram_content_publish}
+      # S3 / object storage (LocalStack) - defaults for local development
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://localstack:4566}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-seshop-media}
     ports:
       - "8080:8080"
 
@@ -73,5 +81,28 @@ services:
     ports:
       - "5173:80"
 
+  localstack:
+    image: localstack/localstack:3.0.0
+    container_name: seshop-localstack
+    environment:
+      - SERVICES=s3
+      - DEFAULT_REGION=${S3_REGION:-us-east-1}
+      - DATA_DIR=/var/lib/localstack
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}
+      - LOCALSTACK_EDITION=open
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./localstack/init:/etc/localstack/init/ready.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4566/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres-data:
+  localstack-data:

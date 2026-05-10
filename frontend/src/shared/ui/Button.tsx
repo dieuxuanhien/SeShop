@@ -10,7 +10,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 const variants = {
   primary: 'bg-primary text-ink hover:bg-primaryStrong',
   secondary: 'border border-primary/40 bg-transparent text-primary hover:bg-primary/10',
-  danger: 'bg-danger text-surface hover:bg-red-900',
+  danger: 'bg-danger text-surface hover:bg-danger/80',
 };
 
 const sizes = {

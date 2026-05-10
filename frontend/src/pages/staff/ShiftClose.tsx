@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
-import { closeShift, getCurrentShift, type ShiftData } from '@/features/staff/api/staffPosApi';
+import { closeShift, getCurrentShift, openShift, type ShiftData } from '@/features/staff/api/staffPosApi';
 
 export function ShiftClose() {
   const navigate = useNavigate();
@@ -11,6 +11,8 @@ export function ShiftClose() {
   const [actualCash, setActualCash] = useState<number | ''>('');
   const [isLoading, setIsLoading] = useState(false);
   const [shiftLoading, setShiftLoading] = useState(true);
+  const [locationId, setLocationId] = useState(1);
+  const [startingCash, setStartingCash] = useState(0);
 
   useEffect(() => {
     // Fetch current shift data to get expected cash from backend
@@ -29,16 +31,35 @@ export function ShiftClose() {
 
   if (shiftLoading) {
     return (
-      <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <p className="text-gray-600">Loading shift data...</p>
+      <div className="mx-auto max-w-3xl">
+        <Card className="border-primary/20 bg-surface/95 p-5 text-sm text-ink/60">Loading shift data...</Card>
       </div>
     );
   }
 
   if (!shift) {
     return (
-      <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <p className="text-red-600">No active shift found. Start a new shift first.</p>
+      <div className="mx-auto max-w-3xl">
+        <h1 className="mb-8 font-display text-3xl font-bold text-surface">Open Register Shift</h1>
+        <Card className="border-primary/20 bg-surface/95 p-6">
+          <p className="mb-5 text-sm text-ink/60">No active shift was found. Open a register shift before selling or closing cash.</p>
+          <form
+            className="grid gap-4"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              setIsLoading(true);
+              try {
+                setShift(await openShift(locationId, startingCash));
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+          >
+            <Input label="Location ID" type="number" min={1} value={locationId} onChange={(event) => setLocationId(Number(event.target.value))} />
+            <Input label="Starting Cash" type="number" min={0} value={startingCash} onChange={(event) => setStartingCash(Number(event.target.value))} />
+            <Button type="submit" isLoading={isLoading}>Open Shift</Button>
+          </form>
+        </Card>
       </div>
     );
   }
@@ -60,37 +81,37 @@ export function ShiftClose() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Close Register Shift</h1>
+    <div className="mx-auto max-w-3xl">
+      <h1 className="mb-8 font-display text-3xl font-bold text-surface">Close Register Shift</h1>
       
-      <Card>
+      <Card className="border-primary/20 bg-surface/95">
         <div className="p-6">
-          <div className="bg-gray-50 p-4 rounded-md mb-8">
-            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4">Shift Summary</h3>
+          <div className="mb-8 rounded-md bg-ink/[0.03] p-4">
+            <h3 className="mb-4 text-sm font-medium uppercase tracking-wide text-ink/55">Shift Summary</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-500">Register</p>
-                <p className="font-medium text-gray-900">{shift.registerName}</p>
+                <p className="text-sm text-ink/55">Register</p>
+                <p className="font-medium text-ink">{shift.registerName}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Opened At</p>
-                <p className="font-medium text-gray-900">{new Date(shift.openedAt).toLocaleString()}</p>
+                <p className="text-sm text-ink/55">Opened At</p>
+                <p className="font-medium text-ink">{new Date(shift.openedAt).toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Total Transactions</p>
-                <p className="font-medium text-gray-900">{shift.transactionCount}</p>
+                <p className="text-sm text-ink/55">Total Transactions</p>
+                <p className="font-medium text-ink">{shift.transactionCount}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Total Card Payments</p>
-                <p className="font-medium text-gray-900">{shift.cardPaymentsTotal.toLocaleString()} VND</p>
+                <p className="text-sm text-ink/55">Total Card Payments</p>
+                <p className="font-medium text-ink">{shift.cardPaymentsTotal.toLocaleString()} VND</p>
               </div>
             </div>
           </div>
 
           <div className="mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Cash Reconciliation</h3>
-            <div className="flex justify-between items-center py-3 border-b border-gray-200">
-              <span className="text-gray-600">System Expected Cash</span>
+            <h3 className="mb-4 text-lg font-medium text-ink">Cash Reconciliation</h3>
+            <div className="flex items-center justify-between border-b border-primary/15 py-3">
+              <span className="text-ink/60">System Expected Cash</span>
               <span className="font-bold text-lg">{expectedCash.toLocaleString()} VND</span>
             </div>
             
@@ -105,20 +126,20 @@ export function ShiftClose() {
             </div>
 
             {actualCash !== '' && (
-              <div className={`mt-4 p-4 rounded flex justify-between items-center font-medium ${variance === 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              <div className={`mt-4 flex items-center justify-between rounded-md p-4 font-medium ${variance === 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
                 <span>Variance</span>
                 <span>{variance > 0 ? '+' : ''}{variance.toLocaleString()} VND</span>
               </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-4 border-t border-gray-200 pt-6">
+          <div className="flex justify-end gap-4 border-t border-primary/15 pt-6">
             <Button variant="secondary" onClick={() => navigate('/staff/dashboard')}>Cancel</Button>
             <Button 
               onClick={handleCloseShift} 
               isLoading={isLoading}
               disabled={actualCash === ''}
-              className={variance !== 0 ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : ''}
+              variant={variance !== 0 ? 'danger' : 'primary'}
             >
               {variance !== 0 ? 'Close Shift with Variance' : 'Close Shift Successfully'}
             </Button>

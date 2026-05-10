@@ -60,44 +60,44 @@ export function InventoryAdjustment() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <Spinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Inventory Adjustments</h1>
-          <p className="mt-1 text-sm text-gray-500">View and adjust stock levels.</p>
+          <h1 className="font-display text-2xl font-semibold text-surface">Inventory Adjustments</h1>
+          <p className="mt-1 text-sm text-surface/60">View and adjust stock levels.</p>
         </div>
       </div>
 
-      <Card>
+      <Card className="border-primary/20 bg-surface/95">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-primary/10">
+            <thead className="bg-ink/[0.03]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">On Hand</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Reserved</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Available</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Location</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">SKU</th>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Product</th>
+                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-ink/50">On Hand</th>
+                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-ink/50">Reserved</th>
+                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-ink/50">Available</th>
+                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-ink/50">Action</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-primary/10 bg-surface">
               {balances.map((balance) => (
                 <tr key={balance.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{balance.locationName}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{balance.skuCode}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{balance.productName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">{balance.locationName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">{balance.skuCode}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">{balance.productName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">{balance.onHandQty}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-orange-600">{balance.reservedQty}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600">{balance.availableQty}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-warning">{balance.reservedQty}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-success">{balance.availableQty}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Button variant="secondary" size="sm" onClick={() => handleAdjustClick(balance)}>
                       Adjust
@@ -107,7 +107,7 @@ export function InventoryAdjustment() {
               ))}
               {balances.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-ink/55">
                     No balances found.
                   </td>
                 </tr>
@@ -119,10 +119,10 @@ export function InventoryAdjustment() {
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Adjust Inventory">
         {selectedBalance && (
-          <form onSubmit={handleSubmitAdjustment} className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-md mb-4">
+          <form onSubmit={handleSubmitAdjustment} className="space-y-4 p-6">
+            <div className="mb-4 rounded-md bg-ink/[0.03] p-4">
               <p className="text-sm font-medium">{selectedBalance.productName}</p>
-              <p className="text-xs text-gray-500">SKU: {selectedBalance.skuCode} | Location: {selectedBalance.locationName}</p>
+              <p className="text-xs text-ink/55">SKU: {selectedBalance.skuCode} | Location: {selectedBalance.locationName}</p>
               <p className="text-sm mt-2">Current On Hand: <strong>{selectedBalance.onHandQty}</strong></p>
             </div>
             

@@ -125,6 +125,10 @@ Folder structure rules are documented in [docs/3.Design/SESHOP Folder Structure.
 - [x] E2E testing
   - [x] Add Playwright browser flow tests for customer checkout
   - [x] Add Playwright browser flow tests for staff POS cash sale
+- [x] Permission seed and RBAC coverage
+  - [x] Add seed catalog alignment test for permission and role mappings
+  - [x] Add backend JWT and permission validator tests
+  - [x] Add frontend permission helper tests
 - [x] Frontend mock API cleanup for catalog, checkout, and staff order flows
 - [x] Complete live backend endpoints for staff inventory and POS flows
   - [x] Align POS receipt and shift persistence with Flyway schema
