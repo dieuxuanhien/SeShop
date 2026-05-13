@@ -188,3 +188,56 @@ test('staff can scan a SKU and complete a POS cash sale', async ({ page }) => {
   await expect(page.getByText(/Receipt #501/)).toBeVisible();
   await expect(page.getByText('50,000 VND', { exact: true })).toBeVisible();
 });
+
+test('staff can publish an approved Instagram draft', async ({ page }) => {
+  const staff: TestUser = {
+    id: 7,
+    username: 'staff.user',
+    userType: 'STAFF',
+    roles: ['STAFF'],
+    permissions: [],
+  };
+
+  await signIn(page, staff);
+
+  let published = false;
+  await page.route(api('/marketing/drafts'), async (route) => {
+    await fulfillData(route, [
+      {
+        id: 99,
+        productId: 501,
+        caption: 'Fresh vintage drop',
+        hashtags: '#seshop #newarrival',
+        mediaOrder: ['https://cdn.example.com/image-1.jpg'],
+        status: published ? 'PUBLISHED' : 'APPROVED',
+        createdAt: '2026-05-10T12:00:00+07:00',
+      },
+    ]);
+  });
+
+  await page.route(api('/marketing/drafts/99/publish'), async (route) => {
+    expect(route.request().method()).toBe('POST');
+    published = true;
+    await fulfillData(route, {
+      draftId: 99,
+      status: 'PUBLISHED',
+      instagramCreationId: 'creation-7',
+      instagramMediaId: 'media-99',
+      instagramPermalink: 'https://www.instagram.com/p/media-99',
+      publishedAt: '2026-05-10T12:35:00+07:00',
+    });
+  });
+
+  await page.goto('/staff/marketing/drafts');
+  await expect(page.getByRole('heading', { name: 'Instagram Compose & Draft Management' })).toBeVisible();
+  await expect(page.getByText('Fresh vintage drop')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await expect(page.getByRole('button', { name: 'Publish to Instagram' })).toBeEnabled();
+  const publishRequestPromise = page.waitForRequest(api('/marketing/drafts/99/publish'));
+  await page.getByRole('button', { name: 'Publish to Instagram' }).click();
+  await publishRequestPromise;
+
+  await expect(page.getByText(/Draft published to Instagram/i)).toBeVisible();
+  await expect(page.getByText('PUBLISHED', { exact: true })).toBeVisible();
+});

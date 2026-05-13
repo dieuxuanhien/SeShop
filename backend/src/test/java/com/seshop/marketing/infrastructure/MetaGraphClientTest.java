@@ -108,6 +108,54 @@ class MetaGraphClientTest {
         assertThat(first(accountsQuery, "access_token")).isEqualTo("user-token");
     }
 
+        @Test
+        void publishesAnInstagramImagePostThroughTheGraphApi() throws IOException {
+                List<URI> requests = new ArrayList<>();
+                server = HttpServer.create(new InetSocketAddress(0), 0);
+                server.createContext("/v25.0/ig-123/media", exchange -> {
+                        requests.add(exchange.getRequestURI());
+                        respond(exchange, """
+                                        {
+                                            "id": "creation-7"
+                                        }
+                                        """);
+                });
+                server.createContext("/v25.0/ig-123/media_publish", exchange -> {
+                        requests.add(exchange.getRequestURI());
+                        respond(exchange, """
+                                        {
+                                            "id": "media-99"
+                                        }
+                                        """);
+                });
+                server.start();
+
+                MetaGraphProperties properties = configuredProperties();
+                properties.setBaseUrl("http://localhost:" + server.getAddress().getPort() + "/v25.0");
+                MetaGraphClient client = new MetaGraphClient(properties, objectMapper);
+
+                MetaGraphClient.MetaPublishResult result = client.publishImagePost(
+                                "ig-123",
+                                "page-token",
+                                "https://cdn.example.com/image-1.jpg",
+                                "Fresh vintage drop"
+                );
+
+                assertThat(result.creationId()).isEqualTo("creation-7");
+                assertThat(result.mediaId()).isEqualTo("media-99");
+                assertThat(requests).hasSize(2);
+                assertThat(requests.get(0).getPath()).isEqualTo("/v25.0/ig-123/media");
+                Map<String, List<String>> createQuery = queryParams(requests.get(0));
+                assertThat(first(createQuery, "image_url")).isEqualTo("https://cdn.example.com/image-1.jpg");
+                assertThat(first(createQuery, "caption")).isEqualTo("Fresh vintage drop");
+                assertThat(first(createQuery, "access_token")).isEqualTo("page-token");
+
+                assertThat(requests.get(1).getPath()).isEqualTo("/v25.0/ig-123/media_publish");
+                Map<String, List<String>> publishQuery = queryParams(requests.get(1));
+                assertThat(first(publishQuery, "creation_id")).isEqualTo("creation-7");
+                assertThat(first(publishQuery, "access_token")).isEqualTo("page-token");
+        }
+
     private MetaGraphProperties configuredProperties() {
         MetaGraphProperties properties = new MetaGraphProperties();
         properties.setEnabled(true);

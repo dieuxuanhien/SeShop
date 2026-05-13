@@ -2,6 +2,7 @@ package com.seshop.marketing.api;
 
 import com.seshop.marketing.api.dto.InstagramConnectionDto;
 import com.seshop.marketing.api.dto.InstagramDraftDto;
+import com.seshop.marketing.api.dto.InstagramPublishResultDto;
 import com.seshop.marketing.application.InstagramService;
 import com.seshop.shared.api.ApiResponse;
 import com.seshop.shared.security.AuthenticatedUser;
@@ -49,17 +50,22 @@ public class InstagramController {
     }
 
     @PutMapping("/drafts/{draftId}")
-    public ApiResponse<InstagramDraftDto> updateDraft(@PathVariable Long draftId, @RequestBody InstagramDraftDto request) {
+    public ApiResponse<InstagramDraftDto> updateDraft(@PathVariable long draftId, @RequestBody InstagramDraftDto request) {
         return ApiResponse.success(instagramService.updateDraft(draftId, request));
     }
 
     @PostMapping("/drafts/{draftId}/submit-review")
-    public ApiResponse<InstagramDraftDto> submitReview(@PathVariable Long draftId) {
+    public ApiResponse<InstagramDraftDto> submitReview(@PathVariable long draftId) {
         return ApiResponse.success(instagramService.submitReview(draftId));
     }
 
     @PostMapping("/drafts/{draftId}/approve")
-    public ApiResponse<InstagramDraftDto> approveDraft(@PathVariable Long draftId) {
+    public ApiResponse<InstagramDraftDto> approveDraft(@PathVariable long draftId) {
         return ApiResponse.success(instagramService.approveDraft(draftId));
+    }
+
+    @PostMapping("/drafts/{draftId}/publish")
+    public ApiResponse<InstagramPublishResultDto> publishDraft(@PathVariable long draftId) {
+        return ApiResponse.success(instagramService.publishDraft(draftId));
     }
 }

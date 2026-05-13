@@ -105,6 +105,7 @@ public class OrderService {
         provider = provider.toUpperCase();
         payment.setProvider(provider);
 
+        String clientSecret = null;
         if ("STRIPE".equals(provider)) {
             StripeClient.StripePaymentResult result = stripeClient.createPaymentIntent(
                     savedOrder.getTotalAmount(),
@@ -113,7 +114,8 @@ public class OrderService {
             );
             payment.setStatus(normalizeStripeStatus(result.status()));
             payment.setTransactionId(result.transactionId());
-            savedOrder.setStatus("PAYMENT_PENDING");
+            clientSecret = result.clientSecret();
+            savedOrder.setStatus("PENDING_PAYMENT");
         } else if ("COD".equals(provider)) {
             payment.setStatus("PENDING");
             payment.setTransactionId("COD-" + UUID.randomUUID());
@@ -131,6 +133,7 @@ public class OrderService {
         response.setOrderNumber(savedOrder.getOrderNumber());
         response.setPaymentStatus(payment.getStatus());
         response.setShipmentStatus("PENDING");
+        response.setClientSecret(clientSecret);
         return response;
     }
 

@@ -5,6 +5,7 @@ public class CheckoutResponse {
     private String orderNumber;
     private String paymentStatus;
     private String shipmentStatus;
+    private String clientSecret;
 
     public Long getOrderId() {
         return orderId;
@@ -36,5 +37,13 @@ public class CheckoutResponse {
 
     public void setShipmentStatus(String shipmentStatus) {
         this.shipmentStatus = shipmentStatus;
+    }
+
+    public String getClientSecret() {
+        return clientSecret;
+    }
+
+    public void setClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
     }
 }

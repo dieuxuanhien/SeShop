@@ -104,6 +104,7 @@ Folder structure rules are documented in [docs/3.Design/SESHOP Folder Structure.
   - [x] Add discount usage validation and stronger request checks
   - [x] Enforce Instagram draft state rules and connection checks
   - [x] Validate AI recommendation input
+  - [x] Add Instagram publish endpoint and Meta Graph publish flow
 - [x] Implement Purchase Orders APIs
   - [x] Create purchase order and goods receipt endpoints
   - [x] Update inventory balances on goods receipt
@@ -115,16 +116,19 @@ Folder structure rules are documented in [docs/3.Design/SESHOP Folder Structure.
 - [x] Implement Instagram Integration
   - [x] Build Instagram drafts gallery and composer shell
   - [x] Build Instagram connection status and permissions shell
+  - [x] Add approved draft publishing flow to Instagram
 
 ### 9. Integration Testing (Weeks 4-5)
 - [x] API testing
   - [x] Add backend API contract tests for staff inventory and POS endpoints
+  - [x] Add backend API contract tests for Instagram publish flow
 - [x] Component testing
   - [x] Add checkout component test for live cart, discount validation, and order submission flow
   - [x] Add POS component test for SKU lookup and cash-sale receipt flow
 - [x] E2E testing
   - [x] Add Playwright browser flow tests for customer checkout
   - [x] Add Playwright browser flow tests for staff POS cash sale
+  - [x] Add Playwright browser flow test for Instagram draft publishing
 - [x] Permission seed and RBAC coverage
   - [x] Add seed catalog alignment test for permission and role mappings
   - [x] Add backend JWT and permission validator tests

@@ -18,6 +18,15 @@ export type InstagramDraft = {
   createdAt?: string;
 };
 
+export type InstagramPublishResult = {
+  draftId: number;
+  status: string;
+  instagramCreationId?: string;
+  instagramMediaId?: string;
+  instagramPermalink?: string;
+  publishedAt?: string;
+};
+
 export async function getInstagramStatus(): Promise<InstagramConnection | null> {
   const response = await apiClient.get<ApiResponse<InstagramConnection | null>>('/marketing/instagram/status');
   return response.data.data;
@@ -63,5 +72,10 @@ export async function submitInstagramDraftForReview(draftId: number): Promise<In
 
 export async function approveInstagramDraft(draftId: number): Promise<InstagramDraft> {
   const response = await apiClient.post<ApiResponse<InstagramDraft>>(`/marketing/drafts/${draftId}/approve`);
+  return response.data.data;
+}
+
+export async function publishInstagramDraft(draftId: number): Promise<InstagramPublishResult> {
+  const response = await apiClient.post<ApiResponse<InstagramPublishResult>>(`/marketing/drafts/${draftId}/publish`);
   return response.data.data;
 }

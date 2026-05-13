@@ -10,6 +10,7 @@ import {
   createInstagramDraft,
   getInstagramDrafts,
   submitInstagramDraftForReview,
+  publishInstagramDraft,
   updateInstagramDraft,
   type InstagramDraft,
 } from '@/features/marketing/api/marketingApi';
@@ -24,6 +25,7 @@ export function InstagramDrafts() {
   const [hashtags, setHashtags] = useState('');
   const [mediaOrder, setMediaOrder] = useState('');
   const [message, setMessage] = useState('');
+  const [selectedDraftStatus, setSelectedDraftStatus] = useState<string>('DRAFT');
 
   function loadDrafts() {
     setIsLoading(true);
@@ -39,6 +41,7 @@ export function InstagramDrafts() {
 
   function handleSelectDraft(draft: InstagramDraft) {
     setSelectedDraftId(draft.id);
+    setSelectedDraftStatus(draft.status);
     setProductId(draft.productId);
     setCaption(draft.caption ?? '');
     setHashtags(draft.hashtags ?? '');
@@ -48,6 +51,7 @@ export function InstagramDrafts() {
 
   function handleNewDraft() {
     setSelectedDraftId(null);
+    setSelectedDraftStatus('DRAFT');
     setProductId(0);
     setCaption('');
     setHashtags('');
@@ -101,10 +105,31 @@ export function InstagramDrafts() {
     setMessage('');
     try {
       await approveInstagramDraft(selectedDraftId);
+      setSelectedDraftStatus('APPROVED');
       setMessage('Draft approved.');
       loadDrafts();
     } catch {
       setMessage('Draft could not be approved.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handlePublish() {
+    if (!selectedDraftId) return;
+    setIsSaving(true);
+    setMessage('');
+    try {
+      const published = await publishInstagramDraft(selectedDraftId);
+      setSelectedDraftStatus(published.status);
+      setMessage(
+        published.instagramPermalink
+          ? `Draft published to Instagram: ${published.instagramPermalink}`
+          : 'Draft published to Instagram.',
+      );
+      loadDrafts();
+    } catch {
+      setMessage('Draft could not be published to Instagram.');
     } finally {
       setIsSaving(false);
     }
@@ -160,7 +185,7 @@ export function InstagramDrafts() {
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase text-ink/50">DRF-{draft.id}</p>
                   <Badge variant={draft.status === 'APPROVED' ? 'success' : draft.status === 'READY_FOR_REVIEW' ? 'warning' : 'default'}>
-                    {draft.status.split('_').join(' ')}
+                        {draft.status === 'PUBLISHED' ? 'PUBLISHED' : draft.status.split('_').join(' ')}
                   </Badge>
                 </div>
                 <div className="mt-3 h-24 rounded-md border border-dashed border-primary/30 bg-surface" />
@@ -195,6 +220,7 @@ export function InstagramDrafts() {
                 <Button type="submit" variant="secondary" isLoading={isSaving}>Save Draft</Button>
                 <Button type="button" variant="secondary" onClick={handleSubmitReview} disabled={!selectedDraftId} isLoading={isSaving}>Submit Review</Button>
                 <Button type="button" variant="secondary" onClick={handleApprove} disabled={!selectedDraftId} isLoading={isSaving}>Approve</Button>
+                <Button type="button" onClick={handlePublish} disabled={!selectedDraftId || selectedDraftStatus !== 'APPROVED'} isLoading={isSaving}>Publish to Instagram</Button>
               </div>
             </form>
             {message ? <p className="mt-4 text-sm text-ink/65">{message}</p> : null}

@@ -1,26 +1,25 @@
 package com.seshop.payment.infrastructure;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seshop.shared.exception.BusinessException;
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
+import com.stripe.net.RequestOptions;
+import com.stripe.param.PaymentIntentCreateParams;
 import java.math.BigDecimal;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestClient;
 
 @Component
 public class StripeClient {
 
     private final StripeProperties properties;
-    private final ObjectMapper objectMapper;
 
-    public StripeClient(StripeProperties properties, ObjectMapper objectMapper) {
+    public StripeClient(StripeProperties properties) {
         this.properties = properties;
-        this.objectMapper = objectMapper;
+        if (StringUtils.hasText(properties.getSecretKey())) {
+            Stripe.apiKey = properties.getSecretKey();
+        }
     }
 
     public StripePaymentResult createPaymentIntent(BigDecimal amount, String idempotencyKey, String orderNumber) {
@@ -31,37 +30,45 @@ public class StripeClient {
             throw new BusinessException("PAY_002", "Stripe secret key is not configured");
         }
 
-        long amountInMinorUnits = amount.multiply(BigDecimal.valueOf(100L)).longValue();
-        String form = "amount=" + encode(String.valueOf(amountInMinorUnits))
-                + "&currency=" + encode(properties.getCurrency())
-                + "&metadata[order_number]=" + encode(orderNumber)
-                + "&automatic_payment_methods[enabled]=true";
-
-        String response = RestClient.builder()
-                .baseUrl(properties.getBaseUrl())
-                .build()
-                .post()
-                .uri("/payment_intents")
-                .header("Authorization", "Bearer " + properties.getSecretKey())
-                .header("Idempotency-Key", idempotencyKey)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(form)
-                .retrieve()
-                .body(String.class);
+        String currency = properties.getCurrency().toLowerCase();
+        long amountInMinorUnits;
+        if (isZeroDecimal(currency)) {
+            amountInMinorUnits = amount.longValue();
+        } else {
+            amountInMinorUnits = amount.multiply(BigDecimal.valueOf(100L)).longValue();
+        }
 
         try {
-            Map<String, Object> payload = objectMapper.readValue(response, new TypeReference<>() {});
-            String transactionId = (String) payload.get("id");
-            String status = (String) payload.getOrDefault("status", "requires_payment_method");
-            String clientSecret = (String) payload.get("client_secret");
-            return new StripePaymentResult(transactionId, status, clientSecret);
-        } catch (Exception exception) {
-            throw new BusinessException("PAY_001", "Cannot parse Stripe response");
+            PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+                    .setAmount(amountInMinorUnits)
+                    .setCurrency(currency)
+                    .putMetadata("order_number", orderNumber)
+                    .setAutomaticPaymentMethods(
+                            PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                                    .setEnabled(true)
+                                    .build()
+                    )
+                    .build();
+
+            RequestOptions options = RequestOptions.builder()
+                    .setIdempotencyKey(idempotencyKey)
+                    .build();
+
+            PaymentIntent paymentIntent = PaymentIntent.create(params, options);
+
+            return new StripePaymentResult(
+                    paymentIntent.getId(),
+                    paymentIntent.getStatus(),
+                    paymentIntent.getClientSecret()
+            );
+        } catch (StripeException e) {
+            throw new BusinessException("PAY_001", "Stripe API error: " + e.getMessage());
         }
     }
 
-    private String encode(String value) {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    private boolean isZeroDecimal(String currency) {
+        return java.util.Set.of("bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf")
+                .contains(currency);
     }
 
     public record StripePaymentResult(String transactionId, String status, String clientSecret) {

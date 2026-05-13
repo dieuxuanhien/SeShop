@@ -84,7 +84,7 @@ This API spec is aligned with:
 - Support `DRAFT`, `IN_TRANSIT`, `COMPLETED`, `CANCELLED` for transfers.
 - Support Stripe and Cash on Delivery in online checkout.
 - Support cash and card for POS.
-- Support manual review flow for Instagram drafts; no auto-publish endpoint is defined.
+- Support manual review flow for Instagram drafts and an explicit publish endpoint after approval.
 - Support procurement flows because purchase order and goods receipt tables exist in schema and SRS.
 
 ---
@@ -237,6 +237,7 @@ If a user lacks permission, the API must return `403 FORBIDDEN` with a stable er
 | `REF_001` | Refund not eligible |
 | `SOC_001` | Instagram connection expired |
 | `SOC_002` | Draft approval required |
+| `SOC_003` | Instagram publish failed |
 | `REV_001` | Review not eligible |
 | `GEN_001` | Invalid request payload |
 
@@ -970,6 +971,26 @@ Move draft to review-ready state.
 
 ### POST `/api/v1/marketing/drafts/{draftId}/approve`
 Approve draft for manual publishing handoff.
+
+### POST `/api/v1/marketing/drafts/{draftId}/publish`
+Publish an approved draft to Instagram.
+
+**Response 200**
+```json
+{
+  "data": {
+    "draftId": 11,
+    "status": "PUBLISHED",
+    "instagramCreationId": "creation-7",
+    "instagramMediaId": "media-99",
+    "instagramPermalink": "https://www.instagram.com/p/media-99",
+    "publishedAt": "2026-05-10T12:35:00+07:00"
+  },
+  "meta": {
+    "traceId": "trace-401"
+  }
+}
+```
 
 ### GET `/api/v1/marketing/drafts`
 List drafts with filters.

@@ -21,6 +21,7 @@ export type CheckoutResponse = {
   paymentStatus: string;
   shipmentStatus: string;
   totalAmount?: number;
+  clientSecret?: string;
 };
 
 export async function validateDiscount(code: string, subtotal: number): Promise<{ valid: boolean; discountAmount: number }> {

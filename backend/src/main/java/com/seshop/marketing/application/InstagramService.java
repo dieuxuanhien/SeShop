@@ -3,6 +3,7 @@ package com.seshop.marketing.application;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seshop.marketing.api.dto.InstagramPublishResultDto;
 import com.seshop.marketing.api.dto.InstagramConnectionDto;
 import com.seshop.marketing.api.dto.InstagramDraftDto;
 import com.seshop.marketing.infrastructure.MetaGraphClient;
@@ -140,6 +141,46 @@ public class InstagramService {
         return mapDraftToDto(draftRepository.save(entity));
     }
 
+    @Transactional
+    public InstagramPublishResultDto publishDraft(@NonNull Long draftId) {
+        InstagramDraftEntity entity = draftRepository.findById(draftId)
+                .orElseThrow(() -> new ResourceNotFoundException("SOC_404", "Draft not found"));
+        if (!"APPROVED".equals(entity.getStatus())) {
+            throw new BusinessException("SOC_002", "Draft approval required");
+        }
+
+        InstagramConnectionEntity connection = connectionRepository.findByUserId(entity.getCreatedBy())
+                .orElseThrow(() -> new BusinessException("SOC_001", "Instagram connection expired"));
+        if (!"CONNECTED".equals(connection.getStatus())) {
+            throw new BusinessException("SOC_001", "Instagram connection expired");
+        }
+
+        List<String> mediaOrder = readMediaOrder(entity.getMediaOrderJson());
+        if (mediaOrder.isEmpty() || !org.springframework.util.StringUtils.hasText(mediaOrder.getFirst())) {
+            throw new BusinessException("SOC_003", "Instagram draft has no media to publish");
+        }
+
+        String caption = buildPublishCaption(entity.getCaption(), entity.getHashtags());
+        MetaGraphClient.MetaPublishResult publishResult = metaGraphClient.publishImagePost(
+                connection.getAccountId(),
+                connection.getTokenEncrypted(),
+                mediaOrder.getFirst(),
+                caption
+        );
+
+        entity.setStatus("PUBLISHED");
+        draftRepository.save(entity);
+
+        InstagramPublishResultDto dto = new InstagramPublishResultDto();
+        dto.setDraftId(entity.getId());
+        dto.setStatus(entity.getStatus());
+        dto.setInstagramCreationId(publishResult.creationId());
+        dto.setInstagramMediaId(publishResult.mediaId());
+        dto.setInstagramPermalink(buildPermalink(publishResult.mediaId()));
+        dto.setPublishedAt(OffsetDateTime.now());
+        return dto;
+    }
+
     @Transactional(readOnly = true)
     public List<InstagramDraftDto> listDrafts() {
         return draftRepository.findAll().stream()
@@ -170,5 +211,34 @@ public class InstagramService {
             dto.setMediaOrder(Collections.emptyList());
         }
         return dto;
+    }
+
+    private List<String> readMediaOrder(String mediaOrderJson) {
+        try {
+            if (mediaOrderJson == null || mediaOrderJson.isBlank()) {
+                return Collections.emptyList();
+            }
+            return objectMapper.readValue(mediaOrderJson, new TypeReference<List<String>>() {});
+        } catch (Exception exception) {
+            return Collections.emptyList();
+        }
+    }
+
+    private String buildPublishCaption(String caption, String hashtags) {
+        StringBuilder builder = new StringBuilder();
+        if (caption != null && !caption.isBlank()) {
+            builder.append(caption.trim());
+        }
+        if (hashtags != null && !hashtags.isBlank()) {
+            if (builder.length() > 0) {
+                builder.append("\n\n");
+            }
+            builder.append(hashtags.trim());
+        }
+        return builder.toString();
+    }
+
+    private String buildPermalink(String mediaId) {
+        return "https://www.instagram.com/p/" + mediaId;
     }
 }
