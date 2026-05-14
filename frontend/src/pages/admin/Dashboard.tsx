@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -6,6 +7,7 @@ import { PageScaffold } from '@/shared/ui/PageScaffold';
 import { getDashboardMetrics, getSystemStatus, type DashboardMetrics, type SystemStatus } from '@/features/admin/api/adminDashboardApi';
 
 export function AdminDashboard() {
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [systemStatus, setSystemStatus] = useState<SystemStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -124,9 +126,9 @@ export function AdminDashboard() {
               <p className="mt-1 text-xs text-ink/50">Jump to critical admin controls.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary">New Role</Button>
-              <Button variant="secondary">Invite Staff</Button>
-              <Button variant="secondary">View Audit</Button>
+              <Button variant="secondary" onClick={() => navigate('/admin/users-roles')}>New Role</Button>
+              <Button variant="secondary" onClick={() => navigate('/admin/users-roles')}>Invite Staff</Button>
+              <Button variant="secondary" onClick={() => navigate('/admin/audit-logs')}>View Audit</Button>
             </div>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">

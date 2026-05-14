@@ -3,8 +3,9 @@ import { ImagePlus, Pencil, Plus, Search, Shirt, Tags } from 'lucide-react';
 import {
   createProduct,
   createProductVariants,
-  getProducts,
+  getStaffProducts,
   registerProductImage,
+  uploadProductImage,
   updateProduct,
   type ProductMutationRequest,
   type VariantMutationRequest,
@@ -40,7 +41,7 @@ export function CatalogManagement() {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [productForm, setProductForm] = useState<ProductMutationRequest>(emptyProductForm);
   const [variantForm, setVariantForm] = useState<VariantMutationRequest>(emptyVariantForm);
-  const [imageUrl, setImageUrl] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -61,7 +62,7 @@ export function CatalogManagement() {
   async function loadProducts() {
     setIsLoading(true);
     try {
-      const page = await getProducts({ page: 1, size: 100 });
+      const page = await getStaffProducts({ page: 1, size: 100 });
       setProducts(page.items);
     } catch {
       setProducts([]);
@@ -83,14 +84,16 @@ export function CatalogManagement() {
       status: product.status,
     });
     setMessage('');
+    document.getElementById('product-form')?.scrollIntoView({ behavior: 'smooth' });
   }
 
   function handleNewProduct() {
     setSelectedProductId(null);
     setProductForm(emptyProductForm);
     setVariantForm(emptyVariantForm);
-    setImageUrl('');
+    setUploadFile(null);
     setMessage('');
+    document.getElementById('product-form')?.scrollIntoView({ behavior: 'smooth' });
   }
 
   async function handleSaveProduct(event: React.FormEvent) {
@@ -130,20 +133,16 @@ export function CatalogManagement() {
 
   async function handleAddImage(event: React.FormEvent) {
     event.preventDefault();
-    if (!selectedProductId || !imageUrl.trim()) return;
+    if (!selectedProductId || !uploadFile) return;
     setIsSaving(true);
     setMessage('');
     try {
-      await registerProductImage(selectedProductId, {
-        url: imageUrl.trim(),
-        sortOrder: selectedProduct?.images.length ?? 0,
-        isInstagramReady: true,
-      });
-      setImageUrl('');
-      setMessage('Image registered.');
+      await uploadProductImage(selectedProductId, uploadFile);
+      setUploadFile(null);
+      setMessage('Image uploaded successfully.');
       await loadProducts();
     } catch {
-      setMessage('Image could not be registered.');
+      setMessage('Image could not be uploaded.');
     } finally {
       setIsSaving(false);
     }
@@ -246,7 +245,7 @@ export function CatalogManagement() {
         </Card>
 
         <div className="grid gap-5">
-          <Card className="border-primary/20 bg-surface/95 p-5">
+          <Card id="product-form" className="border-primary/20 bg-surface/95 p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">
                 {selectedProductId ? 'Edit Product' : 'Create Product'}
@@ -327,14 +326,17 @@ export function CatalogManagement() {
           <Card className="border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Product Media</h2>
             <form onSubmit={handleAddImage} className="mt-4 grid gap-4">
-              <Input
-                label="Image URL"
-                value={imageUrl}
-                onChange={(event) => setImageUrl(event.target.value)}
-                placeholder="https://..."
-              />
-              <Button type="submit" variant="secondary" icon={<ImagePlus size={16} />} disabled={!selectedProductId} isLoading={isSaving}>
-                Register Image
+              <label className="grid gap-1 text-sm font-medium text-ink">
+                <span>Upload Product Image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setUploadFile(event.target.files?.[0] || null)}
+                  className="w-full rounded-md border border-primary/30 bg-surface px-3 py-2 text-sm text-ink outline-none file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-1 file:text-xs file:font-semibold file:text-surface"
+                />
+              </label>
+              <Button type="submit" variant="secondary" icon={<ImagePlus size={16} />} disabled={!selectedProductId || !uploadFile} isLoading={isSaving}>
+                Upload Image
               </Button>
             </form>
             {message ? <p className="mt-4 text-sm text-ink/65">{message}</p> : null}

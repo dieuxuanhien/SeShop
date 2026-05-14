@@ -60,6 +60,29 @@ public class StaffCatalogController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping
+    public ResponseEntity<Map<String, Object>> listProducts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String brand,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<ProductDto> products = catalogService.getAllProducts(keyword, brand, pageable);
+
+        Map<String, Object> data = new java.util.HashMap<>();
+        data.put("items", products.getContent());
+        data.put("page", products.getNumber());
+        data.put("size", products.getSize());
+        data.put("totalElements", products.getTotalElements());
+        data.put("totalPages", products.getTotalPages());
+
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("data", data);
+
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/{productId}/images")
     public ResponseEntity<Map<String, Object>> registerImage(
             @PathVariable Long productId,
@@ -67,6 +90,18 @@ public class StaffCatalogController {
         ProductDto product = catalogService.registerImage(productId, request);
 
         Map<String, Object> response = new HashMap<>();
+        response.put("data", product);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{productId}/images/upload")
+    public ResponseEntity<Map<String, Object>> uploadImage(
+            @PathVariable Long productId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        ProductDto product = catalogService.uploadImage(productId, file);
+
+        Map<String, Object> response = new java.util.HashMap<>();
         response.put("data", product);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

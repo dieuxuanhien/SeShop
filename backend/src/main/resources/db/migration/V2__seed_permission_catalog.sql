@@ -12,5 +12,8 @@ VALUES
   ('refund.process', 'Process refunds and returns'),
   ('promo.manage', 'Manage discount codes'),
   ('social.compose', 'Compose Instagram drafts'),
-  ('social.connect', 'Connect or reconnect Instagram account')
+  ('social.connect', 'Connect or reconnect Instagram account'),
+  ('customer.read', 'View customer profiles'),
+  ('customer.write', 'Manage customer accounts'),
+  ('report.read', 'View sales and inventory reports')
 ON CONFLICT (code) DO NOTHING;

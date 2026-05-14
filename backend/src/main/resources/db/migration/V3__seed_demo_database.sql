@@ -38,7 +38,10 @@ INSERT INTO seed_thrifted_products (
   ('93569-A', 'George Thorogood And The Destroyers Unbranded Band T-Shirt - Large Black Cotton', 'Unbranded', 'T-Shirt', 'Large', 'Black', 1278000, 'Very Good', 'Mens', 'Cotton', '2000S', 'https://cdn.shopify.com/s/files/1/0556/1841/files/E95F9632-A584-46F8-BD5E-1672087D0746.webp?v=1778237995', 'Band Tees'),
   ('93563-A', 'Polo By Ralph Lauren Polo Shirt - XL Green Cotton', 'Polo by Ralph Lauren', 'Polo Shirt', 'XL', 'Green', 1278000, 'Very Good', 'Mens', 'Cotton', '2000S', 'https://cdn.shopify.com/s/files/1/0556/1841/files/16509324-C6CD-40F4-8634-200E848A5A54.webp?v=1778237978', 'Polo Shirts'),
   ('93562-A', 'Skull Mona Lisa Social Collision Graphic T-Shirt - Medium Black Polyester', 'Social Collision', 'T-Shirt', 'Medium', 'Black', 1278000, 'Very Good', 'Mens', 'Polyester', '2000S', 'https://cdn.shopify.com/s/files/1/0556/1841/files/81A9B3C6-546D-43BD-BDE5-6EB10E4329C2.webp?v=1778237976', 'Graphic T-Shirts'),
-  ('93558-A', 'Golden State Warriors Hardwood Classics Nba Graphic Long Sleeve T-Shirt - Small Black Cotton', 'Hardwood Classics Nba', 'Long Sleeve T-Shirt', 'Small', 'Black', 1570000, 'Very Good', 'Mens', 'Cotton', '2000S', 'https://cdn.shopify.com/s/files/1/0556/1841/files/F7D8C41D-2502-4799-A4F8-AD2F27369F8C.webp?v=1778237968', 'Sportswear');
+  ('93558-A', 'Golden State Warriors Hardwood Classics Nba Graphic Long Sleeve T-Shirt - Small Black Cotton', 'Hardwood Classics Nba', 'Long Sleeve T-Shirt', 'Small', 'Black', 1570000, 'Very Good', 'Mens', 'Cotton', '2000S', 'https://cdn.shopify.com/s/files/1/0556/1841/files/F7D8C41D-2502-4799-A4F8-AD2F27369F8C.webp?v=1778237968', 'Sportswear'),
+  ('LVR-001', 'Louis Vuitton Monogram Pochette Accessoires', 'Louis Vuitton', 'Bag', 'One Size', 'Brown', 25000000, 'Excellent', 'Womens', 'Canvas', '2010S', 'https://images.vestiairecollective.com/cdn-cgi/image/width=1000,quality=80,format=auto,f=intrinsic/produit/35824589-1_1.jpg', 'Designer Accessories'),
+  ('GUCCI-001', 'Gucci Double G Buckle Leather Belt', 'Gucci', 'Belt', '90cm', 'Black', 8500000, 'Pristine', 'Unisex', 'Leather', '2020S', 'https://media.gucci.com/style/DarkGray_Center_0_0_2400x2400/1473432313/414516_AP00T_1000_001_100_0000_Light-Leather-belt-with-Double-G-buckle.jpg', 'Designer Accessories'),
+  ('NIKE-SB-001', 'Nike SB Dunk Low Pro ''Chicago''', 'Nike', 'Sneakers', 'US 10', 'Red/White/Black', 12500000, 'Deadstock', 'Mens', 'Leather', '2020S', 'https://images.stockx.com/images/Nike-SB-Dunk-Low-J-Pack-Chicago-Product.jpg?fit=fill&bg=FFFFFF&w=700&h=500&auto=format,compress&q=90&dpr=2&trim=color&updated_at=1606322238', 'Sneakers');
 
 INSERT INTO roles (name, description, status)
 VALUES
@@ -83,7 +86,9 @@ JOIN permissions p ON p.code IN (
   'refund.process',
   'promo.manage',
   'social.compose',
-  'social.connect'
+  'social.connect',
+  'customer.read',
+  'report.read'
 )
 WHERE r.name = 'STORE_MANAGER'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
@@ -121,7 +126,9 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO categories (name, description)
 VALUES
   ('New Arrivals', 'Recently scraped seed products from Thrifted.com.'),
-  ('Vintage Essentials', 'Core second-hand clothing pieces for storefront merchandising.')
+  ('Vintage Essentials', 'Core second-hand clothing pieces for storefront merchandising.'),
+  ('Designer Accessories', 'Luxury items and accessories.'),
+  ('Sneakers', 'Collectible and vintage footwear.')
 ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO products (name, brand, description, status)
@@ -410,6 +417,18 @@ INSERT INTO orders (order_number, customer_user_id, status, payment_status, ship
 SELECT 'ORD-DEMO-2026-0002', u.id, 'CONFIRMED', 'PENDING', 'PENDING', 2337000, 'VND', TIMESTAMPTZ '2026-05-08 10:40:00+07', TIMESTAMPTZ '2026-05-08 10:45:00+07'
 FROM users u
 WHERE u.username = 'demo.customer'
+UNION ALL
+SELECT 'ORD-DEMO-2026-0003', u.id, 'SHIPPED', 'COMPLETED', 'SHIPPED', 25000000, 'VND', TIMESTAMPTZ '2026-05-09 14:00:00+07', TIMESTAMPTZ '2026-05-09 16:00:00+07'
+FROM users u
+WHERE u.username = 'demo.customer'
+UNION ALL
+SELECT 'ORD-DEMO-2026-0004', u.id, 'CANCELLED', 'REFUNDED', 'CANCELLED', 8500000, 'VND', TIMESTAMPTZ '2026-05-10 10:00:00+07', TIMESTAMPTZ '2026-05-10 10:30:00+07'
+FROM users u
+WHERE u.username = 'demo.customer'
+UNION ALL
+SELECT 'ORD-DEMO-2026-0005', u.id, 'PENDING', 'FAILED', 'PENDING', 12500000, 'VND', TIMESTAMPTZ '2026-05-11 09:00:00+07', TIMESTAMPTZ '2026-05-11 09:05:00+07'
+FROM users u
+WHERE u.username = 'demo.customer'
 ON CONFLICT (order_number) DO NOTHING;
 
 INSERT INTO order_items (order_id, variant_id, qty, unit_price, discount_amount)
@@ -418,7 +437,10 @@ FROM (VALUES
   ('ORD-DEMO-2026-0001', 'THR-93579-A', 1, 0::NUMERIC),
   ('ORD-DEMO-2026-0001', 'THR-93570-A', 1, 0::NUMERIC),
   ('ORD-DEMO-2026-0002', 'THR-93591-A', 1, 0::NUMERIC),
-  ('ORD-DEMO-2026-0002', 'THR-93582-A', 1, 0::NUMERIC)
+  ('ORD-DEMO-2026-0002', 'THR-93582-A', 1, 0::NUMERIC),
+  ('ORD-DEMO-2026-0003', 'THR-LVR-001', 1, 0::NUMERIC),
+  ('ORD-DEMO-2026-0004', 'THR-GUCCI-001', 1, 0::NUMERIC),
+  ('ORD-DEMO-2026-0005', 'THR-NIKE-SB-001', 1, 0::NUMERIC)
 ) AS v(order_number, sku_code, qty, discount_amount)
 JOIN orders o ON o.order_number = v.order_number
 JOIN product_variants pv ON pv.sku_code = v.sku_code
@@ -435,7 +457,8 @@ FROM (VALUES
   ('ORD-DEMO-2026-0001', 'THR-93579-A', 'PICKED'),
   ('ORD-DEMO-2026-0001', 'THR-93570-A', 'PICKED'),
   ('ORD-DEMO-2026-0002', 'THR-93591-A', 'ALLOCATED'),
-  ('ORD-DEMO-2026-0002', 'THR-93582-A', 'ALLOCATED')
+  ('ORD-DEMO-2026-0002', 'THR-93582-A', 'ALLOCATED'),
+  ('ORD-DEMO-2026-0003', 'THR-LVR-001', 'SHIPPED')
 ) AS v(order_number, sku_code, status)
 JOIN orders o ON o.order_number = v.order_number
 JOIN product_variants pv ON pv.sku_code = v.sku_code
@@ -457,6 +480,10 @@ INSERT INTO shipments (order_id, carrier, tracking_number, status, shipped_at)
 SELECT o.id, 'GHN', 'GHN-DEMO-0002', 'PENDING', NULL
 FROM orders o
 WHERE o.order_number = 'ORD-DEMO-2026-0002'
+UNION ALL
+SELECT o.id, 'DHL', 'DHL-DEMO-0003', 'SHIPPED', TIMESTAMPTZ '2026-05-09 17:00:00+07'
+FROM orders o
+WHERE o.order_number = 'ORD-DEMO-2026-0003'
 ON CONFLICT (carrier, tracking_number) DO NOTHING;
 
 INSERT INTO payments (order_id, provider, method, status, amount, created_at, updated_at)
@@ -472,21 +499,27 @@ WHERE o.order_number = 'ORD-DEMO-2026-0001'
   );
 
 INSERT INTO payments (order_id, provider, method, status, amount, created_at, updated_at)
-SELECT o.id, 'COD', 'CASH', 'PENDING', o.total_amount, TIMESTAMPTZ '2026-05-08 10:41:00+07', TIMESTAMPTZ '2026-05-08 10:41:00+07'
-FROM orders o
-WHERE o.order_number = 'ORD-DEMO-2026-0002'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM payments p
-    WHERE p.order_id = o.id
-      AND p.provider = 'COD'
-      AND p.status = 'PENDING'
-  );
+SELECT o.id, v.provider, v.method, v.status, o.total_amount, v.created_at, v.updated_at
+FROM (
+  VALUES 
+    ('ORD-DEMO-2026-0002', 'COD', 'CASH', 'PENDING', TIMESTAMPTZ '2026-05-08 10:41:00+07', TIMESTAMPTZ '2026-05-08 10:41:00+07'),
+    ('ORD-DEMO-2026-0003', 'STRIPE', 'CARD', 'COMPLETED', TIMESTAMPTZ '2026-05-09 14:01:00+07', TIMESTAMPTZ '2026-05-09 14:02:00+07'),
+    ('ORD-DEMO-2026-0004', 'STRIPE', 'CARD', 'REFUNDED', TIMESTAMPTZ '2026-05-10 10:01:00+07', TIMESTAMPTZ '2026-05-10 10:35:00+07'),
+    ('ORD-DEMO-2026-0005', 'STRIPE', 'CARD', 'FAILED', TIMESTAMPTZ '2026-05-11 09:01:00+07', TIMESTAMPTZ '2026-05-11 09:02:00+07')
+) AS v(order_number, provider, method, status, created_at, updated_at)
+JOIN orders o ON o.order_number = v.order_number
+WHERE NOT EXISTS (
+  SELECT 1 FROM payments p 
+  WHERE p.order_id = o.id 
+    AND p.provider = v.provider 
+    AND p.status = v.status
+);
 
 INSERT INTO discount_codes (code, discount_type, discount_value, min_spend, max_uses, start_at, end_at, status)
 VALUES
   ('VINTAGE10', 'PERCENT', 10, 500000, 200, TIMESTAMPTZ '2026-05-01 00:00:00+07', TIMESTAMPTZ '2026-06-01 00:00:00+07', 'ACTIVE'),
-  ('THRIFTED50K', 'FIXED', 50000, 800000, 100, TIMESTAMPTZ '2026-05-01 00:00:00+07', TIMESTAMPTZ '2026-06-01 00:00:00+07', 'ACTIVE')
+  ('THRIFTED50K', 'FIXED', 50000, 800000, 100, TIMESTAMPTZ '2026-05-01 00:00:00+07', TIMESTAMPTZ '2026-06-01 00:00:00+07', 'ACTIVE'),
+  ('WELCOME20', 'PERCENT', 20, 0, 1000, TIMESTAMPTZ '2026-01-01 00:00:00+07', TIMESTAMPTZ '2027-01-01 00:00:00+07', 'ACTIVE')
 ON CONFLICT (code) DO UPDATE
 SET discount_type = EXCLUDED.discount_type,
     discount_value = EXCLUDED.discount_value,
@@ -721,28 +754,22 @@ WHERE o.order_number = 'ORD-DEMO-2026-0001'
 ON CONFLICT (order_item_id, customer_user_id) DO NOTHING;
 
 INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, metadata_json, created_at)
-SELECT admin.id, 'ROLE_CREATED', 'SeedData', 'SUPER_ADMIN', '{"source":"V3__seed_demo_database"}'::jsonb, TIMESTAMPTZ '2026-05-08 08:00:00+07'
-FROM users admin
-WHERE admin.username = 'super.admin'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM audit_logs al
-    WHERE al.action = 'ROLE_CREATED'
-      AND al.target_type = 'SeedData'
-      AND al.target_id = 'SUPER_ADMIN'
-  );
-
-INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, metadata_json, created_at)
-SELECT admin.id, 'USER_ROLE_ASSIGNED', 'User', customer.id::TEXT, '{"role":"CUSTOMER","source":"V3__seed_demo_database"}'::jsonb, TIMESTAMPTZ '2026-05-08 08:05:00+07'
-FROM users admin
-JOIN users customer ON customer.username = 'demo.customer'
-WHERE admin.username = 'super.admin'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM audit_logs al
-    WHERE al.action = 'USER_ROLE_ASSIGNED'
-      AND al.target_type = 'User'
-      AND al.target_id = customer.id::TEXT
-  );
+SELECT u.id, 'ROLE_CREATED', 'SeedData', 'SUPER_ADMIN', '{"source":"V3__seed_demo_database"}'::jsonb, TIMESTAMPTZ '2026-05-08 08:00:00+07'
+FROM users u WHERE u.username = 'super.admin'
+UNION ALL
+SELECT u.id, 'USER_ROLE_ASSIGNED', 'User', 'DEMO_CUSTOMER_ID', '{"role":"CUSTOMER","source":"V3__seed_demo_database"}'::jsonb, TIMESTAMPTZ '2026-05-08 08:05:00+07'
+FROM users u WHERE u.username = 'super.admin'
+UNION ALL
+SELECT u.id, 'PRODUCT_CREATED', 'Product', 'THR-LVR-001', '{"name":"Louis Vuitton Monogram Pochette Accessoires"}'::jsonb, TIMESTAMPTZ '2026-05-09 10:00:00+07'
+FROM users u WHERE u.username = 'staff.manager'
+UNION ALL
+SELECT u.id, 'INVENTORY_ADJUSTED', 'Inventory', 'THR-LVR-001', '{"location":"ONLINE-HCM","qty":1}'::jsonb, TIMESTAMPTZ '2026-05-09 10:05:00+07'
+FROM users u WHERE u.username = 'staff.manager'
+UNION ALL
+SELECT u.id, 'ORDER_CONFIRMED', 'Order', 'ORD-DEMO-2026-0003', '{"total":25000000}'::jsonb, TIMESTAMPTZ '2026-05-09 14:05:00+07'
+FROM users u WHERE u.username = 'staff.manager'
+UNION ALL
+SELECT u.id, 'SHIPMENT_CREATED', 'Shipment', 'DHL-DEMO-0003', '{"carrier":"DHL"}'::jsonb, TIMESTAMPTZ '2026-05-09 17:05:00+07'
+FROM users u WHERE u.username = 'staff.manager';
 
 DROP TABLE seed_thrifted_products;

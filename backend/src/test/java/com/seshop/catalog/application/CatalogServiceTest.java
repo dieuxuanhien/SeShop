@@ -38,12 +38,14 @@ class CatalogServiceTest {
     private ProductVariantRepository productVariantRepository;
     @Mock
     private CategoryRepository categoryRepository;
+    @Mock
+    private com.seshop.shared.util.FileStorageService fileStorageService;
 
     private CatalogService service;
 
     @BeforeEach
     void setUp() {
-        service = new CatalogService(productRepository, productVariantRepository, categoryRepository);
+        service = new CatalogService(productRepository, productVariantRepository, categoryRepository, fileStorageService);
     }
 
     // ── createProduct ───────────────────────────────────────────────────────

@@ -21,13 +21,16 @@ public class CatalogService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final CategoryRepository categoryRepository;
+    private final com.seshop.shared.util.FileStorageService fileStorageService;
 
     public CatalogService(ProductRepository productRepository, 
                           ProductVariantRepository productVariantRepository,
-                          CategoryRepository categoryRepository) {
+                          CategoryRepository categoryRepository,
+                          com.seshop.shared.util.FileStorageService fileStorageService) {
         this.productRepository = productRepository;
         this.productVariantRepository = productVariantRepository;
         this.categoryRepository = categoryRepository;
+        this.fileStorageService = fileStorageService;
     }
 
     public ProductDto createProduct(CreateProductRequest request) {
@@ -81,6 +84,28 @@ public class CatalogService {
         image.setIsInstagramReady(Boolean.TRUE.equals(request.getIsInstagramReady()));
         product.getImages().add(image);
         return mapToDto(productRepository.save(product));
+    }
+
+    public ProductDto uploadImage(Long productId, org.springframework.web.multipart.MultipartFile file) {
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        
+        String url = fileStorageService.store(file);
+        
+        ProductImageEntity image = new ProductImageEntity();
+        image.setProduct(product);
+        image.setUrl(url);
+        image.setSortOrder(product.getImages().size());
+        image.setIsInstagramReady(true);
+        product.getImages().add(image);
+        
+        return mapToDto(productRepository.save(product));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductDto> getAllProducts(String keyword, String brand, Pageable pageable) {
+        return productRepository.findByFilters(normalizeFilter(keyword), normalizeFilter(brand), pageable)
+                .map(this::mapToDto);
     }
 
     @Transactional(readOnly = true)

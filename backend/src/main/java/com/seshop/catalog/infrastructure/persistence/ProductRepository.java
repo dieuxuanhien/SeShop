@@ -10,6 +10,14 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
     
+    @Query("SELECT p FROM ProductEntity p WHERE " +
+           "(:keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:brand = '' OR LOWER(p.brand) = LOWER(:brand))")
+    Page<ProductEntity> findByFilters(
+            @Param("keyword") String keyword,
+            @Param("brand") String brand,
+            Pageable pageable);
+
     @Query("SELECT p FROM ProductEntity p WHERE p.status = 'PUBLISHED' " +
            "AND (:keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (:brand = '' OR LOWER(p.brand) = LOWER(:brand))")

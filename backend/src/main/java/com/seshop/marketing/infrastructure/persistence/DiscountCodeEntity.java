@@ -42,33 +42,83 @@ public class DiscountCodeEntity {
     private List<DiscountRedemptionEntity> redemptions = new ArrayList<>();
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getCode() { return code; }
-    public void setCode(String code) { this.code = code; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDiscountType() { return discountType; }
-    public void setDiscountType(String discountType) { this.discountType = discountType; }
+    public String getCode() {
+        return code;
+    }
 
-    public BigDecimal getDiscountValue() { return discountValue; }
-    public void setDiscountValue(BigDecimal discountValue) { this.discountValue = discountValue; }
+    public void setCode(String code) {
+        this.code = code;
+    }
 
-    public BigDecimal getMinSpend() { return minSpend; }
-    public void setMinSpend(BigDecimal minSpend) { this.minSpend = minSpend; }
+    public String getDiscountType() {
+        return discountType;
+    }
 
-    public Integer getMaxUses() { return maxUses; }
-    public void setMaxUses(Integer maxUses) { this.maxUses = maxUses; }
+    public void setDiscountType(String discountType) {
+        this.discountType = discountType;
+    }
 
-    public OffsetDateTime getStartAt() { return startAt; }
-    public void setStartAt(OffsetDateTime startAt) { this.startAt = startAt; }
+    public BigDecimal getDiscountValue() {
+        return discountValue;
+    }
 
-    public OffsetDateTime getEndAt() { return endAt; }
-    public void setEndAt(OffsetDateTime endAt) { this.endAt = endAt; }
+    public void setDiscountValue(BigDecimal discountValue) {
+        this.discountValue = discountValue;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public BigDecimal getMinSpend() {
+        return minSpend;
+    }
 
-    public List<DiscountRedemptionEntity> getRedemptions() { return redemptions; }
-    public void setRedemptions(List<DiscountRedemptionEntity> redemptions) { this.redemptions = redemptions; }
+    public void setMinSpend(BigDecimal minSpend) {
+        this.minSpend = minSpend;
+    }
+
+    public Integer getMaxUses() {
+        return maxUses;
+    }
+
+    public void setMaxUses(Integer maxUses) {
+        this.maxUses = maxUses;
+    }
+
+    public OffsetDateTime getStartAt() {
+        return startAt;
+    }
+
+    public void setStartAt(OffsetDateTime startAt) {
+        this.startAt = startAt;
+    }
+
+    public OffsetDateTime getEndAt() {
+        return endAt;
+    }
+
+    public void setEndAt(OffsetDateTime endAt) {
+        this.endAt = endAt;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public List<DiscountRedemptionEntity> getRedemptions() {
+        return redemptions;
+    }
+
+    public void setRedemptions(List<DiscountRedemptionEntity> redemptions) {
+        this.redemptions = redemptions;
+    }
 }
