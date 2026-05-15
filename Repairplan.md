@@ -35,9 +35,11 @@ Target UCs: UC1-UC4, plus all staff/admin workflows.
    - Progress: UC1-UC3 role create, role permission assignment, staff role assignment, and staff role revocation now emit structured audit metadata.
    - Progress: role permission assignment now activates an inactive role, and staff role assignment rejects inactive users or inactive roles.
    - Progress: POS sale, POS shift close, tax invoice issue, and invoice adjustment now emit structured audit metadata.
+   - Progress: return request, return approval, and refund creation now emit structured audit metadata.
 4. Add tests proving unauthorized users get rejected.
    - Progress: `RoleServiceTest` covers UC1-UC3 audit events and inactive user/role rejection.
    - Progress: `ReceiptServiceTest`, `ShiftServiceTest`, and `InvoiceServiceTest` cover POS/invoice audit events.
+   - Progress: `RefundServiceTest` covers return/refund audit events.
 
 Deliverable: backend RBAC and audit are reliable enough for every later UC.
 
