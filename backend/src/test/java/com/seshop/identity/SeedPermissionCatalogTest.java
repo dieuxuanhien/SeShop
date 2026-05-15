@@ -25,7 +25,10 @@ class SeedPermissionCatalogTest {
             "refund.process",
             "promo.manage",
             "social.compose",
-            "social.connect"
+            "social.connect",
+            "customer.read",
+            "customer.write",
+            "report.read"
     );
 
     @Test
@@ -57,7 +60,9 @@ class SeedPermissionCatalogTest {
                 "refund.process",
                 "promo.manage",
                 "social.compose",
-                "social.connect"
+                "social.connect",
+                "customer.read",
+                "report.read"
         );
         assertThat(matcher.find()).isTrue();
         assertThat(splitSqlStringList(matcher.group(1))).containsExactly(

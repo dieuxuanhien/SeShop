@@ -128,7 +128,7 @@ class CatalogServiceTest {
     @Test
     void getPublishedProductsReturnsPagedResults() {
         ProductEntity p = productEntity(1L, "Vintage Tee", "Hanes", "PUBLISHED");
-        given(productRepository.findPublishedProducts(null, null, PageRequest.of(0, 10)))
+        given(productRepository.findPublishedProducts("", "", PageRequest.of(0, 10)))
                 .willReturn(new PageImpl<>(List.of(p)));
 
         var page = service.getPublishedProducts(null, null, PageRequest.of(0, 10));

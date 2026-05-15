@@ -3,6 +3,7 @@ package com.seshop.identity.api;
 import com.seshop.identity.application.RoleService;
 import com.seshop.identity.infrastructure.persistence.RoleEntity;
 import com.seshop.shared.security.AuthenticatedUser;
+import com.seshop.shared.security.PermissionValidator;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,14 +24,21 @@ import java.util.UUID;
 @RequestMapping("/api/v1/admin")
 public class RoleController {
 
-    private final RoleService roleService;
+    private static final String ROLE_CREATE = "role.create";
+    private static final String ROLE_PERMISSION_ASSIGN = "role.permission.assign";
+    private static final String STAFF_ROLE_ASSIGN = "staff.role.assign";
 
-    public RoleController(RoleService roleService) {
+    private final RoleService roleService;
+    private final PermissionValidator permissionValidator;
+
+    public RoleController(RoleService roleService, PermissionValidator permissionValidator) {
         this.roleService = roleService;
+        this.permissionValidator = permissionValidator;
     }
 
     @PostMapping("/roles")
     public ResponseEntity<?> createRole(@Valid @RequestBody CreateRoleRequest request) {
+        permissionValidator.require(ROLE_CREATE);
         RoleEntity role = roleService.createRole(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "data", Map.of(
@@ -44,6 +52,7 @@ public class RoleController {
 
     @GetMapping("/roles")
     public ResponseEntity<?> listRoles() {
+        permissionValidator.requireAny(ROLE_CREATE, ROLE_PERMISSION_ASSIGN, STAFF_ROLE_ASSIGN);
         List<RoleEntity> roles = roleService.listRoles();
         // In a real application, this would be paginated
         return ResponseEntity.ok(Map.of(
@@ -55,6 +64,7 @@ public class RoleController {
     @PostMapping("/roles/{roleId}/permissions")
     public ResponseEntity<?> assignPermissions(@PathVariable Long roleId,
                                                @Valid @RequestBody AssignPermissionsRequest request) {
+        permissionValidator.require(ROLE_PERMISSION_ASSIGN);
         roleService.assignPermissionsToRole(roleId, request.permissionCodes());
         return ResponseEntity.ok(Map.of(
                 "data", Map.of("success", true),
@@ -66,6 +76,7 @@ public class RoleController {
     public ResponseEntity<?> assignRoleToUser(@PathVariable Long userId,
                                               @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
                                               @Valid @RequestBody AssignRoleRequest request) {
+        permissionValidator.require(STAFF_ROLE_ASSIGN);
         roleService.assignRoleToUser(userId, request.roleId(), authenticatedUser.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "data", Map.of("success", true),
@@ -76,6 +87,7 @@ public class RoleController {
     @DeleteMapping("/users/{userId}/roles/{assignmentId}")
     public ResponseEntity<?> revokeRoleFromUser(@PathVariable Long userId,
                                                 @PathVariable Long assignmentId) {
+        permissionValidator.require(STAFF_ROLE_ASSIGN);
         roleService.revokeRoleFromUser(userId, assignmentId);
         return ResponseEntity.noContent().build();
     }

@@ -38,6 +38,22 @@ class PermissionValidatorTest {
     }
 
     @Test
+    void requireAnyAllowsOneGrantedPermission() {
+        setAuthenticationWithPermissions(List.of("staff.role.assign"));
+
+        assertThatCode(() -> validator.requireAny("role.create", "staff.role.assign")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void requireAnyRejectsWhenNoneGranted() {
+        setAuthenticationWithPermissions(List.of("order.read"));
+
+        assertThatThrownBy(() -> validator.requireAny("role.create", "staff.role.assign"))
+                .isInstanceOf(ForbiddenOperationException.class)
+                .hasMessage("Missing one of permissions: role.create, staff.role.assign");
+    }
+
+    @Test
     void hasPermissionReturnsFalseWithoutAuthentication() {
         assertThat(validator.hasPermission("audit.read")).isFalse();
     }

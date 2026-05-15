@@ -82,8 +82,6 @@ class DiscountServiceTest {
 
     @Test
     void createDiscountRejectsEndBeforeStart() {
-        given(discountCodeRepository.findByCode("BAD")).willReturn(Optional.empty());
-
         DiscountDto request = discountRequest("BAD", "FIXED", "50000", "0", null);
         request.setStartAt(OffsetDateTime.now().plusDays(5));
         request.setEndAt(OffsetDateTime.now().plusDays(1)); // earlier than start
@@ -111,7 +109,6 @@ class DiscountServiceTest {
     void validateDiscountHappyPathReturnsAmountForPercentType() {
         DiscountCodeEntity entity = activeEntity("VINTAGE10", "PERCENT", "10");
         given(discountCodeRepository.findByCode("VINTAGE10")).willReturn(Optional.of(entity));
-        given(redemptionRepository.countByDiscountCodeId(null)).willReturn(0L);
 
         DiscountValidateRequest request = new DiscountValidateRequest();
         request.setCode("VINTAGE10");
@@ -127,7 +124,6 @@ class DiscountServiceTest {
     void validateDiscountHappyPathReturnsFixedAmount() {
         DiscountCodeEntity entity = activeEntity("THRIFTED50K", "FIXED", "50000");
         given(discountCodeRepository.findByCode("THRIFTED50K")).willReturn(Optional.of(entity));
-        given(redemptionRepository.countByDiscountCodeId(null)).willReturn(0L);
 
         DiscountValidateRequest request = new DiscountValidateRequest();
         request.setCode("THRIFTED50K");
@@ -176,7 +172,6 @@ class DiscountServiceTest {
         DiscountCodeEntity entity = activeEntity("HIGHMIN", "FIXED", "100000");
         entity.setMinSpend(new BigDecimal("2000000"));
         given(discountCodeRepository.findByCode("HIGHMIN")).willReturn(Optional.of(entity));
-        given(redemptionRepository.countByDiscountCodeId(null)).willReturn(0L);
 
         DiscountValidateRequest request = new DiscountValidateRequest();
         request.setCode("HIGHMIN");
