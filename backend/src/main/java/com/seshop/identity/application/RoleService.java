@@ -1,7 +1,10 @@
 package com.seshop.identity.application;
 
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.identity.api.CreateRoleRequest;
 import com.seshop.identity.domain.RoleStatus;
+import com.seshop.identity.domain.UserStatus;
 import com.seshop.identity.infrastructure.persistence.PermissionEntity;
 import com.seshop.identity.infrastructure.persistence.PermissionRepository;
 import com.seshop.identity.infrastructure.persistence.RoleEntity;
@@ -16,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class RoleService {
@@ -26,17 +31,20 @@ public class RoleService {
     private final RolePermissionRepository rolePermissionRepository;
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
+    private final AuditService auditService;
 
     public RoleService(RoleRepository roleRepository,
                        PermissionRepository permissionRepository,
                        RolePermissionRepository rolePermissionRepository,
                        UserRepository userRepository,
-                       UserRoleRepository userRoleRepository) {
+                       UserRoleRepository userRoleRepository,
+                       AuditService auditService) {
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -48,7 +56,13 @@ public class RoleService {
         role.setName(request.name());
         role.setDescription(request.description());
         role.setStatus(RoleStatus.INACTIVE); // Per API Spec
-        return roleRepository.save(role);
+        RoleEntity saved = roleRepository.save(role);
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("roleName", saved.getName());
+        metadata.put("status", saved.getStatus().name());
+        metadata.put("description", saved.getDescription());
+        auditService.write(AuditAction.ROLE_CREATED, "Role", saved.getId().toString(), metadata);
+        return saved;
     }
 
     public List<RoleEntity> listRoles() {
@@ -59,6 +73,10 @@ public class RoleService {
     public void assignPermissionsToRole(Long roleId, List<String> permissionCodes) {
         RoleEntity role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+        List<String> previousPermissionCodes = rolePermissionRepository.findByRoleId(roleId).stream()
+                .map(rolePermission -> rolePermission.getPermission().getCode())
+                .sorted()
+                .toList();
 
         List<PermissionEntity> permissions = permissionRepository.findByCodeIn(permissionCodes);
         if (permissions.size() != permissionCodes.size()) {
@@ -72,6 +90,20 @@ public class RoleService {
             RolePermissionEntity rolePermission = new RolePermissionEntity(role, permission);
             rolePermissionRepository.save(rolePermission);
         }
+        if (!permissions.isEmpty() && role.getStatus() == RoleStatus.INACTIVE) {
+            role.setStatus(RoleStatus.ACTIVE);
+            roleRepository.save(role);
+        }
+        List<String> assignedPermissionCodes = permissions.stream()
+                .map(PermissionEntity::getCode)
+                .sorted()
+                .toList();
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("roleName", role.getName());
+        metadata.put("previousPermissionCodes", previousPermissionCodes);
+        metadata.put("assignedPermissionCodes", assignedPermissionCodes);
+        metadata.put("status", role.getStatus().name());
+        auditService.write(AuditAction.ROLE_PERMISSION_ASSIGNED, "Role", role.getId().toString(), metadata);
     }
 
     @Transactional
@@ -80,6 +112,12 @@ public class RoleService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         RoleEntity role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new IllegalArgumentException("User must be active before role assignment");
+        }
+        if (role.getStatus() != RoleStatus.ACTIVE) {
+            throw new IllegalArgumentException("Role must be active before assignment");
+        }
         
         UserEntity assignedBy = assignedByUserId != null ? userRepository.findById(assignedByUserId).orElse(null) : null;
 
@@ -92,6 +130,11 @@ public class RoleService {
         userRole.setRole(role);
         userRole.setAssignedBy(assignedBy);
         userRoleRepository.save(userRole);
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("roleId", roleId);
+        metadata.put("roleName", role.getName());
+        metadata.put("assignedByUserId", assignedByUserId);
+        auditService.write(AuditAction.USER_ROLE_ASSIGNED, "User", userId.toString(), metadata);
     }
 
     @Transactional
@@ -105,5 +148,10 @@ public class RoleService {
 
         userRole.setRevokedAt(OffsetDateTime.now());
         userRoleRepository.save(userRole);
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("assignmentId", assignmentId);
+        metadata.put("roleId", userRole.getRole().getId());
+        metadata.put("roleName", userRole.getRole().getName());
+        auditService.write(AuditAction.USER_ROLE_REVOKED, "User", userId.toString(), metadata);
     }
 }

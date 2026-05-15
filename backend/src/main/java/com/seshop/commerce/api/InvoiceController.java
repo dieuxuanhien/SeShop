@@ -3,6 +3,7 @@ package com.seshop.commerce.api;
 import com.seshop.commerce.api.dto.CreateInvoiceAdjustmentRequest;
 import com.seshop.commerce.api.dto.CreateTaxInvoiceRequest;
 import com.seshop.commerce.application.InvoiceService;
+import com.seshop.shared.security.PermissionValidator;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -17,14 +18,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/invoices")
 public class InvoiceController {
 
-    private final InvoiceService invoiceService;
+    private static final String INVOICE_MANAGE = "invoice.manage";
 
-    public InvoiceController(InvoiceService invoiceService) {
+    private final InvoiceService invoiceService;
+    private final PermissionValidator permissionValidator;
+
+    public InvoiceController(InvoiceService invoiceService, PermissionValidator permissionValidator) {
         this.invoiceService = invoiceService;
+        this.permissionValidator = permissionValidator;
     }
 
     @PostMapping("/tax")
     public ResponseEntity<Map<String, Object>> createTaxInvoice(@Valid @RequestBody CreateTaxInvoiceRequest request) {
+        permissionValidator.require(INVOICE_MANAGE);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", invoiceService.createTaxInvoice(request)));
     }
 
@@ -33,6 +39,7 @@ public class InvoiceController {
             @PathVariable Long invoiceId,
             @Valid @RequestBody CreateInvoiceAdjustmentRequest request
     ) {
+        permissionValidator.require(INVOICE_MANAGE);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("data", invoiceService.createAdjustment(invoiceId, request)));
     }
 }

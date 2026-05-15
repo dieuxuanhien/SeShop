@@ -24,12 +24,18 @@ Target UCs: UC1-UC4, plus all staff/admin workflows.
 1. Add consistent permission enforcement.
    - Introduce method-level checks or a shared authorization helper.
    - Apply to role, staff, product, stock, order, refund, POS, invoice, Instagram, PO, cycle count, and shift controllers.
+   - Progress: POS receipt endpoints now require `pos.sell`, POS shift endpoints require `pos.shift.manage`, and invoice endpoints require `invoice.manage`.
+   - Progress: `SeedPermissionCatalogTest`, `ApiControllerContractTest`, and `InvoiceControllerContractTest` cover the new POS/invoice permission gates.
 2. Standardize permission codes.
    - Make seed catalog, frontend route guards, and backend checks use the same permission names.
+   - Progress: permission seed and demo STORE_MANAGER role include `pos.sell`, `pos.shift.manage`, and `invoice.manage`.
 3. Expand audit logging.
    - Add audit events for before/after changes on sensitive workflows.
    - Cover role changes, staff role changes, stock movement, order status, refund/return, POS, invoice, Instagram connection, PO/receiving, cycle count, and shift close.
+   - Progress: UC1-UC3 role create, role permission assignment, staff role assignment, and staff role revocation now emit structured audit metadata.
+   - Progress: role permission assignment now activates an inactive role, and staff role assignment rejects inactive users or inactive roles.
 4. Add tests proving unauthorized users get rejected.
+   - Progress: `RoleServiceTest` covers UC1-UC3 audit events and inactive user/role rejection.
 
 Deliverable: backend RBAC and audit are reliable enough for every later UC.
 

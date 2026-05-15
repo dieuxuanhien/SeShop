@@ -56,7 +56,7 @@ public class AuthApplicationService {
         user.setStatus(UserStatus.ACTIVE);
 
         UserEntity saved = userRepository.save(user);
-        auditService.write(AuditAction.USER_REGISTERED, "User", saved.getId().toString(), null);
+        auditService.write(AuditAction.USER_REGISTERED, "User", saved.getId().toString(), (String) null);
 
         return new RegisterResult(saved.getId(), saved.getStatus().name(), saved.getUserType().name());
     }
@@ -87,7 +87,7 @@ public class AuthApplicationService {
                 permissions
         );
 
-        auditService.write(AuditAction.USER_LOGGED_IN, "User", user.getId().toString(), null);
+        auditService.write(AuditAction.USER_LOGGED_IN, "User", user.getId().toString(), (String) null);
 
         return new LoginResult(
                 token,

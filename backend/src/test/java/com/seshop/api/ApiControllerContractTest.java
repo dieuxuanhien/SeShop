@@ -90,7 +90,9 @@ class ApiControllerContractTest {
         List<String> permissions = List.of(
                 "inventory.adjust",
                 "inventory.transfer",
-                "order.read"
+                "order.read",
+                "pos.sell",
+                "pos.shift.manage"
         );
         AuthenticatedUser principal = new AuthenticatedUser(42L, "staff.user", "STAFF", permissions);
         List<SimpleGrantedAuthority> authorities = permissions.stream()
@@ -228,6 +230,40 @@ class ApiControllerContractTest {
     }
 
     @Test
+    void createPosReceiptRejectsAuthenticatedUserWithoutPosSellPermission() throws Exception {
+        String token = "pos-viewer-token";
+        List<String> permissions = List.of("order.read");
+        AuthenticatedUser principal = new AuthenticatedUser(43L, "staff.viewer", "STAFF", permissions);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                principal,
+                token,
+                permissions.stream().map(SimpleGrantedAuthority::new).toList()
+        );
+        given(jwtTokenProvider.validate(token)).willReturn(true);
+        given(jwtTokenProvider.authentication(token)).willReturn(authentication);
+
+        mockMvc.perform(post("/api/v1/pos/receipts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-pos-forbidden")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "shiftId": 501,
+                                  "paymentMethod": "CASH",
+                                  "amountPaid": 600000,
+                                  "items": [
+                                    {
+                                      "variantId": 7001,
+                                      "qty": 1
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AUTH_002"));
+    }
+
+    @Test
     void invalidPosReceiptPayloadReturnsStandardValidationError() throws Exception {
         mockMvc.perform(post("/api/v1/pos/receipts")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken())
@@ -272,6 +308,33 @@ class ApiControllerContractTest {
                 .andExpect(jsonPath("$.data.id").value(501))
                 .andExpect(jsonPath("$.data.status").value("CLOSED"))
                 .andExpect(jsonPath("$.data.endingCash").value(2500000.00));
+    }
+
+    @Test
+    void closeShiftRejectsAuthenticatedUserWithoutShiftPermission() throws Exception {
+        String token = "shift-viewer-token";
+        List<String> permissions = List.of("pos.sell");
+        AuthenticatedUser principal = new AuthenticatedUser(43L, "staff.viewer", "STAFF", permissions);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                principal,
+                token,
+                permissions.stream().map(SimpleGrantedAuthority::new).toList()
+        );
+        given(jwtTokenProvider.validate(token)).willReturn(true);
+        given(jwtTokenProvider.authentication(token)).willReturn(authentication);
+
+        mockMvc.perform(post("/api/v1/pos/shifts/501/close")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-shift-forbidden")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "actualCash": 2500000,
+                                  "reason": "End of day close"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AUTH_002"));
     }
 
     private String bearerToken() {
