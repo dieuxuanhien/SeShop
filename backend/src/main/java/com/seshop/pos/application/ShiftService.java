@@ -1,5 +1,7 @@
 package com.seshop.pos.application;
 
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.pos.api.dto.CloseShiftRequest;
 import com.seshop.pos.api.dto.OpenShiftRequest;
 import com.seshop.pos.api.dto.ShiftDto;
@@ -15,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -23,13 +27,16 @@ public class ShiftService {
     private final PosShiftRepository shiftRepository;
     private final PosReceiptRepository receiptRepository;
     private final CashReconciliationRepository reconciliationRepository;
+    private final AuditService auditService;
 
     public ShiftService(PosShiftRepository shiftRepository,
                         PosReceiptRepository receiptRepository,
-                        CashReconciliationRepository reconciliationRepository) {
+                        CashReconciliationRepository reconciliationRepository,
+                        AuditService auditService) {
         this.shiftRepository = shiftRepository;
         this.receiptRepository = receiptRepository;
         this.reconciliationRepository = reconciliationRepository;
+        this.auditService = auditService;
     }
 
     public ShiftDto openShift(Long staffId, OpenShiftRequest request) {
@@ -80,6 +87,16 @@ public class ShiftService {
         ShiftDto dto = mapToDto(saved);
         dto.setEndingCash(actualCash);
         dto.setExpectedCash(expectedCash);
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("shiftId", shiftId);
+        metadata.put("staffId", shift.getStaffId());
+        metadata.put("locationId", shift.getLocationId());
+        metadata.put("expectedCash", expectedCash);
+        metadata.put("actualCash", actualCash);
+        metadata.put("varianceAmount", reconciliation.getVarianceAmount());
+        metadata.put("reason", request.getReason());
+        metadata.put("approvedBy", reconciliation.getApprovedBy());
+        auditService.write(AuditAction.POS_SHIFT_CLOSED, "PosShift", shiftId.toString(), metadata);
         return dto;
     }
 

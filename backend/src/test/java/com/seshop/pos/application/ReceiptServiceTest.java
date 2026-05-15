@@ -2,9 +2,12 @@ package com.seshop.pos.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.catalog.infrastructure.persistence.ProductEntity;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
 import com.seshop.inventory.infrastructure.persistence.InventoryBalanceEntity;
@@ -18,6 +21,7 @@ import com.seshop.pos.infrastructure.persistence.PosShiftEntity;
 import com.seshop.pos.infrastructure.persistence.PosShiftRepository;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,13 +44,17 @@ class ReceiptServiceTest {
     @Mock
     private InventoryBalanceRepository balanceRepository;
 
+    @Mock
+    private AuditService auditService;
+
     @Test
     void createReceiptDecrementsInventoryAtShiftLocation() {
         ReceiptService service = new ReceiptService(
                 receiptRepository,
                 shiftRepository,
                 productVariantRepository,
-                balanceRepository
+                balanceRepository,
+                auditService
         );
 
         PosShiftEntity shift = new PosShiftEntity();
@@ -91,6 +99,26 @@ class ReceiptServiceTest {
         assertThat(savedReceipt.getItems()).hasSize(1);
         assertThat(savedReceipt.getItems().getFirst().getUnitPrice()).isEqualByComparingTo("590000.00");
         then(balanceRepository).should().save(balance);
+        ArgumentCaptor<Map<String, Object>> metadataCaptor = metadataCaptor();
+        then(auditService).should().write(
+                eq(AuditAction.POS_SALE_COMPLETED),
+                eq("PosReceipt"),
+                eq("9001"),
+                metadataCaptor.capture()
+        );
+        assertThat(metadataCaptor.getValue())
+                .containsEntry("receiptNumber", "POS-00009001")
+                .containsEntry("staffId", 42L)
+                .containsEntry("shiftId", 501L)
+                .containsEntry("locationId", 11L)
+                .containsEntry("paymentMethod", "CASH")
+                .containsEntry("totalAmount", new BigDecimal("590000.00"));
+        assertThat((List<?>) metadataCaptor.getValue().get("items")).hasSize(1);
+    }
+
+    @SuppressWarnings("unchecked")
+    private ArgumentCaptor<Map<String, Object>> metadataCaptor() {
+        return ArgumentCaptor.forClass(Map.class);
     }
 
     private ProductVariantEntity variant(Long id, String skuCode, String productName, String price) {

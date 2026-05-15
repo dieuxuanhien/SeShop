@@ -1,5 +1,7 @@
 package com.seshop.pos.application;
 
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
 import com.seshop.inventory.infrastructure.persistence.InventoryBalanceEntity;
@@ -22,7 +24,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -32,15 +38,18 @@ public class ReceiptService {
     private final PosShiftRepository shiftRepository;
     private final ProductVariantRepository productVariantRepository;
     private final InventoryBalanceRepository balanceRepository;
+    private final AuditService auditService;
 
     public ReceiptService(PosReceiptRepository receiptRepository,
                           PosShiftRepository shiftRepository,
                           ProductVariantRepository productVariantRepository,
-                          InventoryBalanceRepository balanceRepository) {
+                          InventoryBalanceRepository balanceRepository,
+                          AuditService auditService) {
         this.receiptRepository = receiptRepository;
         this.shiftRepository = shiftRepository;
         this.productVariantRepository = productVariantRepository;
         this.balanceRepository = balanceRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -87,6 +96,7 @@ public class ReceiptService {
         receipt.setPaymentMethod(paymentMethod);
 
         BigDecimal total = BigDecimal.ZERO;
+        List<Map<String, Object>> auditedItems = new ArrayList<>();
         for (ProcessPosSaleRequest.Item item : request.getItems()) {
             ProductVariantEntity variant = productVariantRepository.findById(item.getVariantId())
                     .orElseThrow(() -> new ResourceNotFoundException("CAT_404", "Variant not found"));
@@ -100,8 +110,18 @@ public class ReceiptService {
             if (availableQty < item.getQty()) {
                 throw new BusinessException("INV_001", "Insufficient stock at POS location");
             }
+            int beforeOnHandQty = balance.getOnHandQty();
             balance.setOnHandQty(balance.getOnHandQty() - item.getQty());
             balanceRepository.save(balance);
+            auditedItems.add(Map.of(
+                    "variantId", item.getVariantId(),
+                    "qty", item.getQty(),
+                    "unitPrice", variant.getPrice(),
+                    "locationId", shift.getLocationId(),
+                    "beforeOnHandQty", beforeOnHandQty,
+                    "afterOnHandQty", balance.getOnHandQty(),
+                    "reservedQty", balance.getReservedQty()
+            ));
 
             PosReceiptItemEntity receiptItem = new PosReceiptItemEntity();
             receiptItem.setReceipt(receipt);
@@ -117,13 +137,26 @@ public class ReceiptService {
 
         receipt.setTotalAmount(total);
         PosReceiptEntity savedReceipt = receiptRepository.save(receipt);
+        String receiptNumber = formatReceiptNumber(savedReceipt.getId());
 
         ProcessPosSaleResponse response = new ProcessPosSaleResponse();
         response.setReceiptId(savedReceipt.getId());
-        response.setReceiptNumber(formatReceiptNumber(savedReceipt.getId()));
+        response.setReceiptNumber(receiptNumber);
         response.setChangeDue("CASH".equals(paymentMethod)
                 ? request.getAmountPaid().subtract(total)
                 : BigDecimal.ZERO);
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("receiptNumber", receiptNumber);
+        metadata.put("staffId", staffId);
+        metadata.put("customerUserId", request.getCustomerUserId());
+        metadata.put("shiftId", shift.getId());
+        metadata.put("locationId", shift.getLocationId());
+        metadata.put("paymentMethod", paymentMethod);
+        metadata.put("totalAmount", total);
+        metadata.put("amountPaid", request.getAmountPaid());
+        metadata.put("changeDue", response.getChangeDue());
+        metadata.put("items", auditedItems);
+        auditService.write(AuditAction.POS_SALE_COMPLETED, "PosReceipt", savedReceipt.getId().toString(), metadata);
         return response;
     }
 

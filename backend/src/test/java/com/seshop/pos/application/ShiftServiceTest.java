@@ -1,9 +1,12 @@
 package com.seshop.pos.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.pos.api.dto.CloseShiftRequest;
 import com.seshop.pos.api.dto.ShiftDto;
 import com.seshop.pos.infrastructure.persistence.CashReconciliationEntity;
@@ -14,6 +17,7 @@ import com.seshop.pos.infrastructure.persistence.PosShiftEntity;
 import com.seshop.pos.infrastructure.persistence.PosShiftRepository;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,9 +37,12 @@ class ShiftServiceTest {
     @Mock
     private CashReconciliationRepository reconciliationRepository;
 
+    @Mock
+    private AuditService auditService;
+
     @Test
     void closeShiftCreatesCashReconciliationFromReceiptTotals() {
-        ShiftService service = new ShiftService(shiftRepository, receiptRepository, reconciliationRepository);
+        ShiftService service = new ShiftService(shiftRepository, receiptRepository, reconciliationRepository, auditService);
 
         PosShiftEntity shift = new PosShiftEntity();
         shift.setId(501L);
@@ -76,5 +83,26 @@ class ShiftServiceTest {
         assertThat(reconciliation.getActualCash()).isEqualByComparingTo("800000.00");
         assertThat(reconciliation.getVarianceAmount()).isEqualByComparingTo("-3000.00");
         assertThat(reconciliation.getApprovedBy()).isEqualTo(42L);
+        ArgumentCaptor<Map<String, Object>> metadataCaptor = metadataCaptor();
+        then(auditService).should().write(
+                eq(AuditAction.POS_SHIFT_CLOSED),
+                eq("PosShift"),
+                eq("501"),
+                metadataCaptor.capture()
+        );
+        assertThat(metadataCaptor.getValue())
+                .containsEntry("shiftId", 501L)
+                .containsEntry("staffId", 42L)
+                .containsEntry("locationId", 11L)
+                .containsEntry("expectedCash", new BigDecimal("803000.00"))
+                .containsEntry("actualCash", new BigDecimal("800000.00"))
+                .containsEntry("varianceAmount", new BigDecimal("-3000.00"))
+                .containsEntry("reason", "End of day close")
+                .containsEntry("approvedBy", 42L);
+    }
+
+    @SuppressWarnings("unchecked")
+    private ArgumentCaptor<Map<String, Object>> metadataCaptor() {
+        return ArgumentCaptor.forClass(Map.class);
     }
 }
