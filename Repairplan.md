@@ -1,18 +1,19 @@
 Here’s a practical repair plan, ordered by dependency and risk. The big idea: fix the cross-cutting foundations first, then complete use cases in clusters instead of chasing UC1-UC27 one by one.
 
-**Phase 0: Stabilize Baseline**
-1. Fix failing backend tests first.
+**Phase 0: Stabilize Baseline** - DONE
+1. [x] Fix failing backend tests first.
    - Permission catalog seed drift.
    - Stale service mocks.
    - Registration null ID test issue.
    - Stripe webhook `WebMvcTest` missing `OrderRepository`.
-2. Add a lightweight “SRS conformance checklist” test/doc file so each UC has:
+2. [x] Add a lightweight “SRS conformance checklist” test/doc file so each UC has:
    - Required permissions.
    - Required audit events.
    - DB tables touched.
    - Happy path.
    - Main rejection paths.
-3. Before editing any symbol, follow repo rule:
+   - Added `docs/SRS_CONFORMANCE_CHECKLIST.md`.
+3. [x] Before editing any symbol, follow repo rule:
    - Run `gitnexus_impact(..., direction: "upstream")`.
    - Warn before HIGH/CRITICAL changes.
    - Run `gitnexus_detect_changes()` before commit.

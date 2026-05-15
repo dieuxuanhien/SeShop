@@ -4,6 +4,7 @@ import com.seshop.commerce.api.dto.OrderDto;
 import com.seshop.commerce.api.dto.ProcessOrderRequest;
 import com.seshop.commerce.api.dto.ShipOrderRequest;
 import com.seshop.commerce.application.OrderService;
+import com.seshop.shared.security.PermissionValidator;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -16,10 +17,15 @@ import java.util.Map;
 @RequestMapping("/api/v1/staff/orders")
 public class StaffOrderController {
 
-    private final OrderService orderService;
+    private static final String ORDER_READ = "order.read";
+    private static final String ORDER_SHIP = "order.ship";
 
-    public StaffOrderController(OrderService orderService) {
+    private final OrderService orderService;
+    private final PermissionValidator permissionValidator;
+
+    public StaffOrderController(OrderService orderService, PermissionValidator permissionValidator) {
         this.orderService = orderService;
+        this.permissionValidator = permissionValidator;
     }
 
     @GetMapping
@@ -27,6 +33,7 @@ public class StaffOrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        permissionValidator.require(ORDER_READ);
         Page<OrderDto> orders = orderService.listOrdersForStaff(page, size);
         Map<String, Object> response = new HashMap<>();
         response.put("data", Map.of(
@@ -41,6 +48,7 @@ public class StaffOrderController {
 
     @GetMapping("/{orderId}")
     public ResponseEntity<Map<String, Object>> getOrder(@PathVariable Long orderId) {
+        permissionValidator.require(ORDER_READ);
         OrderDto order = orderService.getOrder(orderId);
 
         Map<String, Object> response = new HashMap<>();
@@ -53,6 +61,7 @@ public class StaffOrderController {
     public ResponseEntity<Map<String, Object>> processOrder(
             @PathVariable Long orderId, 
             @Valid @RequestBody ProcessOrderRequest request) {
+        permissionValidator.require(ORDER_READ);
         
         OrderDto order = orderService.processOrder(orderId, request);
 
@@ -64,6 +73,7 @@ public class StaffOrderController {
 
     @PostMapping("/{orderId}/allocate")
     public ResponseEntity<Map<String, Object>> allocateOrder(@PathVariable Long orderId) {
+        permissionValidator.require(ORDER_READ);
         OrderDto order = orderService.allocateOrder(orderId);
         Map<String, Object> response = new HashMap<>();
         response.put("data", order);
@@ -72,6 +82,7 @@ public class StaffOrderController {
 
     @PostMapping("/{orderId}/pack")
     public ResponseEntity<Map<String, Object>> packOrder(@PathVariable Long orderId) {
+        permissionValidator.require(ORDER_READ);
         OrderDto order = orderService.packOrder(orderId);
         Map<String, Object> response = new HashMap<>();
         response.put("data", order);
@@ -80,6 +91,7 @@ public class StaffOrderController {
 
     @PostMapping("/{orderId}/ship")
     public ResponseEntity<Map<String, Object>> shipOrder(@PathVariable Long orderId, @Valid @RequestBody ShipOrderRequest request) {
+        permissionValidator.require(ORDER_SHIP);
         OrderDto order = orderService.shipOrder(orderId, request.getCarrier(), request.getRecipientName(), request.getRecipientPhone(), request.getTrackingNumber());
         Map<String, Object> response = new HashMap<>();
         response.put("data", order);
@@ -88,6 +100,7 @@ public class StaffOrderController {
 
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<Map<String, Object>> cancelOrder(@PathVariable Long orderId) {
+        permissionValidator.require(ORDER_READ);
         OrderDto order = orderService.cancelOrder(orderId);
         Map<String, Object> response = new HashMap<>();
         response.put("data", order);

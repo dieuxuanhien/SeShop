@@ -7,6 +7,7 @@ import com.seshop.inventory.api.dto.PurchaseOrderResponse;
 import com.seshop.inventory.application.ProcurementService;
 import com.seshop.shared.api.ApiResponse;
 import com.seshop.shared.security.AuthenticatedUser;
+import com.seshop.shared.security.PermissionValidator;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,10 +17,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/staff")
 public class StaffProcurementController {
 
-    private final ProcurementService procurementService;
+    private static final String INVENTORY_TRANSFER = "inventory.transfer";
 
-    public StaffProcurementController(ProcurementService procurementService) {
+    private final ProcurementService procurementService;
+    private final PermissionValidator permissionValidator;
+
+    public StaffProcurementController(ProcurementService procurementService, PermissionValidator permissionValidator) {
         this.procurementService = procurementService;
+        this.permissionValidator = permissionValidator;
     }
 
     @PostMapping("/purchase-orders")
@@ -27,6 +32,7 @@ public class StaffProcurementController {
     public ApiResponse<PurchaseOrderResponse> createPurchaseOrder(
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody CreatePurchaseOrderRequest request) {
+        permissionValidator.require(INVENTORY_TRANSFER);
         return ApiResponse.success(procurementService.createPurchaseOrder(request, user.userId()));
     }
 
@@ -35,6 +41,7 @@ public class StaffProcurementController {
     public ApiResponse<GoodsReceiptResponse> createGoodsReceipt(
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody GoodsReceiptRequest request) {
+        permissionValidator.require(INVENTORY_TRANSFER);
         return ApiResponse.success(procurementService.createGoodsReceipt(request, user.userId()));
     }
 }

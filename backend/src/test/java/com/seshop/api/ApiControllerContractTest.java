@@ -30,6 +30,7 @@ import com.seshop.shared.exception.GlobalExceptionHandler;
 import com.seshop.shared.security.AuthenticatedUser;
 import com.seshop.shared.security.JwtAuthenticationFilter;
 import com.seshop.shared.security.JwtTokenProvider;
+import com.seshop.shared.security.PermissionValidator;
 import com.seshop.shared.security.RestAccessDeniedHandler;
 import com.seshop.shared.security.RestAuthenticationEntryPoint;
 import com.seshop.shared.security.SecurityConfig;
@@ -61,7 +62,8 @@ import org.springframework.test.web.servlet.MockMvc;
         RestAuthenticationEntryPoint.class,
         RestAccessDeniedHandler.class,
         TraceIdFilter.class,
-        GlobalExceptionHandler.class
+        GlobalExceptionHandler.class,
+        PermissionValidator.class
 })
 @TestPropertySource(properties = "seshop.cors.allowed-origins=http://localhost:5173")
 class ApiControllerContractTest {

@@ -17,6 +17,7 @@ import com.seshop.shared.exception.GlobalExceptionHandler;
 import com.seshop.shared.security.AuthenticatedUser;
 import com.seshop.shared.security.JwtAuthenticationFilter;
 import com.seshop.shared.security.JwtTokenProvider;
+import com.seshop.shared.security.PermissionValidator;
 import com.seshop.shared.security.RestAccessDeniedHandler;
 import com.seshop.shared.security.RestAuthenticationEntryPoint;
 import com.seshop.shared.security.SecurityConfig;
@@ -47,7 +48,8 @@ import org.springframework.test.web.servlet.MockMvc;
         RestAuthenticationEntryPoint.class,
         RestAccessDeniedHandler.class,
         TraceIdFilter.class,
-        GlobalExceptionHandler.class
+        GlobalExceptionHandler.class,
+        PermissionValidator.class
 })
 @TestPropertySource(properties = "seshop.cors.allowed-origins=http://localhost:5173")
 class RefundControllerContractTest {
@@ -100,6 +102,36 @@ class RefundControllerContractTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.returnId").value(201))
                 .andExpect(jsonPath("$.data.status").value("PENDING"));
+    }
+
+    @Test
+    void createReturnRejectsAuthenticatedUserWithoutRefundProcessPermission() throws Exception {
+        String token = "refund-viewer-token";
+        List<String> permissions = List.of("order.read");
+        AuthenticatedUser principal = new AuthenticatedUser(11L, "staff.viewer", "STAFF", permissions);
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                principal,
+                token,
+                permissions.stream().map(SimpleGrantedAuthority::new).toList()
+        );
+        given(jwtTokenProvider.validate(token)).willReturn(true);
+        given(jwtTokenProvider.authentication(token)).willReturn(auth);
+
+        mockMvc.perform(post("/api/v1/returns")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-refund-forbidden")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orderId": 1001,
+                                  "reason": "Size too small",
+                                  "items": [
+                                    {"orderItemId": 5001, "qty": 1}
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AUTH_002"));
     }
 
     @Test

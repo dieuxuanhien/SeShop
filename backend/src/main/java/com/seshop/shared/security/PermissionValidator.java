@@ -16,8 +16,9 @@ public class PermissionValidator {
     }
 
     public void requireAny(String... permissions) {
+        String permissionList = permissions == null ? "" : String.join(", ", permissions);
         if (permissions == null || permissions.length == 0 || Arrays.stream(permissions).noneMatch(this::hasPermission)) {
-            throw new ForbiddenOperationException("Missing one of permissions: " + String.join(", ", permissions));
+            throw new ForbiddenOperationException("Missing one of permissions: " + permissionList);
         }
     }
 

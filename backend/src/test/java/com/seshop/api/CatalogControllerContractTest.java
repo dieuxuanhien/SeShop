@@ -21,6 +21,7 @@ import com.seshop.shared.exception.GlobalExceptionHandler;
 import com.seshop.shared.security.AuthenticatedUser;
 import com.seshop.shared.security.JwtAuthenticationFilter;
 import com.seshop.shared.security.JwtTokenProvider;
+import com.seshop.shared.security.PermissionValidator;
 import com.seshop.shared.security.RestAccessDeniedHandler;
 import com.seshop.shared.security.RestAuthenticationEntryPoint;
 import com.seshop.shared.security.SecurityConfig;
@@ -51,7 +52,8 @@ import org.springframework.test.web.servlet.MockMvc;
         RestAuthenticationEntryPoint.class,
         RestAccessDeniedHandler.class,
         TraceIdFilter.class,
-        GlobalExceptionHandler.class
+        GlobalExceptionHandler.class,
+        PermissionValidator.class
 })
 @TestPropertySource(properties = "seshop.cors.allowed-origins=http://localhost:5173")
 class CatalogControllerContractTest {
@@ -134,6 +136,30 @@ class CatalogControllerContractTest {
                                 {"name":"New","status":"DRAFT"}
                                 """))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void createProductRejectsAuthenticatedUserWithoutCatalogWritePermission() throws Exception {
+        String token = "read-only-token";
+        List<String> permissions = List.of("order.read");
+        AuthenticatedUser principal = new AuthenticatedUser(11L, "staff.viewer", "STAFF", permissions);
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                principal,
+                token,
+                permissions.stream().map(SimpleGrantedAuthority::new).toList()
+        );
+        given(jwtTokenProvider.validate(token)).willReturn(true);
+        given(jwtTokenProvider.authentication(token)).willReturn(auth);
+
+        mockMvc.perform(post("/api/v1/staff/products")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-catalog-forbidden")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"New","status":"DRAFT"}
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AUTH_002"));
     }
 
     @Test

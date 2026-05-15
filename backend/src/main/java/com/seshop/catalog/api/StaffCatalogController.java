@@ -5,6 +5,7 @@ import com.seshop.catalog.api.dto.CreateVariantRequest;
 import com.seshop.catalog.api.dto.ProductDto;
 import com.seshop.catalog.api.dto.RegisterProductImageRequest;
 import com.seshop.catalog.application.CatalogService;
+import com.seshop.shared.security.PermissionValidator;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,14 +19,19 @@ import java.util.Map;
 @RequestMapping("/api/v1/staff/products")
 public class StaffCatalogController {
 
-    private final CatalogService catalogService;
+    private static final String CATALOG_WRITE = "catalog.write";
 
-    public StaffCatalogController(CatalogService catalogService) {
+    private final CatalogService catalogService;
+    private final PermissionValidator permissionValidator;
+
+    public StaffCatalogController(CatalogService catalogService, PermissionValidator permissionValidator) {
         this.catalogService = catalogService;
+        this.permissionValidator = permissionValidator;
     }
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> createProduct(@Valid @RequestBody CreateProductRequest request) {
+        permissionValidator.require(CATALOG_WRITE);
         ProductDto product = catalogService.createProduct(request);
 
         Map<String, Object> response = new HashMap<>();
@@ -38,6 +44,7 @@ public class StaffCatalogController {
     public ResponseEntity<Map<String, Object>> createVariants(
             @PathVariable Long productId,
             @Valid @RequestBody Map<String, List<CreateVariantRequest>> requestMap) {
+        permissionValidator.require(CATALOG_WRITE);
         
         List<CreateVariantRequest> variants = requestMap.get("variants");
         ProductDto product = catalogService.createVariants(productId, variants);
@@ -52,6 +59,7 @@ public class StaffCatalogController {
     public ResponseEntity<Map<String, Object>> updateProduct(
             @PathVariable Long productId,
             @Valid @RequestBody CreateProductRequest request) {
+        permissionValidator.require(CATALOG_WRITE);
         ProductDto product = catalogService.updateProduct(productId, request);
 
         Map<String, Object> response = new HashMap<>();
@@ -66,6 +74,7 @@ public class StaffCatalogController {
             @RequestParam(required = false) String brand,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        permissionValidator.require(CATALOG_WRITE);
         
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
         org.springframework.data.domain.Page<ProductDto> products = catalogService.getAllProducts(keyword, brand, pageable);
@@ -87,6 +96,7 @@ public class StaffCatalogController {
     public ResponseEntity<Map<String, Object>> registerImage(
             @PathVariable Long productId,
             @Valid @RequestBody RegisterProductImageRequest request) {
+        permissionValidator.require(CATALOG_WRITE);
         ProductDto product = catalogService.registerImage(productId, request);
 
         Map<String, Object> response = new HashMap<>();
@@ -99,6 +109,7 @@ public class StaffCatalogController {
     public ResponseEntity<Map<String, Object>> uploadImage(
             @PathVariable Long productId,
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        permissionValidator.require(CATALOG_WRITE);
         ProductDto product = catalogService.uploadImage(productId, file);
 
         Map<String, Object> response = new java.util.HashMap<>();
