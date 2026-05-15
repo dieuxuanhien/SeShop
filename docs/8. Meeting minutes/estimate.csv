@@ -1,0 +1,29 @@
+No.,Form (function),Estimation (hours),Remark
+1,UC1: Create custom role,4,Completed - Core RBAC
+2,UC2: Assign permission to role,4,Completed - Core RBAC
+3,UC3: Assign or revoke role for staff,4,Completed - Core RBAC
+4,UC4: View audit logs,6,Completed - Persistence & UI
+5,UC5: Add product and SKUs,8,Completed - Media handling included
+6,UC6: Adjust SKU inventory,4,Completed - Location aware
+7,UC7: Transfer stock between locations,8,Completed - In-transit status logic
+8,UC8: Process POS sale,12,Completed - Centralized sync
+9,UC9: Process refund,8,Completed - Stock correction logic
+10,UC10: Manage discount codes,6,Completed - Rule engine
+11,UC11: Compose Instagram draft,10,Completed - Media transformation
+12,UC12: Register account,4,Completed - Identity core
+13,UC13: Browse and filter variants,8,Completed - Multi-attribute search
+14,UC14: AI recommendation chat,16,Completed - LLM integration
+15,UC15: Checkout and pay,12,Completed - Stripe & COD
+16,UC16: View stock by location,4,Completed - Real-time lookup
+17,UC17: Track shipment,6,Completed - Timeline visualization
+18,UC18: Leave review with image,6,Completed - Media moderation
+19,UC19: View pending online orders,4,Completed - Staff portal
+20,UC20: Mark order as shipped with tracking,4,Completed - Notification trigger
+21,UC21: Connect Instagram account,8,Completed - OAuth flow
+22,UC22: Purchase order and stock receiving,10,Completed - Inbound logistics
+23,UC23: Allocate order to fulfillment location,6,Completed - Rule-based allocation
+24,UC24: Return intake and exchange,8,Completed - Reverse logistics
+25,UC25: Cycle count and inventory reconciliation,8,Completed - Discrepancy reporting
+26,UC26: POS shift close and cash reconciliation,6,Completed - Manager approval flow
+27,UC27: Generate tax invoice and adjustment note,6,Completed - PDF generation
+TOTAL,,184,

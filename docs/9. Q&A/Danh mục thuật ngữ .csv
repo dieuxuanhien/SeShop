@@ -1,0 +1,21 @@
+No.,Thuật ngữ,Ý nghĩa
+1,SKU (Stock Keeping Unit),Mã đơn vị lưu kho - định danh duy nhất cho từng biến thể sản phẩm (kết hợp size và màu sắc).
+2,POS (Point of Sale),Điểm bán hàng - thiết bị hoặc phần mềm xử lý giao dịch tại cửa hàng vật lý.
+3,Omnichannel,Bán hàng đa kênh - trải nghiệm mua sắm thống nhất giữa các kênh online (e-commerce) và offline (cửa hàng).
+4,RBAC (Role-Based Access Control),Kiểm soát truy cập dựa trên vai trò - hệ thống phân quyền dựa trên chức vụ của nhân viên.
+5,CoD (Cash on Delivery),Thanh toán khi nhận hàng - phương thức thanh toán mà khách hàng trả tiền khi shipper giao hàng đến.
+6,OAuth (Open Authentication),Xác thực mở - tiêu chuẩn kết nối bảo mật với bên thứ ba (ví dụ: liên kết tài khoản Instagram).
+7,Stripe,Cổng thanh toán bên thứ ba dùng để xử lý các giao dịch thẻ tín dụng/thẻ ghi nợ trực tuyến.
+8,Fulfillment,Quá trình hoàn tất đơn hàng - bao gồm lấy hàng, đóng gói và chuẩn bị vận chuyển từ kho.
+9,Allocation,Phân bổ đơn hàng - gán đơn hàng online cho một địa điểm kho cụ thể để xử lý.
+10,Transfer Order,Lệnh điều chuyển - yêu cầu luân chuyển hàng hóa giữa các kho (ví dụ: kho tổng sang cửa hàng).
+11,Draft,Bản nháp - nội dung chưa được lưu chính thức hoặc chưa được phê duyệt (ví dụ: bản nháp bài đăng Instagram).
+12,Sync (Synchronization),Đồng bộ hóa - quá trình cập nhật dữ liệu giữa các hệ thống để đảm bảo thông tin luôn mới nhất.
+13,BRD (Business Requirements Document),Tài liệu yêu cầu nghiệp vụ - văn bản định nghĩa các yêu cầu kinh doanh của dự án.
+14,SRS (Software Requirements Specification),Tài liệu đặc tả yêu cầu phần mềm - văn bản chi tiết về các chức năng và ràng buộc kỹ thuật.
+15,User Story,Câu chuyện người dùng - mô tả ngắn gọn về nhu cầu của người dùng và tiêu chí chấp nhận.
+16,Location Node,Nút địa điểm - bất kỳ vị trí nào lưu trữ kho hàng (cửa hàng hoặc kho lưu trữ).
+17,Audit Log,Nhật ký kiểm toán - bản ghi không thể thay đổi về các hoạt động nhạy cảm hoặc quan trọng trong hệ thống.
+18,Responsive Design,Thiết kế đáp ứng - giao diện tự động điều chỉnh phù hợp với các kích thước màn hình khác nhau (mobile, tablet, desktop).
+19,WCAG (Web Content Accessibility Guidelines),Hướng dẫn truy cập nội dung Web - các tiêu chuẩn giúp người khuyết tật có thể sử dụng được website.
+20,API (Application Programming Interface),Giao diện lập trình ứng dụng - phương thức kết nối và trao đổi dữ liệu giữa các thành phần phần mềm.

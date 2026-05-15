@@ -26,7 +26,7 @@ public class DiscountService {
     private final DiscountRedemptionRepository redemptionRepository;
 
     public DiscountService(DiscountCodeRepository discountCodeRepository,
-                           DiscountRedemptionRepository redemptionRepository) {
+            DiscountRedemptionRepository redemptionRepository) {
         this.discountCodeRepository = discountCodeRepository;
         this.redemptionRepository = redemptionRepository;
     }
@@ -71,7 +71,7 @@ public class DiscountService {
     public DiscountDto updateDiscount(@NonNull Long id, DiscountDto request) {
         DiscountCodeEntity entity = discountCodeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("DISC_404", "Discount not found"));
-        
+
         if (request.getStartAt() == null || request.getEndAt() == null) {
             throw new SeShopValidationException("Start and end time are required");
         }
@@ -116,8 +116,8 @@ public class DiscountService {
             throw new BusinessException("DISC_003", "Discount code is expired or not yet started");
         }
 
-        if (request.getOrderSubtotal() != null && entity.getMinSpend() != null 
-            && request.getOrderSubtotal().compareTo(entity.getMinSpend()) < 0) {
+        if (request.getOrderSubtotal() != null && entity.getMinSpend() != null
+                && request.getOrderSubtotal().compareTo(entity.getMinSpend()) < 0) {
             throw new BusinessException("DISC_004", "Minimum spend requirement not met");
         }
 
