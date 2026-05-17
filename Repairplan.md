@@ -128,10 +128,12 @@ Target UCs: UC8, UC9, UC24, UC26, UC27.
    - Disposition.
    - Exchange linkage.
    - Reverse logistics tracking.
+   - Progress: POS returns now evaluate eligibility, validate requested quantities (inspection), and support RESTOCK, DISPOSE, and REFURBISH disposition states in `ReturnService`.
 5. Fix shift close.
    - Real approver, not cashier auto-approval.
    - Enforce discrepancy reason.
    - Threshold approval workflow/report.
+   - Progress: `ShiftService` now rejects cashier self-approval for shift close and enforces a discrepancy reason when cash variance exceeds the designated threshold.
 6. Implement immutable invoice records.
    - Tax validation.
    - Correction/adjustment note chain.
@@ -183,6 +185,7 @@ Target all UCs with UI gaps.
    - Pick library.
    - Add locale catalogs.
    - Remove hardcoded user-facing strings from critical flows.
+   - Progress: Installed `react-i18next` and `i18next`. Created `frontend/src/i18n.ts` configuration and established English (`en`) and Vietnamese (`vi`) locale catalogs.
 2. Align route guards with backend permissions.
 3. Add missing filters/actions in staff pages.
    - Audit filters and CSV export.

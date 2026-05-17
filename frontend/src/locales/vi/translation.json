@@ -1,0 +1,17 @@
+{
+  "common": {
+    "loading": "Đang tải...",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "submit": "Gửi"
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "shop": "Cửa hàng",
+    "cart": "Giỏ hàng",
+    "login": "Đăng nhập",
+    "dashboard": "Bảng điều khiển"
+  }
+}
