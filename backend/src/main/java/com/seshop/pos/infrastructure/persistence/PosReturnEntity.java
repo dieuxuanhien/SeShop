@@ -3,6 +3,8 @@ package com.seshop.pos.infrastructure.persistence;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "pos_returns")
@@ -12,8 +14,11 @@ public class PosReturnEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "original_order_id", nullable = false)
+    @Column(name = "original_order_id")
     private Long originalOrderId;
+
+    @Column(name = "original_receipt_id", nullable = false)
+    private Long originalReceiptId;
 
     @Column(name = "processed_by", nullable = false)
     private Long processedBy;
@@ -27,6 +32,9 @@ public class PosReturnEntity {
     @Column(name = "processed_at", nullable = false, updatable = false)
     private OffsetDateTime processedAt;
 
+    @OneToMany(mappedBy = "posReturn", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PosReturnItemEntity> items = new ArrayList<>();
+
     @PrePersist
     protected void onProcess() {
         processedAt = OffsetDateTime.now();
@@ -39,6 +47,9 @@ public class PosReturnEntity {
     public Long getOriginalOrderId() { return originalOrderId; }
     public void setOriginalOrderId(Long originalOrderId) { this.originalOrderId = originalOrderId; }
 
+    public Long getOriginalReceiptId() { return originalReceiptId; }
+    public void setOriginalReceiptId(Long originalReceiptId) { this.originalReceiptId = originalReceiptId; }
+
     public Long getProcessedBy() { return processedBy; }
     public void setProcessedBy(Long processedBy) { this.processedBy = processedBy; }
 
@@ -50,4 +61,7 @@ public class PosReturnEntity {
 
     public OffsetDateTime getProcessedAt() { return processedAt; }
     public void setProcessedAt(OffsetDateTime processedAt) { this.processedAt = processedAt; }
+
+    public List<PosReturnItemEntity> getItems() { return items; }
+    public void setItems(List<PosReturnItemEntity> items) { this.items = items; }
 }

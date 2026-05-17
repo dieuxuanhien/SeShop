@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { CheckCircle2, RotateCcw, WalletCards } from 'lucide-react';
 import { approveReturn, createRefund, createReturn, type RefundResponse, type ReturnResponse } from '@/features/commerce/api/returnsApi';
-import { processPosReturn } from '@/features/staff/api/staffPosApi';
+import { processPosReturn, type PosReturnDisposition } from '@/features/staff/api/staffPosApi';
 import { formatCurrency } from '@/shared/lib/formatters';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
 import { PageScaffold } from '@/shared/ui/PageScaffold';
+import { Select } from '@/shared/ui/Select';
 
 export function ReturnsManagement() {
   const [orderId, setOrderId] = useState(0);
@@ -18,7 +19,14 @@ export function ReturnsManagement() {
   const [approveId, setApproveId] = useState(0);
   const [refund, setRefund] = useState({ orderId: 0, paymentId: 0, returnRequestId: 0, amount: 0 });
   const [refundResult, setRefundResult] = useState<RefundResponse | null>(null);
-  const [posReturn, setPosReturn] = useState({ originalOrderId: 0, refundAmount: 0, reason: '' });
+  const [posReturn, setPosReturn] = useState({
+    originalOrderId: 0,
+    variantId: 0,
+    qty: 1,
+    disposition: 'RESTOCK' as PosReturnDisposition,
+    refundAmount: 0,
+    reason: '',
+  });
   const [posResult, setPosResult] = useState<{ id: number; refundAmount: number; processedAt: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -79,7 +87,18 @@ export function ReturnsManagement() {
     setIsSaving(true);
     setMessage('');
     try {
-      const created = await processPosReturn(posReturn.originalOrderId, posReturn.refundAmount, posReturn.reason);
+      const created = await processPosReturn({
+        originalOrderId: posReturn.originalOrderId,
+        refundAmount: posReturn.refundAmount,
+        reason: posReturn.reason,
+        items: [
+          {
+            variantId: posReturn.variantId,
+            qty: posReturn.qty,
+            disposition: posReturn.disposition,
+          },
+        ],
+      });
       setPosResult(created);
       setMessage(`POS return ${created.id} processed.`);
     } catch {
@@ -171,8 +190,20 @@ export function ReturnsManagement() {
                 <p className="mt-1 text-xs text-ink/50">Use this for counter returns that refund immediately.</p>
               </div>
               <div className="grid gap-4 md:grid-cols-3">
-                <Input label="Original Order ID" type="number" min={1} value={posReturn.originalOrderId || ''} onChange={(event) => setPosReturn((current) => ({ ...current, originalOrderId: Number(event.target.value) }))} required />
-                <Input label="Refund Amount" type="number" min={0} value={posReturn.refundAmount || ''} onChange={(event) => setPosReturn((current) => ({ ...current, refundAmount: Number(event.target.value) }))} required />
+                <Input label="Original Receipt ID" type="number" min={1} value={posReturn.originalOrderId || ''} onChange={(event) => setPosReturn((current) => ({ ...current, originalOrderId: Number(event.target.value) }))} required />
+                <Input label="Variant ID" type="number" min={1} value={posReturn.variantId || ''} onChange={(event) => setPosReturn((current) => ({ ...current, variantId: Number(event.target.value) }))} required />
+                <Input label="Quantity" type="number" min={1} value={posReturn.qty || ''} onChange={(event) => setPosReturn((current) => ({ ...current, qty: Number(event.target.value) }))} required />
+                <Select
+                  label="Disposition"
+                  value={posReturn.disposition}
+                  onChange={(event) => setPosReturn((current) => ({ ...current, disposition: event.target.value as PosReturnDisposition }))}
+                  options={[
+                    { label: 'Restock', value: 'RESTOCK' },
+                    { label: 'Refurbish', value: 'REFURBISH' },
+                    { label: 'Dispose', value: 'DISPOSE' },
+                  ]}
+                />
+                <Input label="Refund Amount" type="number" min={0.01} step="0.01" value={posReturn.refundAmount || ''} onChange={(event) => setPosReturn((current) => ({ ...current, refundAmount: Number(event.target.value) }))} required />
                 <Input label="Reason" value={posReturn.reason} onChange={(event) => setPosReturn((current) => ({ ...current, reason: event.target.value }))} required />
               </div>
               <Button type="submit" isLoading={isSaving}>

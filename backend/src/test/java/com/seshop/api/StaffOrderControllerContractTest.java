@@ -72,7 +72,10 @@ class StaffOrderControllerContractTest {
                         .header(HttpHeaders.AUTHORIZATION, bearerToken("order-read-token"))
                         .header(TraceIdFilter.TRACE_HEADER, "trace-order-list"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.items[0].orderNumber").value("ORD-1001"));
+                .andExpect(jsonPath("$.data.items[0].orderNumber").value("ORD-1001"))
+                .andExpect(jsonPath("$.data.items[0].paymentStatus").value("PAID"))
+                .andExpect(jsonPath("$.data.items[0].shipmentStatus").value("PENDING"))
+                .andExpect(jsonPath("$.data.items[0].currency").value("VND"));
     }
 
     @Test
@@ -152,7 +155,10 @@ class StaffOrderControllerContractTest {
         order.setId(id);
         order.setOrderNumber(orderNumber);
         order.setStatus(status);
+        order.setPaymentStatus("PAID");
+        order.setShipmentStatus("PENDING");
         order.setTotalAmount(new BigDecimal("590000"));
+        order.setCurrency("VND");
         return order;
     }
 }

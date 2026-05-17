@@ -10,4 +10,6 @@ public interface DiscountRedemptionRepository extends JpaRepository<DiscountRede
     Optional<DiscountRedemptionEntity> findByDiscountCodeIdAndOrderId(Long discountCodeId, Long orderId);
 
     long countByDiscountCodeId(Long discountCodeId);
+
+    boolean existsByOrderId(Long orderId);
 }

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seshop.audit.application.AuditService;
 import com.seshop.marketing.api.dto.InstagramPublishResultDto;
 import com.seshop.marketing.infrastructure.MetaGraphClient;
 import com.seshop.marketing.infrastructure.persistence.InstagramConnectionEntity;
@@ -31,11 +32,15 @@ class InstagramServiceTest {
     @Mock
     private MetaGraphClient metaGraphClient;
 
+    @Mock
+    private AuditService auditService;
+
     @Test
     @SuppressWarnings("null")
     void publishesApprovedDraftAndMarksItAsPublished() {
         ObjectMapper objectMapper = new ObjectMapper();
-        InstagramService service = new InstagramService(connectionRepository, draftRepository, objectMapper, metaGraphClient);
+        InstagramService service = new InstagramService(connectionRepository, draftRepository, objectMapper,
+                metaGraphClient, auditService);
 
         InstagramConnectionEntity connection = new InstagramConnectionEntity();
         connection.setUserId(7L);
@@ -54,9 +59,11 @@ class InstagramServiceTest {
 
         when(connectionRepository.findByUserId(7L)).thenReturn(Optional.of(connection));
         when(draftRepository.findById(11L)).thenReturn(Optional.of(draft));
-        when(metaGraphClient.publishImagePost(eq("ig-123"), eq("page-token"), eq("https://cdn.example.com/image-1.jpg"), eq("Fresh vintage drop\n\n#seshop #newarrival")))
+        when(metaGraphClient.publishImagePost(eq("ig-123"), eq("page-token"), eq("https://cdn.example.com/image-1.jpg"),
+                eq("Fresh vintage drop\n\n#seshop #newarrival")))
                 .thenReturn(new MetaGraphClient.MetaPublishResult("creation-7", "media-99"));
-        when(draftRepository.save(any(InstagramDraftEntity.class))).thenAnswer(invocation -> invocation.getArgument(0, InstagramDraftEntity.class));
+        when(draftRepository.save(any(InstagramDraftEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0, InstagramDraftEntity.class));
 
         InstagramPublishResultDto result = service.publishDraft(11L);
 
@@ -67,6 +74,7 @@ class InstagramServiceTest {
         assertThat(result.getInstagramPermalink()).isEqualTo("https://www.instagram.com/p/media-99");
         assertThat(draft.getStatus()).isEqualTo("PUBLISHED");
 
-        verify(metaGraphClient).publishImagePost(eq("ig-123"), eq("page-token"), eq("https://cdn.example.com/image-1.jpg"), eq("Fresh vintage drop\n\n#seshop #newarrival"));
+        verify(metaGraphClient).publishImagePost(eq("ig-123"), eq("page-token"),
+                eq("https://cdn.example.com/image-1.jpg"), eq("Fresh vintage drop\n\n#seshop #newarrival"));
     }
 }

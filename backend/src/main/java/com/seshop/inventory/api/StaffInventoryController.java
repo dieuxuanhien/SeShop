@@ -22,6 +22,7 @@ import java.util.Map;
 public class StaffInventoryController {
 
     private static final String INVENTORY_ADJUST = "inventory.adjust";
+    private static final String INVENTORY_ADJUST_OVERRIDE = "inventory.adjust.override";
     private static final String INVENTORY_TRANSFER = "inventory.transfer";
 
     private final InventoryService inventoryService;
@@ -47,7 +48,9 @@ public class StaffInventoryController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<InventoryAdjustmentResponse> adjustInventory(@Valid @RequestBody InventoryAdjustmentRequest request) {
         permissionValidator.require(INVENTORY_ADJUST);
-        return ApiResponse.success(inventoryService.adjustInventory(request));
+        return ApiResponse.success(inventoryService.adjustInventory(
+                request,
+                permissionValidator.hasPermission(INVENTORY_ADJUST_OVERRIDE)));
     }
 
     @PostMapping("/transfers")
@@ -87,6 +90,13 @@ public class StaffInventoryController {
             @Valid @RequestBody ReceiveTransferRequest request) {
         permissionValidator.require(INVENTORY_TRANSFER);
         inventoryService.receiveTransfer(transferId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/transfers/{transferId}/cancel")
+    public ResponseEntity<Void> cancelTransfer(@PathVariable Long transferId) {
+        permissionValidator.require(INVENTORY_TRANSFER);
+        inventoryService.cancelTransfer(transferId);
         return ResponseEntity.ok().build();
     }
 }

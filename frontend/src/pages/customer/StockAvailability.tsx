@@ -1,14 +1,51 @@
-import { useParams, NavLink } from 'react-router-dom';
-import { ChevronRight, MapPin } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, NavLink, useSearchParams } from 'react-router-dom';
+import { ChevronRight, MapPin, PackageSearch } from 'lucide-react';
 import { useProduct, useProductAvailability } from '@/features/catalog/model/catalogHooks';
 import { Badge } from '@/shared/ui/Badge';
+import { Select } from '@/shared/ui/Select';
 import { Skeleton } from '@/shared/ui/Skeleton';
 
 export function StockAvailability() {
   const { productId } = useParams<{ productId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const id = Number(productId);
+  const initialVariantId = Number(searchParams.get('variantId') ?? 0);
+  const [selectedVariantId, setSelectedVariantId] = useState(Number.isFinite(initialVariantId) ? initialVariantId : 0);
   const { data: product } = useProduct(id);
-  const { data: availability, isLoading } = useProductAvailability(id);
+  const { data: availability, isLoading } = useProductAvailability(
+    id,
+    selectedVariantId,
+    selectedVariantId > 0,
+  );
+  const selectedVariant = product?.variants.find((variant) => variant.id === selectedVariantId);
+
+  const variantOptions = useMemo(() => {
+    return product?.variants.map((variant) => ({
+      value: String(variant.id),
+      label: [
+        variant.skuCode,
+        variant.size ? `Size ${variant.size}` : undefined,
+        variant.color,
+      ].filter(Boolean).join(' - '),
+    })) ?? [];
+  }, [product]);
+
+  useEffect(() => {
+    if (!product || product.variants.length === 0) {
+      return;
+    }
+    const isSelectedVariantValid = product.variants.some((variant) => variant.id === selectedVariantId);
+    if (!isSelectedVariantValid) {
+      setSelectedVariantId(product.variants[0].id);
+    }
+  }, [product, selectedVariantId]);
+
+  function handleVariantChange(event: React.ChangeEvent<HTMLSelectElement>) {
+    const nextVariantId = Number(event.target.value);
+    setSelectedVariantId(nextVariantId);
+    setSearchParams(nextVariantId > 0 ? { variantId: String(nextVariantId) } : {});
+  }
 
   return (
     <div className="min-h-screen">
@@ -34,13 +71,32 @@ export function StockAvailability() {
           <h1 className="font-display text-3xl text-highlight mb-2">Store Availability</h1>
           {product && (
             <p className="text-surface/60 text-sm">
-              Check where <span className="text-surface/90 font-medium">{product.name}</span> is available
+              Check where <span className="text-surface/90 font-medium">{product.name}</span> is available by SKU
             </p>
           )}
         </div>
 
+        {product && variantOptions.length > 0 && (
+          <div className="mb-6 rounded-md border border-primary/15 bg-surface/[0.03] p-4">
+            <div className="mb-3 flex items-center gap-3 text-sm text-surface/70">
+              <PackageSearch size={17} className="text-primary" />
+              <span>
+                {selectedVariant ? selectedVariant.skuCode : 'Select a SKU'} availability is shown per location.
+              </span>
+            </div>
+            <Select
+              label="Variant"
+              value={String(selectedVariantId)}
+              onChange={handleVariantChange}
+              options={variantOptions}
+            />
+          </div>
+        )}
+
         {/* Availability Table */}
-        {isLoading ? (
+        {!selectedVariantId ? (
+          <p className="text-center text-surface/50 py-12">Select a variant to view availability.</p>
+        ) : isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-16 w-full" />

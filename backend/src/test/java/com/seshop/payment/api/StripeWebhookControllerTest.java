@@ -3,13 +3,14 @@ package com.seshop.payment.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.seshop.commerce.infrastructure.persistence.OrderEntity;
-import com.seshop.commerce.infrastructure.persistence.OrderRepository;
 import com.seshop.commerce.infrastructure.persistence.PaymentEntity;
 import com.seshop.commerce.infrastructure.persistence.PaymentRepository;
+import com.seshop.commerce.application.OrderService;
 import com.seshop.payment.infrastructure.StripeProperties;
 import com.seshop.shared.api.TraceIdFilter;
 import com.seshop.shared.exception.GlobalExceptionHandler;
@@ -63,7 +64,7 @@ class StripeWebhookControllerTest {
     private PaymentRepository paymentRepository;
 
     @MockBean
-    private OrderRepository orderRepository;
+    private OrderService orderService;
 
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
@@ -82,11 +83,12 @@ class StripeWebhookControllerTest {
     }
 
     @Test
-    void webhookUpdatesPaymentStatusToCompleted() throws Exception {
+    void webhookUpdatesPaymentStatusToPaid() throws Exception {
         OrderEntity order = new OrderEntity();
         order.setId(99L);
         order.setOrderNumber("ORD-99");
         order.setStatus("PENDING_PAYMENT");
+        order.setPaymentStatus("PENDING");
 
         PaymentEntity payment = new PaymentEntity();
         payment.setId(1L);
@@ -96,7 +98,6 @@ class StripeWebhookControllerTest {
 
         given(paymentRepository.findByTransactionId("pi_test_002")).willReturn(Optional.of(payment));
         given(paymentRepository.save(payment)).willReturn(payment);
-        given(orderRepository.save(order)).willReturn(order);
 
         String payload = stripePayload("evt_test_002", "payment_intent.succeeded", "pi_test_002", "succeeded");
 
@@ -104,25 +105,76 @@ class StripeWebhookControllerTest {
                         .header(TraceIdFilter.TRACE_HEADER, "trace-webhook-status")
                         .header("Stripe-Signature", stripeSignature(payload))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
+                .content(payload))
                 .andExpect(status().isOk());
 
-        assertThat(payment.getStatus()).isEqualTo("COMPLETED");
-        assertThat(order.getStatus()).isEqualTo("PAID");
+        assertThat(payment.getStatus()).isEqualTo("PAID");
+        then(orderService).should().markPaymentPaid(99L);
     }
 
     @Test
-    void webhookSetsPaymentToPendingForNonSucceededStatus() throws Exception {
+    void webhookMarksPendingPaymentAsFailed() throws Exception {
+        OrderEntity order = new OrderEntity();
+        order.setId(99L);
+        order.setOrderNumber("ORD-99");
+        order.setStatus("PENDING_PAYMENT");
+        order.setPaymentStatus("PENDING");
+
+        PaymentEntity payment = new PaymentEntity();
+        payment.setId(1L);
+        payment.setTransactionId("pi_test_003");
+        payment.setOrder(order);
+        payment.setStatus("PENDING");
+
+        given(paymentRepository.findByTransactionId("pi_test_003")).willReturn(Optional.of(payment));
+        given(paymentRepository.save(payment)).willReturn(payment);
+
         String payload = stripePayload("evt_test_003", "payment_intent.payment_failed", "pi_test_003", "requires_payment_method");
 
         mockMvc.perform(post("/api/v1/webhooks/payments")
                         .header(TraceIdFilter.TRACE_HEADER, "trace-webhook-fail")
                         .header("Stripe-Signature", stripeSignature(payload))
                         .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isOk());
+
+        assertThat(payment.getStatus()).isEqualTo("FAILED");
+        then(orderService).should().markPaymentFailed(99L);
+    }
+
+    @Test
+    void webhookDoesNotDowngradeAlreadyPaidOrderOnLateFailure() throws Exception {
+        OrderEntity order = new OrderEntity();
+        order.setId(99L);
+        order.setOrderNumber("ORD-99");
+        order.setStatus("PAID");
+        order.setPaymentStatus("PAID");
+
+        PaymentEntity payment = new PaymentEntity();
+        payment.setId(1L);
+        payment.setTransactionId("pi_test_paid");
+        payment.setOrder(order);
+        payment.setStatus("PAID");
+
+        given(paymentRepository.findByTransactionId("pi_test_paid")).willReturn(Optional.of(payment));
+
+        String payload = stripePayload(
+                "evt_test_late_failure",
+                "payment_intent.payment_failed",
+                "pi_test_paid",
+                "requires_payment_method"
+        );
+
+        mockMvc.perform(post("/api/v1/webhooks/payments")
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-webhook-late-fail")
+                        .header("Stripe-Signature", stripeSignature(payload))
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk());
 
-        then(paymentRepository).shouldHaveNoInteractions();
+        assertThat(payment.getStatus()).isEqualTo("PAID");
+        then(paymentRepository).should(never()).save(payment);
+        then(orderService).shouldHaveNoInteractions();
     }
 
     @Test

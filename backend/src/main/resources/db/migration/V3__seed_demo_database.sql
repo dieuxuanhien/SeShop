@@ -80,6 +80,7 @@ FROM roles r
 JOIN permissions p ON p.code IN (
   'catalog.write',
   'inventory.adjust',
+  'inventory.adjust.override',
   'inventory.transfer',
   'order.read',
   'order.ship',

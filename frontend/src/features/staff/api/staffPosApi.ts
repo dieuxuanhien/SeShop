@@ -27,6 +27,19 @@ export type ShiftData = {
   expectedCash: number;
 };
 
+export type PosReturnDisposition = 'RESTOCK' | 'REFURBISH' | 'DISPOSE';
+
+export type PosReturnRequest = {
+  originalOrderId: number;
+  refundAmount: number;
+  reason: string;
+  items: Array<{
+    variantId: number;
+    qty: number;
+    disposition: PosReturnDisposition;
+  }>;
+};
+
 export async function lookupProductBySku(skuCode: string): Promise<ProductVariant> {
   const response = await apiClient.get<ApiResponse<ProductVariant>>(`/staff/inventory/balances/sku/${skuCode}`);
   const variant = response.data.data;
@@ -65,9 +78,10 @@ export async function openShift(locationId: number, startingCash: number): Promi
   return { ...data, shiftId: data.shiftId ?? data.id ?? 0 };
 }
 
-export async function processPosReturn(originalOrderId: number, refundAmount: number, reason: string): Promise<{
+export async function processPosReturn(request: PosReturnRequest): Promise<{
   id: number;
   originalOrderId: number;
+  originalReceiptId: number;
   refundAmount: number;
   reason: string;
   processedAt: string;
@@ -75,13 +89,10 @@ export async function processPosReturn(originalOrderId: number, refundAmount: nu
   const response = await apiClient.post<ApiResponse<{
     id: number;
     originalOrderId: number;
+    originalReceiptId: number;
     refundAmount: number;
     reason: string;
     processedAt: string;
-  }>>('/pos/returns', {
-    originalOrderId,
-    refundAmount,
-    reason,
-  });
+  }>>('/pos/returns', request);
   return response.data.data;
 }

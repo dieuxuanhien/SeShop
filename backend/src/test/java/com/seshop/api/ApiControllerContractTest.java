@@ -14,15 +14,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.seshop.inventory.api.StaffInventoryController;
 import com.seshop.inventory.api.dto.CreateTransferRequest;
+import com.seshop.inventory.api.dto.InventoryAdjustmentRequest;
+import com.seshop.inventory.api.dto.InventoryAdjustmentResponse;
 import com.seshop.inventory.api.dto.InventoryBalanceDto;
 import com.seshop.inventory.application.InventoryService;
 import com.seshop.pos.api.ReceiptController;
+import com.seshop.pos.api.ReturnController;
 import com.seshop.pos.api.ShiftController;
 import com.seshop.pos.api.dto.CloseShiftRequest;
 import com.seshop.pos.api.dto.ProcessPosSaleRequest;
 import com.seshop.pos.api.dto.ProcessPosSaleResponse;
+import com.seshop.pos.api.dto.ProcessReturnRequest;
+import com.seshop.pos.api.dto.ReturnDto;
 import com.seshop.pos.api.dto.ShiftDto;
 import com.seshop.pos.application.ReceiptService;
+import com.seshop.pos.application.ReturnService;
 import com.seshop.pos.application.ShiftService;
 import com.seshop.shared.api.PageResponse;
 import com.seshop.shared.api.TraceIdFilter;
@@ -54,6 +60,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(controllers = {
         StaffInventoryController.class,
         ReceiptController.class,
+        ReturnController.class,
         ShiftController.class
 })
 @Import({
@@ -80,6 +87,9 @@ class ApiControllerContractTest {
     private ReceiptService receiptService;
 
     @MockBean
+    private ReturnService returnService;
+
+    @MockBean
     private ShiftService shiftService;
 
     @MockBean
@@ -92,7 +102,8 @@ class ApiControllerContractTest {
                 "inventory.transfer",
                 "order.read",
                 "pos.sell",
-                "pos.shift.manage"
+                "pos.shift.manage",
+                "refund.process"
         );
         AuthenticatedUser principal = new AuthenticatedUser(42L, "staff.user", "STAFF", permissions);
         List<SimpleGrantedAuthority> authorities = permissions.stream()
@@ -159,6 +170,69 @@ class ApiControllerContractTest {
     }
 
     @Test
+    void adjustInventoryPassesNegativeOverridePermissionFlag() throws Exception {
+        String token = "inventory-manager-token";
+        List<String> permissions = List.of("inventory.adjust", "inventory.adjust.override");
+        AuthenticatedUser principal = new AuthenticatedUser(43L, "inventory.manager", "STAFF", permissions);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                principal,
+                token,
+                permissions.stream().map(SimpleGrantedAuthority::new).toList()
+        );
+        given(jwtTokenProvider.validate(token)).willReturn(true);
+        given(jwtTokenProvider.authentication(token)).willReturn(authentication);
+
+        InventoryAdjustmentResponse response = new InventoryAdjustmentResponse();
+        response.setInventoryBalanceId(8801L);
+        response.setOnHandQty(-1);
+        response.setReservedQty(0);
+        response.setAvailableQty(-1);
+
+        given(inventoryService.adjustInventory(any(InventoryAdjustmentRequest.class), eq(true)))
+                .willReturn(response);
+
+        mockMvc.perform(post("/api/v1/staff/inventory/adjustments")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-adjust")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "variantId": 7001,
+                                  "locationId": 11,
+                                  "deltaQty": -10,
+                                  "reasonCode": "OVERRIDE",
+                                  "notes": "Manager-approved correction"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.inventoryBalanceId").value(8801))
+                .andExpect(jsonPath("$.data.availableQty").value(-1));
+
+        ArgumentCaptor<InventoryAdjustmentRequest> requestCaptor =
+                ArgumentCaptor.forClass(InventoryAdjustmentRequest.class);
+        then(inventoryService).should().adjustInventory(requestCaptor.capture(), eq(true));
+        assertThat(requestCaptor.getValue().getReasonCode()).isEqualTo("OVERRIDE");
+    }
+
+    @Test
+    void invalidInventoryAdjustmentPayloadReturnsReasonCodeError() throws Exception {
+        mockMvc.perform(post("/api/v1/staff/inventory/adjustments")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken())
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-invalid-adjustment")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "variantId": 7001,
+                                  "locationId": 11,
+                                  "deltaQty": -1
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GEN_001"))
+                .andExpect(jsonPath("$.details[*].field", hasItems("reasonCode")));
+    }
+
+    @Test
     void createInventoryTransferUsesAuthenticatedStaffId() throws Exception {
         given(inventoryService.createTransfer(any(CreateTransferRequest.class), eq(42L)))
                 .willReturn(9001L);
@@ -191,6 +265,16 @@ class ApiControllerContractTest {
         assertThat(capturedRequest.getItems()).hasSize(1);
         assertThat(capturedRequest.getItems().getFirst().getVariantId()).isEqualTo(7001L);
         assertThat(capturedRequest.getItems().getFirst().getQty()).isEqualTo(3);
+    }
+
+    @Test
+    void cancelInventoryTransferRequiresTransferPermissionAndCallsService() throws Exception {
+        mockMvc.perform(post("/api/v1/staff/inventory/transfers/9001/cancel")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken())
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-transfer-cancel"))
+                .andExpect(status().isOk());
+
+        then(inventoryService).should().cancelTransfer(9001L);
     }
 
     @Test
@@ -281,6 +365,84 @@ class ApiControllerContractTest {
                 .andExpect(jsonPath("$.message").value("Invalid request payload"))
                 .andExpect(jsonPath("$.traceId").value("trace-invalid-pos"))
                 .andExpect(jsonPath("$.details[*].field", hasItems("paymentMethod", "amountPaid", "items")));
+    }
+
+    @Test
+    void processPosReturnRequiresRefundPermissionAndPassesAuthenticatedStaffId() throws Exception {
+        ReturnDto response = new ReturnDto();
+        response.setId(700L);
+        response.setOriginalReceiptId(501L);
+        response.setOriginalOrderId(501L);
+        response.setRefundAmount(new BigDecimal("590000.00"));
+        response.setReason("Customer return");
+
+        given(returnService.processReturn(any(ProcessReturnRequest.class), eq(42L)))
+                .willReturn(response);
+
+        mockMvc.perform(post("/api/v1/pos/returns")
+                        .header(HttpHeaders.AUTHORIZATION, bearerToken())
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-pos-return")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "originalOrderId": 501,
+                                  "refundAmount": 590000,
+                                  "reason": "Customer return",
+                                  "items": [
+                                    {
+                                      "variantId": 7001,
+                                      "qty": 1,
+                                      "disposition": "RESTOCK"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.id").value(700))
+                .andExpect(jsonPath("$.data.originalReceiptId").value(501))
+                .andExpect(jsonPath("$.data.refundAmount").value(590000.00));
+
+        ArgumentCaptor<ProcessReturnRequest> requestCaptor =
+                ArgumentCaptor.forClass(ProcessReturnRequest.class);
+        then(returnService).should().processReturn(requestCaptor.capture(), eq(42L));
+        assertThat(requestCaptor.getValue().getOriginalOrderId()).isEqualTo(501L);
+        assertThat(requestCaptor.getValue().getItems()).hasSize(1);
+        assertThat(requestCaptor.getValue().getItems().getFirst().getDisposition()).isEqualTo("RESTOCK");
+    }
+
+    @Test
+    void processPosReturnRejectsAuthenticatedUserWithoutRefundPermission() throws Exception {
+        String token = "pos-return-viewer-token";
+        List<String> permissions = List.of("pos.sell");
+        AuthenticatedUser principal = new AuthenticatedUser(43L, "staff.viewer", "STAFF", permissions);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                principal,
+                token,
+                permissions.stream().map(SimpleGrantedAuthority::new).toList()
+        );
+        given(jwtTokenProvider.validate(token)).willReturn(true);
+        given(jwtTokenProvider.authentication(token)).willReturn(authentication);
+
+        mockMvc.perform(post("/api/v1/pos/returns")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-pos-return-forbidden")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "originalOrderId": 501,
+                                  "refundAmount": 590000,
+                                  "reason": "Customer return",
+                                  "items": [
+                                    {
+                                      "variantId": 7001,
+                                      "qty": 1,
+                                      "disposition": "RESTOCK"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("AUTH_002"));
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.seshop.inventory.application;
 
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
 import com.seshop.inventory.api.dto.CreateTransferRequest;
@@ -13,6 +15,7 @@ import com.seshop.inventory.api.dto.StockTransferDto;
 import com.seshop.inventory.infrastructure.persistence.*;
 import com.seshop.shared.api.PageResponse;
 import com.seshop.shared.exception.BusinessException;
+import com.seshop.shared.exception.ForbiddenOperationException;
 import com.seshop.shared.exception.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,15 +36,18 @@ public class InventoryService {
     private final LocationRepository locationRepository;
     private final InventoryTransferRepository transferRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final AuditService auditService;
 
     public InventoryService(InventoryBalanceRepository balanceRepository,
                             LocationRepository locationRepository,
                             InventoryTransferRepository transferRepository,
-                            ProductVariantRepository productVariantRepository) {
+                            ProductVariantRepository productVariantRepository,
+                            AuditService auditService) {
         this.balanceRepository = balanceRepository;
         this.locationRepository = locationRepository;
         this.transferRepository = transferRepository;
         this.productVariantRepository = productVariantRepository;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -118,7 +125,7 @@ public class InventoryService {
         return mapVariant(variant);
     }
 
-    public InventoryAdjustmentResponse adjustInventory(InventoryAdjustmentRequest request) {
+    public InventoryAdjustmentResponse adjustInventory(InventoryAdjustmentRequest request, boolean canOverrideNegativeStock) {
         productVariantRepository.findById(request.getVariantId())
                 .orElseThrow(() -> new ResourceNotFoundException("CAT_404", "Variant not found"));
 
@@ -136,13 +143,38 @@ public class InventoryService {
                     return newBalance;
                 });
 
-        balance.setOnHandQty(balance.getOnHandQty() + request.getDeltaQty());
-        
-        if (balance.getOnHandQty() < balance.getReservedQty()) {
-            throw new BusinessException("INV_001", "Adjustment would result in available quantity less than 0");
+        int beforeOnHandQty = balance.getOnHandQty();
+        int beforeReservedQty = balance.getReservedQty();
+        int beforeAvailableQty = beforeOnHandQty - beforeReservedQty;
+        int afterOnHandQty = beforeOnHandQty + request.getDeltaQty();
+        int afterAvailableQty = afterOnHandQty - beforeReservedQty;
+
+        if (afterAvailableQty < 0 && !canOverrideNegativeStock) {
+            throw new ForbiddenOperationException("Missing permission: inventory.adjust.override");
         }
 
-        return mapAdjustment(balanceRepository.save(balance));
+        balance.setOnHandQty(afterOnHandQty);
+        InventoryBalanceEntity savedBalance = balanceRepository.save(balance);
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("variantId", request.getVariantId());
+        metadata.put("locationId", location.getId());
+        metadata.put("deltaQty", request.getDeltaQty());
+        metadata.put("reasonCode", request.getReasonCode().trim());
+        metadata.put("notes", request.getNotes());
+        metadata.put("beforeOnHandQty", beforeOnHandQty);
+        metadata.put("afterOnHandQty", savedBalance.getOnHandQty());
+        metadata.put("beforeReservedQty", beforeReservedQty);
+        metadata.put("afterReservedQty", savedBalance.getReservedQty());
+        metadata.put("beforeAvailableQty", beforeAvailableQty);
+        metadata.put("afterAvailableQty", afterAvailableQty);
+        metadata.put("negativeStockOverrideUsed", afterAvailableQty < 0);
+        auditService.write(
+                AuditAction.INVENTORY_ADJUSTED,
+                "InventoryBalance",
+                savedBalance.getId() == null ? null : savedBalance.getId().toString(),
+                metadata);
+
+        return mapAdjustment(savedBalance);
     }
 
     public Long createTransfer(CreateTransferRequest request, Long createdBy) {
@@ -162,6 +194,13 @@ public class InventoryService {
         transfer.setCreatedBy(createdBy);
 
         for (CreateTransferRequest.TransferItemDto itemDto : request.getItems()) {
+            productVariantRepository.findById(itemDto.getVariantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("CAT_404", "Variant not found"));
+            boolean duplicateVariant = transfer.getItems().stream()
+                    .anyMatch(item -> item.getVariantId().equals(itemDto.getVariantId()));
+            if (duplicateVariant) {
+                throw new BusinessException("INV_002", "Transfer cannot contain duplicate variants");
+            }
             InventoryTransferItemEntity item = new InventoryTransferItemEntity();
             item.setTransfer(transfer);
             item.setVariantId(itemDto.getVariantId());
@@ -170,6 +209,10 @@ public class InventoryService {
         }
 
         InventoryTransferEntity saved = transferRepository.save(transfer);
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("createdBy", createdBy);
+        metadata.put("reason", request.getReason());
+        auditTransferStatusChange(saved, null, "DRAFT", metadata);
         return saved.getId();
     }
 
@@ -181,20 +224,78 @@ public class InventoryService {
             throw new BusinessException("INV_002", "Transfer must be in DRAFT state to approve");
         }
 
-        for (InventoryTransferItemEntity item : transfer.getItems()) {
-            InventoryBalanceEntity balance = balanceRepository
-                    .findForUpdateByVariantIdAndLocationId(item.getVariantId(), transfer.getSourceLocation().getId())
-                    .orElseThrow(() -> new BusinessException("INV_001", "Source balance not found for variant"));
-            
-            balance.setOnHandQty(balance.getOnHandQty() - item.getQty());
-            if (balance.getOnHandQty() < balance.getReservedQty()) {
-                throw new BusinessException("INV_001", "Insufficient available stock at source location");
-            }
-            balanceRepository.save(balance);
+        List<Map<String, Object>> auditedItems = transfer.getItems().stream()
+                .map(item -> {
+                    InventoryBalanceEntity balance = balanceRepository
+                            .findForUpdateByVariantIdAndLocationId(item.getVariantId(), transfer.getSourceLocation().getId())
+                            .orElseThrow(() -> new BusinessException("INV_001", "Source balance not found for variant"));
+
+                    int beforeOnHandQty = balance.getOnHandQty();
+                    int beforeReservedQty = balance.getReservedQty();
+                    int beforeAvailableQty = beforeOnHandQty - beforeReservedQty;
+                    if (beforeAvailableQty < item.getQty()) {
+                        throw new BusinessException("INV_001", "Insufficient available stock at source location");
+                    }
+                    balance.setOnHandQty(beforeOnHandQty - item.getQty());
+                    balanceRepository.save(balance);
+
+                    Map<String, Object> itemMetadata = new LinkedHashMap<>();
+                    itemMetadata.put("variantId", item.getVariantId());
+                    itemMetadata.put("qty", item.getQty());
+                    itemMetadata.put("locationId", transfer.getSourceLocation().getId());
+                    itemMetadata.put("beforeOnHandQty", beforeOnHandQty);
+                    itemMetadata.put("afterOnHandQty", balance.getOnHandQty());
+                    itemMetadata.put("beforeReservedQty", beforeReservedQty);
+                    itemMetadata.put("afterReservedQty", balance.getReservedQty());
+                    itemMetadata.put("beforeAvailableQty", beforeAvailableQty);
+                    itemMetadata.put("afterAvailableQty", balance.getOnHandQty() - balance.getReservedQty());
+                    return itemMetadata;
+                })
+                .toList();
+
+        String fromStatus = transfer.getStatus();
+        transfer.setStatus("IN_TRANSIT");
+        InventoryTransferEntity savedTransfer = transferRepository.save(transfer);
+        auditTransferStatusChange(savedTransfer, fromStatus, "IN_TRANSIT", Map.of("items", auditedItems));
+    }
+
+    public void cancelTransfer(Long transferId) {
+        InventoryTransferEntity transfer = transferRepository.findById(transferId)
+                .orElseThrow(() -> new ResourceNotFoundException("INV_002", "Transfer not found"));
+
+        if (!"DRAFT".equals(transfer.getStatus()) && !"IN_TRANSIT".equals(transfer.getStatus())) {
+            throw new BusinessException("INV_002", "Only DRAFT or IN_TRANSIT transfers can be cancelled");
         }
 
-        transfer.setStatus("IN_TRANSIT");
-        transferRepository.save(transfer);
+        List<Map<String, Object>> restoredItems = List.of();
+        if ("IN_TRANSIT".equals(transfer.getStatus())) {
+            restoredItems = transfer.getItems().stream()
+                    .map(item -> {
+                        InventoryBalanceEntity balance = balanceRepository
+                                .findForUpdateByVariantIdAndLocationId(
+                                        item.getVariantId(),
+                                        transfer.getSourceLocation().getId())
+                                .orElseThrow(() -> new BusinessException("INV_001", "Source balance not found for variant"));
+                        int beforeOnHandQty = balance.getOnHandQty();
+                        balance.setOnHandQty(beforeOnHandQty + item.getQty());
+                        balanceRepository.save(balance);
+
+                        Map<String, Object> itemMetadata = new LinkedHashMap<>();
+                        itemMetadata.put("variantId", item.getVariantId());
+                        itemMetadata.put("qty", item.getQty());
+                        itemMetadata.put("locationId", transfer.getSourceLocation().getId());
+                        itemMetadata.put("beforeOnHandQty", beforeOnHandQty);
+                        itemMetadata.put("afterOnHandQty", balance.getOnHandQty());
+                        itemMetadata.put("reservedQty", balance.getReservedQty());
+                        return itemMetadata;
+                    })
+                    .toList();
+        }
+
+        String fromStatus = transfer.getStatus();
+        transfer.setStatus("CANCELLED");
+        InventoryTransferEntity savedTransfer = transferRepository.save(transfer);
+        auditTransferStatusChange(savedTransfer, fromStatus, "CANCELLED", Map.of("restoredItems", restoredItems));
     }
 
     public void receiveTransfer(Long transferId, ReceiveTransferRequest request) {
@@ -205,33 +306,99 @@ public class InventoryService {
             throw new BusinessException("INV_002", "Transfer must be in IN_TRANSIT state to receive");
         }
 
+        Map<Long, ReceiveTransferRequest.ReceivedItemDto> receivedItemsByVariant = new LinkedHashMap<>();
         for (ReceiveTransferRequest.ReceivedItemDto receivedItem : request.getReceivedItems()) {
-            InventoryTransferItemEntity item = transfer.getItems().stream()
-                    .filter(i -> i.getVariantId().equals(receivedItem.getVariantId()))
-                    .findFirst()
-                    .orElseThrow(() -> new BusinessException("INV_002", "Variant not found in transfer"));
-
-            item.setReceivedQty(receivedItem.getReceivedQty());
-            item.setDamagedQty(receivedItem.getDamagedQty());
-
-            InventoryBalanceEntity balance = balanceRepository
-                    .findForUpdateByVariantIdAndLocationId(item.getVariantId(), transfer.getDestinationLocation().getId())
-                    .orElseGet(() -> {
-                        InventoryBalanceEntity newBalance = new InventoryBalanceEntity();
-                        newBalance.setVariantId(item.getVariantId());
-                        newBalance.setLocation(transfer.getDestinationLocation());
-                        newBalance.setOnHandQty(0);
-                        newBalance.setReservedQty(0);
-                        return newBalance;
-                    });
-
-            balance.setOnHandQty(balance.getOnHandQty() + receivedItem.getReceivedQty());
-            balanceRepository.save(balance);
+            if (receivedItemsByVariant.putIfAbsent(receivedItem.getVariantId(), receivedItem) != null) {
+                throw new BusinessException("INV_002", "Transfer receipt cannot contain duplicate variants");
+            }
         }
 
+        for (InventoryTransferItemEntity item : transfer.getItems()) {
+            if (!receivedItemsByVariant.containsKey(item.getVariantId())) {
+                throw new BusinessException("INV_002", "All transfer items must be received before completion");
+            }
+        }
+        if (receivedItemsByVariant.size() != transfer.getItems().size()) {
+            throw new BusinessException("INV_002", "Received variants must match transfer items");
+        }
+
+        List<Map<String, Object>> auditedItems = transfer.getItems().stream()
+                .map(item -> {
+                    ReceiveTransferRequest.ReceivedItemDto receivedItem = receivedItemsByVariant.get(item.getVariantId());
+                    int receivedQty = receivedItem.getReceivedQty();
+                    int damagedQty = receivedItem.getDamagedQty();
+                    if (receivedQty + damagedQty > item.getQty()) {
+                        throw new BusinessException("INV_002", "Received plus damaged quantity cannot exceed transfer quantity");
+                    }
+
+                    item.setReceivedQty(receivedQty);
+                    item.setDamagedQty(damagedQty);
+
+                    InventoryBalanceEntity balance = balanceRepository
+                            .findForUpdateByVariantIdAndLocationId(item.getVariantId(), transfer.getDestinationLocation().getId())
+                            .orElseGet(() -> {
+                                InventoryBalanceEntity newBalance = new InventoryBalanceEntity();
+                                newBalance.setVariantId(item.getVariantId());
+                                newBalance.setLocation(transfer.getDestinationLocation());
+                                newBalance.setOnHandQty(0);
+                                newBalance.setReservedQty(0);
+                                return newBalance;
+                            });
+
+                    int beforeOnHandQty = balance.getOnHandQty();
+                    balance.setOnHandQty(beforeOnHandQty + receivedQty);
+                    balanceRepository.save(balance);
+
+                    Map<String, Object> itemMetadata = new LinkedHashMap<>();
+                    itemMetadata.put("variantId", item.getVariantId());
+                    itemMetadata.put("transferQty", item.getQty());
+                    itemMetadata.put("receivedQty", receivedQty);
+                    itemMetadata.put("damagedQty", damagedQty);
+                    itemMetadata.put("locationId", transfer.getDestinationLocation().getId());
+                    itemMetadata.put("beforeOnHandQty", beforeOnHandQty);
+                    itemMetadata.put("afterOnHandQty", balance.getOnHandQty());
+                    itemMetadata.put("reservedQty", balance.getReservedQty());
+                    return itemMetadata;
+                })
+                .toList();
+
+        String fromStatus = transfer.getStatus();
         transfer.setStatus("COMPLETED");
         transfer.setCompletedAt(OffsetDateTime.now());
-        transferRepository.save(transfer);
+        InventoryTransferEntity savedTransfer = transferRepository.save(transfer);
+        auditTransferStatusChange(savedTransfer, fromStatus, "COMPLETED", Map.of("items", auditedItems));
+    }
+
+    private void auditTransferStatusChange(
+            InventoryTransferEntity transfer,
+            String fromStatus,
+            String toStatus,
+            Map<String, ?> extraMetadata) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("transferId", transfer.getId());
+        metadata.put("sourceLocationId", transfer.getSourceLocation().getId());
+        metadata.put("destinationLocationId", transfer.getDestinationLocation().getId());
+        metadata.put("fromStatus", fromStatus);
+        metadata.put("toStatus", toStatus);
+        metadata.put("itemCount", transfer.getItems().size());
+        metadata.put("items", transfer.getItems().stream()
+                .map(this::transferItemMetadata)
+                .toList());
+        metadata.putAll(extraMetadata);
+        auditService.write(
+                AuditAction.INVENTORY_TRANSFER_CHANGED,
+                "InventoryTransfer",
+                transfer.getId() == null ? null : transfer.getId().toString(),
+                metadata);
+    }
+
+    private Map<String, Object> transferItemMetadata(InventoryTransferItemEntity item) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("variantId", item.getVariantId());
+        metadata.put("qty", item.getQty());
+        metadata.put("receivedQty", item.getReceivedQty());
+        metadata.put("damagedQty", item.getDamagedQty());
+        return metadata;
     }
 
     private InventoryBalanceDto mapBalance(InventoryBalanceEntity entity) {

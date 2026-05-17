@@ -75,8 +75,14 @@ export function OrdersManagement() {
                 <tr key={order.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">{order.orderNumber}</td>
                   <td className="max-w-xs truncate px-6 py-4 whitespace-nowrap text-sm text-ink/60">{order.shippingAddress}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">{order.totalAmount.toLocaleString()} VND</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">Gateway</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">
+                    {order.totalAmount.toLocaleString()} {order.currency ?? 'VND'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <Badge variant={order.paymentStatus === 'PAID' ? 'success' : order.paymentStatus === 'FAILED' ? 'danger' : 'warning'}>
+                      {order.paymentStatus ?? 'PENDING'}
+                    </Badge>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <Badge variant={order.status === 'SHIPPED' || order.status === 'DELIVERED' ? 'success' : order.status === 'CANCELLED' ? 'danger' : 'warning'}>
                       {order.status}

@@ -7,7 +7,10 @@ public class OrderDto {
     private Long id;
     private String orderNumber;
     private String status;
+    private String paymentStatus;
+    private String shipmentStatus;
     private BigDecimal totalAmount;
+    private String currency;
     private String shippingAddress;
     private List<OrderItemDto> items;
 
@@ -44,8 +47,17 @@ public class OrderDto {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public String getShipmentStatus() { return shipmentStatus; }
+    public void setShipmentStatus(String shipmentStatus) { this.shipmentStatus = shipmentStatus; }
+
     public BigDecimal getTotalAmount() { return totalAmount; }
     public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+
+    public String getCurrency() { return currency; }
+    public void setCurrency(String currency) { this.currency = currency; }
 
     public String getShippingAddress() { return shippingAddress; }
     public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }

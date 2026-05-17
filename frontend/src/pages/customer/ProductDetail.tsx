@@ -273,7 +273,7 @@ export function ProductDetail() {
                 <span>Complimentary shipping on orders over 2.000.000 VND</span>
               </div>
               <NavLink
-                to={`/products/${product.id}/availability`}
+                to={`/products/${product.id}/availability${matchedVariant ? `?variantId=${matchedVariant.id}` : ''}`}
                 className="flex items-center gap-3 text-sm text-primary hover:underline"
               >
                 <MapPin size={16} />

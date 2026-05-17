@@ -2,15 +2,21 @@ package com.seshop.marketing.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.marketing.api.dto.DiscountDto;
 import com.seshop.marketing.api.dto.DiscountValidateRequest;
 import com.seshop.marketing.api.dto.DiscountValidationResponse;
 import com.seshop.marketing.infrastructure.persistence.DiscountCodeEntity;
 import com.seshop.marketing.infrastructure.persistence.DiscountCodeRepository;
+import com.seshop.marketing.infrastructure.persistence.DiscountRedemptionEntity;
 import com.seshop.marketing.infrastructure.persistence.DiscountRedemptionRepository;
 import com.seshop.shared.exception.BusinessException;
 import com.seshop.shared.exception.DuplicateResourceException;
@@ -18,6 +24,7 @@ import com.seshop.shared.exception.SeShopValidationException;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,11 +46,14 @@ class DiscountServiceTest {
     @Mock
     private DiscountRedemptionRepository redemptionRepository;
 
+    @Mock
+    private AuditService auditService;
+
     private DiscountService service;
 
     @BeforeEach
     void setUp() {
-        service = new DiscountService(discountCodeRepository, redemptionRepository);
+        service = new DiscountService(discountCodeRepository, redemptionRepository, auditService);
     }
 
     // ── createDiscount ──────────────────────────────────────────────────────
@@ -68,6 +78,15 @@ class DiscountServiceTest {
         assertThat(saved.getStatus()).isEqualTo("ACTIVE");
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getCode()).isEqualTo("SUMMER20");
+        then(auditService).should().write(
+                eq(AuditAction.DISCOUNT_CREATED),
+                eq("DiscountCode"),
+                eq("1"),
+                argThat((Map<String, ?> metadata) ->
+                        "SUMMER20".equals(metadata.get("code"))
+                                && "PERCENT".equals(metadata.get("discountType"))
+                                && "ACTIVE".equals(metadata.get("status")))
+        );
     }
 
     @Test
@@ -95,12 +114,53 @@ class DiscountServiceTest {
     @Test
     void deactivateDiscountSetsStatusToInactive() {
         DiscountCodeEntity entity = activeEntity("VINTAGE10", "PERCENT", "10");
+        entity.setId(7L);
         given(discountCodeRepository.findById(7L)).willReturn(Optional.of(entity));
         given(discountCodeRepository.save(entity)).willReturn(entity);
 
         service.deactivateDiscount(7L);
 
         assertThat(entity.getStatus()).isEqualTo("INACTIVE");
+        then(auditService).should().write(
+                eq(AuditAction.DISCOUNT_DEACTIVATED),
+                eq("DiscountCode"),
+                eq("7"),
+                argThat((Map<String, ?> metadata) -> {
+                    Map<?, ?> before = (Map<?, ?>) metadata.get("before");
+                    Map<?, ?> after = (Map<?, ?>) metadata.get("after");
+                    return "VINTAGE10".equals(metadata.get("code"))
+                            && "ACTIVE".equals(before.get("status"))
+                            && "INACTIVE".equals(after.get("status"));
+                })
+        );
+    }
+
+    @Test
+    void updateDiscountWritesBeforeAfterAuditMetadata() {
+        DiscountCodeEntity entity = activeEntity("VINTAGE10", "PERCENT", "10");
+        entity.setId(7L);
+        given(discountCodeRepository.findById(7L)).willReturn(Optional.of(entity));
+        given(discountCodeRepository.save(entity)).willReturn(entity);
+
+        DiscountDto request = discountRequest("VINTAGE10", "FIXED", "50000", "250000", 25);
+
+        DiscountDto result = service.updateDiscount(7L, request);
+
+        assertThat(result.getDiscountType()).isEqualTo("FIXED");
+        assertThat(result.getDiscountValue()).isEqualByComparingTo("50000");
+        then(auditService).should().write(
+                eq(AuditAction.DISCOUNT_UPDATED),
+                eq("DiscountCode"),
+                eq("7"),
+                argThat((Map<String, ?> metadata) -> {
+                    Map<?, ?> before = (Map<?, ?>) metadata.get("before");
+                    Map<?, ?> after = (Map<?, ?>) metadata.get("after");
+                    return "VINTAGE10".equals(metadata.get("code"))
+                            && "PERCENT".equals(before.get("discountType"))
+                            && "FIXED".equals(after.get("discountType"))
+                            && new BigDecimal("250000").compareTo((BigDecimal) after.get("minSpend")) == 0;
+                })
+        );
     }
 
     // ── validateDiscount ────────────────────────────────────────────────────
@@ -133,6 +193,20 @@ class DiscountServiceTest {
 
         assertThat(response.isValid()).isTrue();
         assertThat(response.getDiscountAmount()).isEqualByComparingTo("50000");
+    }
+
+    @Test
+    void validateDiscountCapsFixedAmountAtSubtotal() {
+        DiscountCodeEntity entity = activeEntity("BIGSAVE", "FIXED", "1000000");
+        given(discountCodeRepository.findByCode("BIGSAVE")).willReturn(Optional.of(entity));
+
+        DiscountValidateRequest request = new DiscountValidateRequest();
+        request.setCode("BIGSAVE");
+        request.setOrderSubtotal(new BigDecimal("500000"));
+
+        DiscountValidationResponse response = service.validateDiscount(request);
+
+        assertThat(response.getDiscountAmount()).isEqualByComparingTo("500000");
     }
 
     @Test
@@ -194,6 +268,51 @@ class DiscountServiceTest {
         assertThatThrownBy(() -> service.validateDiscount(request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("not active");
+    }
+
+    @Test
+    void redeemDiscountPersistsRedemptionAndReturnsAmount() {
+        DiscountCodeEntity entity = activeEntity("VINTAGE10", "PERCENT", "10");
+        entity.setId(7L);
+        given(redemptionRepository.existsByOrderId(1001L)).willReturn(false);
+        given(discountCodeRepository.findByCode("VINTAGE10")).willReturn(Optional.of(entity));
+        given(redemptionRepository.save(any(DiscountRedemptionEntity.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
+        DiscountValidationResponse response = service.redeemDiscount(
+                " VINTAGE10 ",
+                42L,
+                1001L,
+                new BigDecimal("1000000")
+        );
+
+        assertThat(response.isValid()).isTrue();
+        assertThat(response.getDiscountAmount()).isEqualByComparingTo("100000.00");
+
+        ArgumentCaptor<DiscountRedemptionEntity> redemptionCaptor =
+                ArgumentCaptor.forClass(DiscountRedemptionEntity.class);
+        then(redemptionRepository).should().save(redemptionCaptor.capture());
+        DiscountRedemptionEntity redemption = redemptionCaptor.getValue();
+        assertThat(redemption.getDiscountCode()).isSameAs(entity);
+        assertThat(redemption.getOrderId()).isEqualTo(1001L);
+        assertThat(redemption.getCustomerUserId()).isEqualTo(42L);
+    }
+
+    @Test
+    void redeemDiscountRejectsOrderWithExistingDiscountRedemption() {
+        given(redemptionRepository.existsByOrderId(1001L)).willReturn(true);
+
+        assertThatThrownBy(() -> service.redeemDiscount(
+                "VINTAGE10",
+                42L,
+                1001L,
+                new BigDecimal("1000000")
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("already has a discount");
+
+        then(discountCodeRepository).shouldHaveNoInteractions();
+        then(redemptionRepository).should(never()).save(any());
     }
 
     // ── listDiscounts ───────────────────────────────────────────────────────

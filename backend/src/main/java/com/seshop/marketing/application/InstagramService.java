@@ -3,6 +3,8 @@ package com.seshop.marketing.application;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.marketing.api.dto.InstagramPublishResultDto;
 import com.seshop.marketing.api.dto.InstagramConnectionDto;
 import com.seshop.marketing.api.dto.InstagramDraftDto;
@@ -19,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.lang.NonNull;
 import java.time.OffsetDateTime;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,17 +33,19 @@ public class InstagramService {
     private final InstagramDraftRepository draftRepository;
     private final ObjectMapper objectMapper;
     private final MetaGraphClient metaGraphClient;
+    private final AuditService auditService;
 
     public InstagramService(
             InstagramConnectionRepository connectionRepository,
             InstagramDraftRepository draftRepository,
             ObjectMapper objectMapper,
-            MetaGraphClient metaGraphClient
-    ) {
+            MetaGraphClient metaGraphClient,
+            AuditService auditService) {
         this.connectionRepository = connectionRepository;
         this.draftRepository = draftRepository;
         this.objectMapper = objectMapper;
         this.metaGraphClient = metaGraphClient;
+        this.auditService = auditService;
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +57,8 @@ public class InstagramService {
 
     @Transactional
     public String startConnection(Long userId) {
-        InstagramConnectionEntity entity = connectionRepository.findByUserId(userId).orElse(new InstagramConnectionEntity());
+        InstagramConnectionEntity entity = connectionRepository.findByUserId(userId)
+                .orElse(new InstagramConnectionEntity());
         entity.setUserId(userId);
         entity.setAccountId("pending");
         entity.setTokenEncrypted("pending");
@@ -66,13 +73,23 @@ public class InstagramService {
         MetaGraphClient.MetaTokenResult tokenResult = metaGraphClient.exchangeCode(code);
         MetaGraphClient.MetaAccountResult account = metaGraphClient.getAccount(tokenResult.accessToken());
 
-        InstagramConnectionEntity entity = connectionRepository.findByUserId(userId).orElse(new InstagramConnectionEntity());
+        InstagramConnectionEntity entity = connectionRepository.findByUserId(userId)
+                .orElse(new InstagramConnectionEntity());
         entity.setUserId(userId);
         entity.setAccountId(account.accountId());
         entity.setTokenEncrypted(account.accessToken());
         entity.setTokenExpiresAt(OffsetDateTime.now().plusSeconds(tokenResult.expiresInSeconds()));
         entity.setStatus("CONNECTED");
-        return mapConnectionToDto(connectionRepository.save(entity));
+        InstagramConnectionDto result = mapConnectionToDto(connectionRepository.save(entity));
+
+        Map<String, Object> connectMeta = new LinkedHashMap<>();
+        connectMeta.put("userId", userId);
+        connectMeta.put("accountId", account.accountId());
+        connectMeta.put("status", "CONNECTED");
+        auditService.write(AuditAction.INSTAGRAM_CONNECTION_CHANGED, "InstagramConnection",
+                String.valueOf(userId), connectMeta);
+
+        return result;
     }
 
     @Transactional
@@ -88,13 +105,13 @@ public class InstagramService {
         entity.setProductId(request.getProductId());
         entity.setCaption(request.getCaption());
         entity.setHashtags(request.getHashtags());
-        
+
         try {
             entity.setMediaOrderJson(objectMapper.writeValueAsString(request.getMediaOrder()));
         } catch (JsonProcessingException e) {
             entity.setMediaOrderJson("[]");
         }
-        
+
         entity.setStatus("DRAFT");
         return mapDraftToDto(draftRepository.save(entity));
     }
@@ -107,7 +124,7 @@ public class InstagramService {
         if (!"DRAFT".equals(entity.getStatus())) {
             throw new BusinessException("SOC_002", "Draft approval required");
         }
-        
+
         entity.setCaption(request.getCaption());
         entity.setHashtags(request.getHashtags());
         try {
@@ -115,7 +132,7 @@ public class InstagramService {
         } catch (JsonProcessingException e) {
             // keep existing
         }
-        
+
         return mapDraftToDto(draftRepository.save(entity));
     }
 
@@ -165,11 +182,19 @@ public class InstagramService {
                 connection.getAccountId(),
                 connection.getTokenEncrypted(),
                 mediaOrder.getFirst(),
-                caption
-        );
+                caption);
 
         entity.setStatus("PUBLISHED");
         draftRepository.save(entity);
+
+        Map<String, Object> publishMeta = new LinkedHashMap<>();
+        publishMeta.put("draftId", entity.getId());
+        publishMeta.put("productId", entity.getProductId());
+        publishMeta.put("createdBy", entity.getCreatedBy());
+        publishMeta.put("instagramMediaId", publishResult.mediaId());
+        publishMeta.put("permalink", buildPermalink(publishResult.mediaId()));
+        auditService.write(AuditAction.INSTAGRAM_POST_PUBLISHED, "InstagramDraft",
+                String.valueOf(entity.getId()), publishMeta);
 
         InstagramPublishResultDto dto = new InstagramPublishResultDto();
         dto.setDraftId(entity.getId());
@@ -206,7 +231,8 @@ public class InstagramService {
         dto.setStatus(entity.getStatus());
         dto.setCreatedAt(entity.getCreatedAt());
         try {
-            dto.setMediaOrder(objectMapper.readValue(entity.getMediaOrderJson(), new TypeReference<List<String>>() {}));
+            dto.setMediaOrder(objectMapper.readValue(entity.getMediaOrderJson(), new TypeReference<List<String>>() {
+            }));
         } catch (Exception e) {
             dto.setMediaOrder(Collections.emptyList());
         }
@@ -218,7 +244,8 @@ public class InstagramService {
             if (mediaOrderJson == null || mediaOrderJson.isBlank()) {
                 return Collections.emptyList();
             }
-            return objectMapper.readValue(mediaOrderJson, new TypeReference<List<String>>() {});
+            return objectMapper.readValue(mediaOrderJson, new TypeReference<List<String>>() {
+            });
         } catch (Exception exception) {
             return Collections.emptyList();
         }

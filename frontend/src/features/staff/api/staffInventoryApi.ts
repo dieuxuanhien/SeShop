@@ -80,3 +80,7 @@ export async function approveStockTransfer(transferId: number): Promise<void> {
 export async function receiveStockTransfer(transferId: number, request: ReceiveTransferRequest): Promise<void> {
   await apiClient.post(`/staff/inventory/transfers/${transferId}/receive`, request);
 }
+
+export async function cancelStockTransfer(transferId: number): Promise<void> {
+  await apiClient.post(`/staff/inventory/transfers/${transferId}/cancel`);
+}

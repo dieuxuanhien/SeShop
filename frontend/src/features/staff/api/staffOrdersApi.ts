@@ -5,7 +5,10 @@ export type StaffOrder = {
   id: number;
   orderNumber: string;
   status: string;
+  paymentStatus: string;
+  shipmentStatus: string;
   totalAmount: number;
+  currency: string;
   shippingAddress: string;
 };
 

@@ -103,8 +103,10 @@ export async function getProductById(productId: number): Promise<Product | undef
   return toFrontendProduct(response.data.data);
 }
 
-export async function getProductAvailability(productId: number): Promise<StockAvailability[]> {
-  const response = await apiClient.get<ApiResponse<StockAvailability[]>>(`/products/${productId}/availability`);
+export async function getProductAvailability(productId: number, variantId?: number): Promise<StockAvailability[]> {
+  const response = await apiClient.get<ApiResponse<StockAvailability[]>>(`/products/${productId}/availability`, {
+    params: variantId ? { variantId } : undefined,
+  });
   return response.data.data;
 }
 

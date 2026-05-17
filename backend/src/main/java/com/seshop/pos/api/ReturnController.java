@@ -4,6 +4,7 @@ import com.seshop.pos.api.dto.ProcessReturnRequest;
 import com.seshop.pos.api.dto.ReturnDto;
 import com.seshop.pos.application.ReturnService;
 import com.seshop.shared.security.AuthenticatedUser;
+import com.seshop.shared.security.PermissionValidator;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,16 +18,21 @@ import java.util.Map;
 @RequestMapping("/api/v1/pos/returns")
 public class ReturnController {
 
-    private final ReturnService returnService;
+    private static final String REFUND_PROCESS = "refund.process";
 
-    public ReturnController(ReturnService returnService) {
+    private final ReturnService returnService;
+    private final PermissionValidator permissionValidator;
+
+    public ReturnController(ReturnService returnService, PermissionValidator permissionValidator) {
         this.returnService = returnService;
+        this.permissionValidator = permissionValidator;
     }
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> processReturn(
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody ProcessReturnRequest request) {
+        permissionValidator.require(REFUND_PROCESS);
         ReturnDto returnDto = returnService.processReturn(request, user.userId());
 
         Map<String, Object> response = new HashMap<>();

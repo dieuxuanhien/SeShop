@@ -22,11 +22,11 @@ export function useProduct(productId: number) {
   });
 }
 
-export function useProductAvailability(productId: number) {
+export function useProductAvailability(productId: number, variantId?: number, enabled = true) {
   return useQuery({
-    queryKey: ['product-availability', productId],
-    queryFn: () => getProductAvailability(productId),
-    enabled: productId > 0,
+    queryKey: ['product-availability', productId, variantId ?? 'product'],
+    queryFn: () => getProductAvailability(productId, variantId),
+    enabled: enabled && productId > 0,
   });
 }
 

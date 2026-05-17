@@ -6,6 +6,7 @@ VALUES
   ('audit.read', 'View audit logs'),
   ('catalog.write', 'Create or update products and variants'),
   ('inventory.adjust', 'Adjust SKU inventory'),
+  ('inventory.adjust.override', 'Override negative inventory adjustment guardrails'),
   ('inventory.transfer', 'Create and process inventory transfers'),
   ('order.read', 'View staff-visible orders'),
   ('order.ship', 'Mark orders shipped'),

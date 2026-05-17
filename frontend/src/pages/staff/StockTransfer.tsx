@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRightLeft, CheckCircle2, PackageCheck } from 'lucide-react';
+import { ArrowRightLeft, CheckCircle2, PackageCheck, XCircle } from 'lucide-react';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -8,6 +8,7 @@ import { Select } from '@/shared/ui/Select';
 import { Spinner } from '@/shared/ui/Spinner';
 import {
   approveStockTransfer,
+  cancelStockTransfer,
   createStockTransfer,
   getInventoryBalances,
   getStockTransfers,
@@ -110,6 +111,20 @@ export function StockTransfer() {
     }
   }
 
+  async function handleCancel(transfer: StockTransfer) {
+    setIsSaving(true);
+    setMessage('');
+    try {
+      await cancelStockTransfer(transfer.id);
+      setMessage(`Transfer ${transfer.id} cancelled.`);
+      await fetchTransfers();
+    } catch {
+      setMessage('Transfer cancellation failed.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -155,9 +170,14 @@ export function StockTransfer() {
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-ink/60">{transfer.itemCount}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                       {['DRAFT', 'IN_TRANSIT'].includes(transfer.status) ? (
-                        <Button size="sm" variant={transfer.status === 'DRAFT' ? 'secondary' : 'primary'} onClick={() => handleAdvance(transfer)} isLoading={isSaving}>
-                          {transfer.status === 'DRAFT' ? 'Approve' : 'Receive'}
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant={transfer.status === 'DRAFT' ? 'secondary' : 'primary'} onClick={() => handleAdvance(transfer)} isLoading={isSaving}>
+                            {transfer.status === 'DRAFT' ? 'Approve' : 'Receive'}
+                          </Button>
+                          <Button size="sm" variant="secondary" icon={<XCircle size={15} />} onClick={() => handleCancel(transfer)} disabled={isSaving}>
+                            Cancel
+                          </Button>
+                        </div>
                       ) : null}
                     </td>
                   </tr>

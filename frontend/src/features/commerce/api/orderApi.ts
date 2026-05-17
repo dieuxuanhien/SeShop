@@ -9,6 +9,19 @@ export type CustomerOrder = {
   shippingAddress?: string;
 };
 
+export type ShipmentTrackingEvent = {
+  code: string;
+  label: string;
+  state: 'COMPLETED' | 'PENDING';
+  occurredAt?: string;
+};
+
+export type ShipmentTracking = {
+  status: string;
+  trackingNumbers: string[];
+  events: ShipmentTrackingEvent[];
+};
+
 export async function getMyOrders(page = 1, size = 20): Promise<PageResponse<CustomerOrder>> {
   const response = await apiClient.get<ApiResponse<PageResponse<CustomerOrder>>>('/orders/me', {
     params: { page: page - 1, size },
@@ -22,7 +35,7 @@ export async function getOrder(orderId: number): Promise<CustomerOrder> {
   return response.data.data;
 }
 
-export async function refreshShipment(orderId: number): Promise<{ status: string; trackingNumbers: string[] }> {
-  const response = await apiClient.post<ApiResponse<{ status: string; trackingNumbers: string[] }>>(`/orders/${orderId}/track-shipment`);
+export async function refreshShipment(orderId: number): Promise<ShipmentTracking> {
+  const response = await apiClient.post<ApiResponse<ShipmentTracking>>(`/orders/${orderId}/track-shipment`);
   return response.data.data;
 }

@@ -1,5 +1,6 @@
 package com.seshop.inventory.api.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -14,6 +15,7 @@ public class InventoryAdjustmentRequest {
     @NotNull(message = "Delta quantity is required")
     private Integer deltaQty;
 
+    @NotBlank(message = "Reason code is required")
     @Size(max = 50, message = "Reason code must not exceed 50 characters")
     private String reasonCode;
 

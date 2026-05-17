@@ -53,15 +53,21 @@ Target UCs: UC5-UC8, UC16, UC22, UC23, UC25.
    - Require reason code.
    - Require override permission for exceptional changes.
    - Audit before/after quantity.
+   - Progress: inventory adjustments now require `reasonCode`, reject negative available stock unless the caller has `inventory.adjust.override`, and write before/after audit metadata.
 3. Complete transfer workflow.
    - Add cancel.
    - Persist status trail.
    - Make receive/approve transactional.
+   - Progress: transfer create, approve, receive, and cancel now emit status-transition audit metadata; cancel restores source stock for in-transit transfers.
+   - Progress: transfer approval checks available stock before mutation, and receiving rejects duplicate, missing, unknown, or over-received item quantities.
 4. Implement allocation properly.
    - Replace `allocateOrder` status-only behavior.
    - Add allocation records, split location support, reservation handling, and pick task model if required by SRS.
+   - Progress: `allocateOrder` now creates persistent `order_allocations`, splits allocation across locked inventory balances, and increases `reserved_qty` so later POS/transfer flows cannot consume allocated stock.
+   - Progress: staff shipment now fulfills active allocations by decrementing both `on_hand_qty` and `reserved_qty`; order cancellation releases active allocation reservations.
 5. Improve stock views.
    - Frontend should show selected-variant/location availability, not only product totals.
+   - Progress: customer stock availability now carries the product-detail selected variant, lets the shopper switch SKUs, and queries location availability per variant.
 
 Deliverable: stock cannot be oversold or silently mutated.
 
@@ -73,20 +79,28 @@ Target UCs: UC10, UC15, UC17, UC19, UC20.
    - Reserve stock before payment.
    - Release reservation on payment failure/timeout.
    - Decrement/commit stock only after confirmed order/payment rules.
+   - Progress: checkout now reserves available stock through order allocations before COD/Stripe payment state is created, and Stripe payment failure releases active reservations.
 2. Apply discounts to order totals.
    - Persist redemption.
    - Enforce usage limits, expiry, eligibility.
    - Audit admin discount changes.
+   - Progress: checkout now redeems the submitted discount code against the saved order, persists `discount_redemptions`, applies the discount to order/payment totals, and rejects invalid or already-redeemed discounts before stock reservation/payment.
+   - Progress: discount create, update, and deactivate now write structured audit events with before/after metadata for admin changes.
 3. Strengthen payment state.
    - Add payment status to staff order DTOs.
    - Make Stripe webhook path robust and tested.
    - Define COD state transitions clearly.
+   - Progress: orders now map persisted payment/shipment status and currency into staff/customer order DTOs, and the staff orders table displays live payment state instead of a placeholder.
+   - Progress: Stripe webhook success/failure handling now uses `PAID`/`FAILED` payment states, delegates order payment transitions to `OrderService`, and ignores late failure events for already-paid orders.
+   - Progress: COD orders remain unpaid at checkout and their pending COD payment is marked `PAID` when staff delivers the order.
 4. Fix shipment workflow.
    - Validate order state before shipping.
    - Validate tracking format.
    - Add notification/event hook.
    - Audit shipment creation/status change.
+   - Progress: staff shipment now rejects unshippable order/payment states before stock fulfillment, validates carrier/tracking input, normalizes carrier statuses, and audits shipment creation/status transitions.
 5. Replace static tracking timeline with persisted or partner-derived shipment events.
+   - Progress: customer tracking now receives status-derived shipment events from the backend instead of rendering a fixed static timeline.
 
 Deliverable: online order lifecycle is coherent from cart to shipment.
 
@@ -96,15 +110,18 @@ Target UCs: UC8, UC9, UC24, UC26, UC27.
 1. Replace in-memory refund/return/invoice services with database-backed persistence.
    - Use documented tables like `tax_invoices`.
    - Add missing repositories/entities where needed.
+   - Progress: online return requests, return items, refunds, tax invoices, and invoice adjustment notes now use JPA persistence backed by the existing schema instead of in-memory maps.
 2. Implement refund eligibility.
    - Online order ownership/status checks.
    - Delivered/paid constraints.
    - Amount validation.
    - Stock disposition rules.
+   - Progress: online returns now require delivered/paid orders and valid order item quantities; refund processing now requires an approved return, a completed payment on the same order, one refund per return request, and an amount not exceeding returned item value.
 3. Implement POS return validation.
    - Validate original receipt.
    - Validate item quantities.
    - Update stock according to disposition.
+   - Progress: POS returns now validate the original receipt, reject duplicate/over-returned variants, require refund amount to match returned line value, persist return items with disposition, and restock the original POS location only for `RESTOCK` dispositions.
 4. Build return intake/exchange model.
    - Eligibility.
    - Inspection.
@@ -119,6 +136,7 @@ Target UCs: UC8, UC9, UC24, UC26, UC27.
    - Tax validation.
    - Correction/adjustment note chain.
    - No mutation of finalized financial records.
+   - Progress: tax invoice issuance now snapshots order tax/subtotal/total data, rejects duplicate order invoices, and stores corrections as immutable adjustment notes with cumulative adjustment audit metadata.
 
 Deliverable: financial and return workflows stop being skeletons.
 
@@ -148,6 +166,7 @@ Target UCs: UC5, UC11-UC14, UC18, UC21.
    - Encrypt tokens.
    - Generate product-derived drafts/media renditions.
    - Audit connect/disconnect/post workflows.
+   - Progress: Instagram `completeConnection` now emits `INSTAGRAM_CONNECTION_CHANGED` audit metadata; `publishDraft` now emits `INSTAGRAM_POST_PUBLISHED` audit metadata with draftId, productId, createdBy, mediaId, and permalink.
 
 Deliverable: customer-facing catalog and social workflows match the documented rules.
 

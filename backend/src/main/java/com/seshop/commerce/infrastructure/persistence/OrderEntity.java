@@ -23,6 +23,15 @@ public class OrderEntity {
     @Column(nullable = false, length = 20)
     private String status;
 
+    @Column(name = "payment_status", nullable = false, length = 20)
+    private String paymentStatus = "PENDING";
+
+    @Column(name = "shipment_status", nullable = false, length = 20)
+    private String shipmentStatus = "PENDING";
+
+    @Column(nullable = false, length = 3)
+    private String currency = "VND";
+
     @Column(name = "subtotal_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal subtotalAmount;
 
@@ -52,6 +61,15 @@ public class OrderEntity {
 
     @PrePersist
     protected void onCreate() {
+        if (paymentStatus == null) {
+            paymentStatus = "PENDING";
+        }
+        if (shipmentStatus == null) {
+            shipmentStatus = "PENDING";
+        }
+        if (currency == null) {
+            currency = "VND";
+        }
         createdAt = OffsetDateTime.now();
         updatedAt = createdAt;
     }
@@ -73,6 +91,15 @@ public class OrderEntity {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public String getShipmentStatus() { return shipmentStatus; }
+    public void setShipmentStatus(String shipmentStatus) { this.shipmentStatus = shipmentStatus; }
+
+    public String getCurrency() { return currency; }
+    public void setCurrency(String currency) { this.currency = currency; }
 
     public BigDecimal getSubtotalAmount() { return subtotalAmount; }
     public void setSubtotalAmount(BigDecimal subtotalAmount) { this.subtotalAmount = subtotalAmount; }

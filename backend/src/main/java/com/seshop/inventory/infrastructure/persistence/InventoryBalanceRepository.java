@@ -24,6 +24,10 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
             @Param("variantId") Long variantId,
             @Param("locationId") Long locationId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM InventoryBalanceEntity b WHERE b.variantId = :variantId ORDER BY b.id")
+    List<InventoryBalanceEntity> findForUpdateByVariantIdOrderById(@Param("variantId") Long variantId);
+
     @Query("SELECT b FROM InventoryBalanceEntity b " +
             "WHERE (:variantId IS NULL OR b.variantId = :variantId) " +
             "AND (:locationId IS NULL OR b.location.id = :locationId)")

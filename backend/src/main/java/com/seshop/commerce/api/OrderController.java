@@ -59,7 +59,11 @@ public class OrderController {
     public ResponseEntity<Map<String, Object>> trackShipment(@PathVariable Long orderId) {
         String status = orderService.refreshShipmentStatus(orderId);
         Map<String, Object> response = new HashMap<>();
-        response.put("data", Map.of("status", status, "trackingNumbers", orderService.getTrackingNumbers(orderId)));
+        response.put("data", Map.of(
+                "status", status,
+                "trackingNumbers", orderService.getTrackingNumbers(orderId),
+                "events", orderService.getShipmentTrackingEvents(orderId)
+        ));
         return ResponseEntity.ok(response);
     }
 }

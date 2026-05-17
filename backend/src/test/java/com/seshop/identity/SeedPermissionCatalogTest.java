@@ -19,6 +19,7 @@ class SeedPermissionCatalogTest {
             "audit.read",
             "catalog.write",
             "inventory.adjust",
+            "inventory.adjust.override",
             "inventory.transfer",
             "order.read",
             "order.ship",
@@ -57,6 +58,7 @@ class SeedPermissionCatalogTest {
         assertThat(splitSqlStringList(matcher.group(1))).containsExactly(
                 "catalog.write",
                 "inventory.adjust",
+                "inventory.adjust.override",
                 "inventory.transfer",
                 "order.read",
                 "order.ship",

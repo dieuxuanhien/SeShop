@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { PageScaffold } from '@/shared/ui/PageScaffold';
-import { getOrder, refreshShipment, type CustomerOrder } from '@/features/commerce/api/orderApi';
+import { getOrder, refreshShipment, type CustomerOrder, type ShipmentTracking } from '@/features/commerce/api/orderApi';
 import { formatCurrency } from '@/shared/lib/formatters';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -11,7 +11,7 @@ export function OrderTracking() {
   const { orderId } = useParams<{ orderId: string }>();
   const id = Number(orderId);
   const [order, setOrder] = useState<CustomerOrder | null>(null);
-  const [shipment, setShipment] = useState<{ status: string; trackingNumbers: string[] } | null>(null);
+  const [shipment, setShipment] = useState<ShipmentTracking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -69,10 +69,21 @@ export function OrderTracking() {
             <div className="rounded-md border border-primary/15 bg-ink/[0.03] p-4">
               <h3 className="text-sm font-semibold text-ink">Delivery Timeline</h3>
               <ol className="mt-4 grid gap-3 text-sm text-ink/65">
-                {['Placed', 'Allocated', 'Packed', 'Shipped', 'Delivered'].map((step) => (
-                  <li key={step} className="flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-primary" />
-                    {step}
+                {(shipment?.events ?? []).map((event) => (
+                  <li key={event.code} className="grid grid-cols-[10px_minmax(0,1fr)] items-start gap-3">
+                    <span
+                      className={`mt-1.5 size-2 rounded-full ${
+                        event.state === 'COMPLETED' ? 'bg-primary' : 'bg-ink/20'
+                      }`}
+                    />
+                    <span>
+                      <span className="block font-medium text-ink">{event.label}</span>
+                      {event.occurredAt ? (
+                        <span className="mt-0.5 block text-xs text-ink/45">
+                          {new Date(event.occurredAt).toLocaleString()}
+                        </span>
+                      ) : null}
+                    </span>
                   </li>
                 ))}
               </ol>
