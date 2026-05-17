@@ -31,9 +31,17 @@ export function AuditLogs() {
   function handleExport() {
     const csv = [
       'id,action,actor,target,status,createdAt',
-      ...filteredLogs.map((log) => [log.id, log.action, log.actor, log.target, log.status, log.createdAt].join(',')),
+      ...filteredLogs.map((log) => [log.id, `"${log.action}"`, `"${log.actor}"`, `"${log.target}"`, log.status, log.createdAt].join(',')),
     ].join('\n');
-    navigator.clipboard?.writeText(csv).catch(() => undefined);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'audit_logs.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   return (

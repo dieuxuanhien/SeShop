@@ -12,6 +12,9 @@ export function InventoryAdjustment() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBalance, setSelectedBalance] = useState<InventoryBalance | null>(null);
+  
+  const [locationFilter, setLocationFilter] = useState('ALL');
+  const [skuFilter, setSkuFilter] = useState('');
 
   // Form state
   const [deltaQty, setDeltaQty] = useState(0);
@@ -34,6 +37,14 @@ export function InventoryAdjustment() {
   useEffect(() => {
     fetchBalances();
   }, []);
+
+  const filteredBalances = balances.filter((b) => {
+    const locMatch = locationFilter === 'ALL' || b.locationName === locationFilter;
+    const skuMatch = !skuFilter || b.skuCode.toLowerCase().includes(skuFilter.toLowerCase());
+    return locMatch && skuMatch;
+  });
+
+  const uniqueLocations = Array.from(new Set(balances.map(b => b.locationName)));
 
   const handleAdjustClick = (balance: InventoryBalance) => {
     setSelectedBalance(balance);
@@ -75,6 +86,32 @@ export function InventoryAdjustment() {
         </div>
       </div>
 
+      <Card className="border-primary/20 bg-surface/95 mb-6 p-4">
+        <div className="flex gap-4">
+          <div className="w-48">
+            <label className="block text-sm font-medium text-ink/70 mb-1">Location</label>
+            <select 
+              className="w-full rounded-md border border-ink/20 bg-surface px-3 py-2 text-sm"
+              value={locationFilter} 
+              onChange={(e) => setLocationFilter(e.target.value)}
+            >
+              <option value="ALL">All Locations</option>
+              {uniqueLocations.map(loc => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-64">
+            <label className="block text-sm font-medium text-ink/70 mb-1">Search SKU</label>
+            <Input 
+              placeholder="Filter by SKU..." 
+              value={skuFilter} 
+              onChange={(e) => setSkuFilter(e.target.value)}
+            />
+          </div>
+        </div>
+      </Card>
+
       <Card className="border-primary/20 bg-surface/95">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-primary/10">
@@ -90,7 +127,7 @@ export function InventoryAdjustment() {
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/10 bg-surface">
-              {balances.map((balance) => (
+              {filteredBalances.map((balance) => (
                 <tr key={balance.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">{balance.locationName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">{balance.skuCode}</td>
@@ -105,7 +142,7 @@ export function InventoryAdjustment() {
                   </td>
                 </tr>
               ))}
-              {balances.length === 0 && (
+              {filteredBalances.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-4 text-center text-sm text-ink/55">
                     No balances found.

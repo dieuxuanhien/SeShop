@@ -187,10 +187,14 @@ Target all UCs with UI gaps.
    - Remove hardcoded user-facing strings from critical flows.
    - Progress: Installed `react-i18next` and `i18next`. Created `frontend/src/i18n.ts` configuration and established English (`en`) and Vietnamese (`vi`) locale catalogs.
 2. Align route guards with backend permissions.
+   - Progress: Updated `frontend/src/app/router/routes.tsx` to use specific backend permissions (e.g. `catalog.write`, `inventory.adjust`) in `ProtectedRoute`.
 3. Add missing filters/actions in staff pages.
    - Audit filters and CSV export.
+     - Progress: Added CSV file download for Audit Logs.
    - Online order filters.
+     - Progress: Added order status and payment status filters to `OrdersManagement.tsx`.
    - Stock-by-location variant selector.
+     - Progress: Added location and SKU filters to `InventoryAdjustment.tsx`.
 4. Add frontend tests for acceptance paths, especially:
    - Unauthorized access.
    - Stock unavailable checkout.

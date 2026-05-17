@@ -9,6 +9,8 @@ export function OrdersManagement() {
   const [orders, setOrders] = useState<StaffOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [paymentFilter, setPaymentFilter] = useState('ALL');
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -25,6 +27,12 @@ export function OrdersManagement() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const filteredOrders = orders.filter((order) => {
+    const statusMatches = statusFilter === 'ALL' ? true : order.status === statusFilter;
+    const paymentMatches = paymentFilter === 'ALL' ? true : order.paymentStatus === paymentFilter;
+    return statusMatches && paymentMatches;
+  });
 
   const handleAction = async (orderId: number, action: 'allocate' | 'pack' | 'ship') => {
     setActionLoading(orderId);
@@ -57,6 +65,41 @@ export function OrdersManagement() {
         </div>
       </div>
 
+      <Card className="border-primary/20 bg-surface/95 mb-6 p-4">
+        <div className="flex gap-4">
+          <div className="w-48">
+            <label className="block text-sm font-medium text-ink/70 mb-1">Order Status</label>
+            <select 
+              className="w-full rounded-md border border-ink/20 bg-surface px-3 py-2 text-sm"
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="ALLOCATED">Allocated</option>
+              <option value="PACKED">Packed</option>
+              <option value="SHIPPED">Shipped</option>
+              <option value="DELIVERED">Delivered</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
+          <div className="w-48">
+            <label className="block text-sm font-medium text-ink/70 mb-1">Payment Status</label>
+            <select 
+              className="w-full rounded-md border border-ink/20 bg-surface px-3 py-2 text-sm"
+              value={paymentFilter} 
+              onChange={(e) => setPaymentFilter(e.target.value)}
+            >
+              <option value="ALL">All Payments</option>
+              <option value="PENDING">Pending</option>
+              <option value="PAID">Paid</option>
+              <option value="FAILED">Failed</option>
+              <option value="REFUNDED">Refunded</option>
+            </select>
+          </div>
+        </div>
+      </Card>
+
       <Card className="border-primary/20 bg-surface/95">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-primary/10">
@@ -71,7 +114,7 @@ export function OrdersManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/10 bg-surface">
-              {orders.map((order) => (
+              {filteredOrders.map((order) => (
                 <tr key={order.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">{order.orderNumber}</td>
                   <td className="max-w-xs truncate px-6 py-4 whitespace-nowrap text-sm text-ink/60">{order.shippingAddress}</td>
@@ -107,7 +150,7 @@ export function OrdersManagement() {
                   </td>
                 </tr>
               ))}
-              {orders.length === 0 && (
+              {filteredOrders.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-4 text-center text-sm text-ink/55">
                     No orders found.

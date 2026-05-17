@@ -63,25 +63,67 @@ export function AppRoutes() {
       <Route element={<RootLayout />}>
         <Route element={<ProtectedRoute role="STAFF" />}>
           <Route path="staff/dashboard" element={<StaffDashboard />} />
-          <Route path="staff/catalog" element={<CatalogManagement />} />
-          <Route path="staff/inventory" element={<InventoryAdjustment />} />
-          <Route path="staff/transfers" element={<StockTransfer />} />
-          <Route path="staff/orders" element={<OrdersManagement />} />
-          <Route path="staff/returns" element={<ReturnsManagement />} />
-          <Route path="staff/discounts" element={<Discounts />} />
-          <Route path="staff/pos" element={<POS />} />
-          <Route path="staff/pos/shift-close" element={<ShiftClose />} />
+          
+          <Route element={<ProtectedRoute permission="catalog.write" />}>
+            <Route path="staff/catalog" element={<CatalogManagement />} />
+          </Route>
+
+          <Route element={<ProtectedRoute permission="inventory.adjust" />}>
+            <Route path="staff/inventory" element={<InventoryAdjustment />} />
+          </Route>
+
+          <Route element={<ProtectedRoute permission="inventory.transfer" />}>
+            <Route path="staff/transfers" element={<StockTransfer />} />
+          </Route>
+
+          <Route element={<ProtectedRoute permission="order.read" />}>
+            <Route path="staff/orders" element={<OrdersManagement />} />
+          </Route>
+
+          <Route element={<ProtectedRoute permission="refund.process" />}>
+            <Route path="staff/returns" element={<ReturnsManagement />} />
+          </Route>
+
+          <Route element={<ProtectedRoute permission="promo.manage" />}>
+            <Route path="staff/discounts" element={<Discounts />} />
+          </Route>
+
+          <Route element={<ProtectedRoute permission="pos.sell" />}>
+            <Route path="staff/pos" element={<POS />} />
+          </Route>
+
+          <Route element={<ProtectedRoute permission="pos.shift.manage" />}>
+            <Route path="staff/pos/shift-close" element={<ShiftClose />} />
+          </Route>
+
           <Route path="staff/purchase-orders" element={<PurchaseOrders />} />
-          <Route path="staff/sales-report" element={<SalesReport />} />
-          <Route path="staff/marketing/drafts" element={<InstagramDrafts />} />
-          <Route path="staff/marketing/instagram" element={<InstagramConnection />} />
+
+          <Route element={<ProtectedRoute permission="report.read" />}>
+            <Route path="staff/sales-report" element={<SalesReport />} />
+          </Route>
+
+          <Route element={<ProtectedRoute permission="social.compose" />}>
+            <Route path="staff/marketing/drafts" element={<InstagramDrafts />} />
+          </Route>
+
+          <Route element={<ProtectedRoute permission="social.connect" />}>
+            <Route path="staff/marketing/instagram" element={<InstagramConnection />} />
+          </Route>
         </Route>
 
         <Route element={<ProtectedRoute role="ADMIN" />}>
           <Route path="admin/dashboard" element={<AdminDashboard />} />
-          <Route path="admin/users-roles" element={<UserRoleManagement />} />
+          
+          <Route element={<ProtectedRoute permission="role.create" />}>
+            <Route path="admin/users-roles" element={<UserRoleManagement />} />
+          </Route>
+
           <Route path="admin/locations" element={<LocationsManagement />} />
-          <Route path="admin/audit-logs" element={<AuditLogs />} />
+          
+          <Route element={<ProtectedRoute permission="audit.read" />}>
+            <Route path="admin/audit-logs" element={<AuditLogs />} />
+          </Route>
+
           <Route path="admin/settings" element={<Settings />} />
         </Route>
 
