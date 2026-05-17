@@ -68,6 +68,48 @@ public class MetaGraphClient {
         }
     }
 
+    public void verifyScopes(String accessToken) {
+        String baseUrl = baseUrl();
+        String response = RestClient.builder()
+            .baseUrl(baseUrl)
+                .build()
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/me/permissions")
+                        .queryParam("access_token", accessToken)
+                        .build())
+                .retrieve()
+                .body(String.class);
+
+        try {
+            Map<String, Object> payload = objectMapper.readValue(response, new TypeReference<>() {});
+            Object data = payload.get("data");
+            if (data instanceof List<?> permissions) {
+                List<String> requiredScopes = List.of(properties.getScopes().split(","));
+                for (String scope : requiredScopes) {
+                    boolean granted = false;
+                    for (Object permNode : permissions) {
+                        if (permNode instanceof Map<?, ?> perm) {
+                            if (scope.equals(perm.get("permission")) && "granted".equals(perm.get("status"))) {
+                                granted = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!granted) {
+                        throw new BusinessException("SOC_001", "Missing required scope: " + scope);
+                    }
+                }
+            } else {
+                throw new BusinessException("SOC_001", "Cannot parse Meta Graph permissions response");
+            }
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new BusinessException("SOC_001", "Cannot parse Meta Graph permissions response");
+        }
+    }
+
     public MetaAccountResult getAccount(String accessToken) {
         String baseUrl = baseUrl();
         String response = RestClient.builder()

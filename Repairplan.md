@@ -171,6 +171,8 @@ Target UCs: UC5, UC11-UC14, UC18, UC21.
    - Generate product-derived drafts/media renditions.
    - Audit connect/disconnect/post workflows.
    - Progress: Instagram `completeConnection` now emits `INSTAGRAM_CONNECTION_CHANGED` audit metadata; `publishDraft` now emits `INSTAGRAM_POST_PUBLISHED` audit metadata with draftId, productId, createdBy, mediaId, and permalink.
+   - Progress: InstagramService now uses HMAC to verify OAuth state and Spring Security TextEncryptor to encrypt/decrypt access tokens in the database.
+   - Progress: MetaGraphClient now verifies required scopes from /me/permissions and InstagramService automatically populates draft captions, hashtags, and media order from the associated product if left empty.
 
 Deliverable: customer-facing catalog and social workflows match the documented rules.
 

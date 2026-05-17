@@ -13,39 +13,57 @@ import com.seshop.marketing.infrastructure.persistence.InstagramConnectionEntity
 import com.seshop.marketing.infrastructure.persistence.InstagramConnectionRepository;
 import com.seshop.marketing.infrastructure.persistence.InstagramDraftEntity;
 import com.seshop.marketing.infrastructure.persistence.InstagramDraftRepository;
+import com.seshop.catalog.infrastructure.persistence.ProductEntity;
+import com.seshop.catalog.infrastructure.persistence.ProductImageEntity;
+import com.seshop.catalog.infrastructure.persistence.ProductRepository;
 import com.seshop.shared.exception.BusinessException;
 import com.seshop.shared.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.lang.NonNull;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
+import org.springframework.security.crypto.encrypt.Encryptors;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 @Service
 public class InstagramService {
 
     private final InstagramConnectionRepository connectionRepository;
     private final InstagramDraftRepository draftRepository;
+    private final ProductRepository productRepository;
     private final ObjectMapper objectMapper;
     private final MetaGraphClient metaGraphClient;
     private final AuditService auditService;
+    private final TextEncryptor encryptor;
+    private final String secret;
 
     public InstagramService(
             InstagramConnectionRepository connectionRepository,
             InstagramDraftRepository draftRepository,
+            ProductRepository productRepository,
             ObjectMapper objectMapper,
             MetaGraphClient metaGraphClient,
-            AuditService auditService) {
+            AuditService auditService,
+            @Value("${seshop.security.jwt.secret}") String secret) {
         this.connectionRepository = connectionRepository;
         this.draftRepository = draftRepository;
+        this.productRepository = productRepository;
         this.objectMapper = objectMapper;
         this.metaGraphClient = metaGraphClient;
         this.auditService = auditService;
+        this.secret = secret;
+        this.encryptor = Encryptors.text(secret, "5c0744940b5c369b");
     }
 
     @Transactional(readOnly = true)
@@ -65,19 +83,21 @@ public class InstagramService {
         entity.setTokenExpiresAt(OffsetDateTime.now().plusMinutes(10));
         entity.setStatus("PENDING_AUTH");
         connectionRepository.save(entity);
-        return metaGraphClient.buildAuthorizationUrl(String.valueOf(userId));
+        return metaGraphClient.buildAuthorizationUrl(generateState(userId));
     }
 
     @Transactional
-    public InstagramConnectionDto completeConnection(Long userId, String code) {
+    public InstagramConnectionDto completeConnection(String state, String code) {
+        Long userId = verifyState(state);
         MetaGraphClient.MetaTokenResult tokenResult = metaGraphClient.exchangeCode(code);
+        metaGraphClient.verifyScopes(tokenResult.accessToken());
         MetaGraphClient.MetaAccountResult account = metaGraphClient.getAccount(tokenResult.accessToken());
 
         InstagramConnectionEntity entity = connectionRepository.findByUserId(userId)
                 .orElse(new InstagramConnectionEntity());
         entity.setUserId(userId);
         entity.setAccountId(account.accountId());
-        entity.setTokenEncrypted(account.accessToken());
+        entity.setTokenEncrypted(encryptor.encrypt(account.accessToken()));
         entity.setTokenExpiresAt(OffsetDateTime.now().plusSeconds(tokenResult.expiresInSeconds()));
         entity.setStatus("CONNECTED");
         InstagramConnectionDto result = mapConnectionToDto(connectionRepository.save(entity));
@@ -102,14 +122,51 @@ public class InstagramService {
 
         InstagramDraftEntity entity = new InstagramDraftEntity();
         entity.setCreatedBy(userId);
-        entity.setProductId(request.getProductId());
-        entity.setCaption(request.getCaption());
-        entity.setHashtags(request.getHashtags());
+        
+        if (request.getProductId() != null) {
+            ProductEntity product = productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new ResourceNotFoundException("CAT_404", "Product not found"));
+            
+            entity.setProductId(product.getId());
+            
+            String caption = request.getCaption();
+            if (caption == null || caption.isBlank()) {
+                caption = product.getName() + "\n\n" + (product.getDescription() != null ? product.getDescription() : "");
+            }
+            entity.setCaption(caption);
 
-        try {
-            entity.setMediaOrderJson(objectMapper.writeValueAsString(request.getMediaOrder()));
-        } catch (JsonProcessingException e) {
-            entity.setMediaOrderJson("[]");
+            String hashtags = request.getHashtags();
+            if (hashtags == null || hashtags.isBlank()) {
+                hashtags = "#" + (product.getBrand() != null ? product.getBrand().replaceAll("\\s+", "") : "SeShop") + " #fashion";
+            }
+            entity.setHashtags(hashtags);
+
+            List<String> mediaOrder = request.getMediaOrder();
+            if (mediaOrder == null || mediaOrder.isEmpty()) {
+                mediaOrder = product.getImages().stream()
+                        .filter(img -> Boolean.TRUE.equals(img.getIsInstagramReady()))
+                        .map(ProductImageEntity::getUrl)
+                        .collect(Collectors.toList());
+                if (mediaOrder.isEmpty() && !product.getImages().isEmpty()) {
+                    mediaOrder = product.getImages().stream()
+                            .map(ProductImageEntity::getUrl)
+                            .collect(Collectors.toList());
+                }
+            }
+            try {
+                entity.setMediaOrderJson(objectMapper.writeValueAsString(mediaOrder));
+            } catch (JsonProcessingException e) {
+                entity.setMediaOrderJson("[]");
+            }
+        } else {
+            entity.setProductId(null);
+            entity.setCaption(request.getCaption());
+            entity.setHashtags(request.getHashtags());
+            try {
+                entity.setMediaOrderJson(objectMapper.writeValueAsString(request.getMediaOrder()));
+            } catch (JsonProcessingException e) {
+                entity.setMediaOrderJson("[]");
+            }
         }
 
         entity.setStatus("DRAFT");
@@ -180,7 +237,7 @@ public class InstagramService {
         String caption = buildPublishCaption(entity.getCaption(), entity.getHashtags());
         MetaGraphClient.MetaPublishResult publishResult = metaGraphClient.publishImagePost(
                 connection.getAccountId(),
-                connection.getTokenEncrypted(),
+                encryptor.decrypt(connection.getTokenEncrypted()),
                 mediaOrder.getFirst(),
                 caption);
 
@@ -267,5 +324,35 @@ public class InstagramService {
 
     private String buildPermalink(String mediaId) {
         return "https://www.instagram.com/p/" + mediaId;
+    }
+
+    private String generateState(Long userId) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] hash = mac.doFinal(String.valueOf(userId).getBytes(StandardCharsets.UTF_8));
+            return userId + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (Exception e) {
+            throw new BusinessException("SOC_001", "Cannot generate state");
+        }
+    }
+
+    private Long verifyState(String state) {
+        try {
+            String[] parts = state.split("\\.");
+            if (parts.length != 2) {
+                throw new BusinessException("SOC_001", "Invalid OAuth state format");
+            }
+            Long userId = Long.parseLong(parts[0]);
+            String expected = generateState(userId);
+            if (!expected.equals(state)) {
+                throw new BusinessException("SOC_001", "OAuth state signature mismatch");
+            }
+            return userId;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException("SOC_001", "Invalid OAuth state");
+        }
     }
 }

@@ -14,6 +14,7 @@ import com.seshop.marketing.infrastructure.persistence.InstagramConnectionEntity
 import com.seshop.marketing.infrastructure.persistence.InstagramConnectionRepository;
 import com.seshop.marketing.infrastructure.persistence.InstagramDraftEntity;
 import com.seshop.marketing.infrastructure.persistence.InstagramDraftRepository;
+import com.seshop.catalog.infrastructure.persistence.ProductRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,9 @@ class InstagramServiceTest {
     private InstagramDraftRepository draftRepository;
 
     @Mock
+    private ProductRepository productRepository;
+
+    @Mock
     private MetaGraphClient metaGraphClient;
 
     @Mock
@@ -39,13 +43,15 @@ class InstagramServiceTest {
     @SuppressWarnings("null")
     void publishesApprovedDraftAndMarksItAsPublished() {
         ObjectMapper objectMapper = new ObjectMapper();
-        InstagramService service = new InstagramService(connectionRepository, draftRepository, objectMapper,
-                metaGraphClient, auditService);
+        String secret = "test-secret-key-for-jwt-testing";
+        org.springframework.security.crypto.encrypt.TextEncryptor encryptor = org.springframework.security.crypto.encrypt.Encryptors.text(secret, "5c0744940b5c369b");
+        InstagramService service = new InstagramService(connectionRepository, draftRepository, productRepository, objectMapper,
+                metaGraphClient, auditService, secret);
 
         InstagramConnectionEntity connection = new InstagramConnectionEntity();
         connection.setUserId(7L);
         connection.setAccountId("ig-123");
-        connection.setTokenEncrypted("page-token");
+        connection.setTokenEncrypted(encryptor.encrypt("page-token"));
         connection.setStatus("CONNECTED");
 
         InstagramDraftEntity draft = new InstagramDraftEntity();

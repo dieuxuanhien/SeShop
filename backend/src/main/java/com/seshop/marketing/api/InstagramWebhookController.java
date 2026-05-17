@@ -24,12 +24,6 @@ public class InstagramWebhookController {
             @RequestParam("code") String code,
             @RequestParam("state") String state
     ) {
-        long userId;
-        try {
-            userId = Long.parseLong(state);
-        } catch (NumberFormatException exception) {
-            throw new SeShopValidationException("Invalid OAuth state");
-        }
-        return ApiResponse.success(instagramService.completeConnection(userId, code));
+        return ApiResponse.success(instagramService.completeConnection(state, code));
     }
 }
