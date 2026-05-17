@@ -129,7 +129,7 @@ export function Products() {
           <span className="text-xs text-surface/40">Active:</span>
           {params.search && (
             <button onClick={() => { setSearchInput(''); updateParam('q', null); }} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 px-3 py-1 text-xs text-surface/80 hover:border-danger/40 hover:text-danger transition">
-              "{params.search}" <X size={12} />
+              {params.search} <X size={12} />
             </button>
           )}
           {activeCategory && (

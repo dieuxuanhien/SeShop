@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Checkout } from './Checkout';
 import { getMyCart } from '@/features/commerce/api/cartApi';
-import { processCheckout, validateDiscount } from '@/features/commerce/api/checkoutApi';
+import { processCheckout, validateDiscount, getProvinces, getDistricts, getWards, estimateShippingFee, estimateStripeFee, validateShippingAddress } from '@/features/commerce/api/checkoutApi';
 import { useCartStore } from '@/features/cart/model/cartStore';
 
 vi.mock('@/features/commerce/api/cartApi', () => ({
@@ -14,16 +14,35 @@ vi.mock('@/features/commerce/api/cartApi', () => ({
 vi.mock('@/features/commerce/api/checkoutApi', () => ({
   processCheckout: vi.fn(),
   validateDiscount: vi.fn(),
+  getProvinces: vi.fn(),
+  getDistricts: vi.fn(),
+  getWards: vi.fn(),
+  estimateShippingFee: vi.fn(),
+  estimateStripeFee: vi.fn(),
+  validateShippingAddress: vi.fn(),
 }));
 
 const mockedGetMyCart = vi.mocked(getMyCart);
 const mockedProcessCheckout = vi.mocked(processCheckout);
 const mockedValidateDiscount = vi.mocked(validateDiscount);
+const mockedGetProvinces = vi.mocked(getProvinces);
+const mockedGetDistricts = vi.mocked(getDistricts);
+const mockedGetWards = vi.mocked(getWards);
+const mockedEstimateShippingFee = vi.mocked(estimateShippingFee);
+const mockedEstimateStripeFee = vi.mocked(estimateStripeFee);
+const mockedValidateShippingAddress = vi.mocked(validateShippingAddress);
 
 describe('Checkout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useCartStore.getState().setItems([]);
+
+    mockedGetProvinces.mockResolvedValue([]);
+    mockedGetDistricts.mockResolvedValue([]);
+    mockedGetWards.mockResolvedValue([]);
+    mockedEstimateShippingFee.mockResolvedValue({ fee: 0 });
+    mockedEstimateStripeFee.mockResolvedValue({ fee: 0 });
+    mockedValidateShippingAddress.mockResolvedValue({ valid: true, message: 'Valid' });
 
     mockedGetMyCart.mockResolvedValue({
       id: 111,

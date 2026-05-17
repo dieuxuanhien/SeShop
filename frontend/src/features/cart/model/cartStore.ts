@@ -5,6 +5,9 @@ export type CartLine = {
   variantId: number;
   skuCode: string;
   name: string;
+  color?: string;
+  size?: string;
+  imageUrl?: string;
   qty: number;
   unitPrice: number;
 };

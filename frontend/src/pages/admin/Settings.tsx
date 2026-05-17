@@ -45,9 +45,9 @@ export function Settings() {
             <Badge variant="sale">Core</Badge>
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <Input label="Business Name" />
-            <Input label="Support Email" />
-            <Input label="Support Phone" />
+            <Input label="Business Name" defaultValue="SeShop Omnichannel" />
+            <Input label="Support Email" defaultValue="support@seshop.com" />
+            <Input label="Support Phone" defaultValue="+84 1900 1234" />
             <Select
               label="Default Currency"
               options={[

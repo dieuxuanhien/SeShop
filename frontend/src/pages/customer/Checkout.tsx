@@ -2,7 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
-import { validateDiscount, processCheckout, type CheckoutRequest, type CheckoutResponse } from '@/features/commerce/api/checkoutApi';
+import {
+  validateDiscount,
+  processCheckout,
+  estimateShippingFee,
+  validateShippingAddress,
+  estimateStripeFee,
+  getProvinces,
+  getDistricts,
+  getWards,
+  type Province,
+  type District,
+  type Ward,
+  type CheckoutRequest,
+  type CheckoutResponse,
+} from '@/features/commerce/api/checkoutApi';
 import { getMyCart } from '@/features/commerce/api/cartApi';
 import { useCartStore } from '@/features/cart/model/cartStore';
 import { loadStripe } from '@stripe/stripe-js/pure';
@@ -15,16 +29,30 @@ export function Checkout() {
   const stripePromise = useMemo(() => loadStripe(env.stripePublishableKey), []);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidatingAddress, setIsValidatingAddress] = useState(false);
   const [error, setError] = useState('');
+  const [addressValidationMsg, setAddressValidationMsg] = useState('');
+
   const cartItems = useCartStore((state) => state.items);
   const setCartItems = useCartStore((state) => state.setItems);
   const clearCart = useCartStore((state) => state.clear);
   const [cartId, setCartId] = useState<number | null>(null);
 
   const subtotal = useMemo(() => cartItems.reduce((sum, item) => sum + item.unitPrice * item.qty, 0), [cartItems]);
-  const shippingFee = 0; // Free shipping
+  const [shippingFee, setShippingFee] = useState(0);
+  const [stripeFee, setStripeFee] = useState(0);
+
   const [discountCode, setDiscountCode] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
+
+  // Address Combo Box State
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+
+  const [selectedProvinceId, setSelectedProvinceId] = useState<number | null>(null);
+  const [selectedDistrictId, setSelectedDistrictId] = useState<number | null>(null);
+  const [selectedWardCode, setSelectedWardCode] = useState<string>('');
 
   // Form state
   const [address, setAddress] = useState({
@@ -33,13 +61,13 @@ export function Checkout() {
     line1: '',
     ward: '',
     district: '',
-    city: 'Ho Chi Minh City',
+    city: '',
   });
   const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'COD'>('STRIPE');
   const [orderResponse, setOrderResponse] = useState<CheckoutResponse | null>(null);
   const [showStripeForm, setShowStripeForm] = useState(false);
 
-  const total = subtotal + shippingFee - discountAmount;
+  const total = subtotal + shippingFee + stripeFee - discountAmount;
 
   useEffect(() => {
     getMyCart()
@@ -50,12 +78,64 @@ export function Checkout() {
           variantId: item.variantId,
           skuCode: item.skuCode,
           name: item.name,
+          color: item.color,
+          size: item.size,
+          imageUrl: item.imageUrl,
           qty: item.qty,
           unitPrice: Number(item.unitPrice),
         })));
       })
       .catch(() => setCartId(null));
   }, [setCartItems]);
+
+  // Load Provinces on mount
+  useEffect(() => {
+    getProvinces().then(setProvinces).catch(() => {});
+  }, []);
+
+  // Load Districts when Province changes
+  useEffect(() => {
+    if (selectedProvinceId) {
+      getDistricts(selectedProvinceId).then(setDistricts).catch(() => {});
+      const p = provinces.find((x) => x.ProvinceID === selectedProvinceId);
+      if (p) setAddress((prev) => ({ ...prev, city: p.ProvinceName }));
+    } else {
+      setDistricts([]);
+    }
+    setSelectedDistrictId(null);
+    setSelectedWardCode('');
+    setWards([]);
+  }, [selectedProvinceId, provinces]);
+
+  // Load Wards when District changes
+  useEffect(() => {
+    if (selectedDistrictId) {
+      getWards(selectedDistrictId).then(setWards).catch(() => {});
+      const d = districts.find((x) => x.DistrictID === selectedDistrictId);
+      if (d) setAddress((prev) => ({ ...prev, district: d.DistrictName }));
+    } else {
+      setWards([]);
+    }
+    setSelectedWardCode('');
+  }, [selectedDistrictId, districts]);
+
+  const handleWardChange = (code: string) => {
+    setSelectedWardCode(code);
+    const w = wards.find((x) => x.WardCode === code);
+    if (w) setAddress((prev) => ({ ...prev, ward: w.WardName }));
+  };
+
+  // Estimate Stripe processing fee when applicable
+  useEffect(() => {
+    const currentBaseTotal = subtotal + shippingFee - discountAmount;
+    if (paymentMethod === 'STRIPE' && currentBaseTotal > 0) {
+      estimateStripeFee(currentBaseTotal)
+        .then((res) => setStripeFee(res.fee))
+        .catch(() => setStripeFee(0));
+    } else {
+      setStripeFee(0);
+    }
+  }, [subtotal, shippingFee, discountAmount, paymentMethod]);
 
   const handleApplyDiscount = async () => {
     if (!discountCode) return;
@@ -73,6 +153,31 @@ export function Checkout() {
       setError('Failed to validate discount.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleValidateAndContinue = async () => {
+    setIsValidatingAddress(true);
+    setError('');
+    setAddressValidationMsg('');
+    try {
+      const res = await validateShippingAddress(address.ward, address.district, address.city);
+      if (res.valid) {
+        // Fetch GHN shipping fee estimate
+        try {
+          const feeRes = await estimateShippingFee(`${address.line1}, ${address.ward}, ${address.district}, ${address.city}`);
+          setShippingFee(feeRes.fee);
+        } catch (e) {
+          console.error('Failed to estimate shipping fee', e);
+        }
+        setStep(2);
+      } else {
+        setError(res.message || 'Invalid shipping address. Please check ward, district, and city.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to validate address with GHN.');
+    } finally {
+      setIsValidatingAddress(false);
     }
   };
 
@@ -156,29 +261,66 @@ export function Checkout() {
                 />
                 <div className="md:col-span-2">
                   <Input
-                    label="Address Line 1"
+                    label="Address Line 1 (Street, House Number)"
                     value={address.line1}
                     onChange={(e) => setAddress({ ...address, line1: e.target.value })}
                     required
                   />
                 </div>
-                <Input
-                  label="Ward"
-                  value={address.ward}
-                  onChange={(e) => setAddress({ ...address, ward: e.target.value })}
-                  required
-                />
-                <Input
-                  label="District"
-                  value={address.district}
-                  onChange={(e) => setAddress({ ...address, district: e.target.value })}
-                  required
-                />
+
+                {/* Cascading Combo Boxes for Province, District, Ward */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-surface">Province / City</label>
+                  <select
+                    value={selectedProvinceId ?? ''}
+                    onChange={(e) => setSelectedProvinceId(Number(e.target.value))}
+                    className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none"
+                    required
+                  >
+                    <option value="">Select Province / City</option>
+                    {provinces.map((p) => (
+                      <option key={p.ProvinceID} value={p.ProvinceID}>{p.ProvinceName}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-surface">District</label>
+                  <select
+                    value={selectedDistrictId ?? ''}
+                    onChange={(e) => setSelectedDistrictId(Number(e.target.value))}
+                    disabled={!selectedProvinceId}
+                    className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none disabled:opacity-50"
+                    required
+                  >
+                    <option value="">Select District</option>
+                    {districts.map((d) => (
+                      <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1 md:col-span-2">
+                  <label className="text-xs font-medium text-surface">Ward / Commune</label>
+                  <select
+                    value={selectedWardCode}
+                    onChange={(e) => handleWardChange(e.target.value)}
+                    disabled={!selectedDistrictId}
+                    className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none disabled:opacity-50"
+                    required
+                  >
+                    <option value="">Select Ward / Commune</option>
+                    {wards.map((w) => (
+                      <option key={w.WardCode} value={w.WardCode}>{w.WardName}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               {step === 1 && (
                 <div className="mt-6 flex justify-end">
                   <Button
-                    onClick={() => setStep(2)}
+                    onClick={handleValidateAndContinue}
+                    isLoading={isValidatingAddress}
                     disabled={!address.fullName || !address.phoneNumber || !address.line1 || !address.district || !address.ward}
                   >
                     Continue to Payment
@@ -249,12 +391,18 @@ export function Checkout() {
 
               <div className="space-y-4 mb-6">
                 {cartItems.length > 0 ? cartItems.map((item) => (
-                  <div key={item.variantId} className="flex gap-4">
-                    <div className="h-20 w-16 rounded-md bg-ink/10" />
+                  <div key={item.variantId} className="flex gap-4 items-center">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="h-16 w-16 rounded-md object-cover border border-primary/20" />
+                    ) : (
+                      <div className="h-16 w-16 rounded-md bg-ink/10 flex items-center justify-center text-xs text-ink/40">No img</div>
+                    )}
                     <div>
                       <h3 className="text-sm font-medium">{item.name}</h3>
-                      <p className="text-xs text-ink/55">Qty: {item.qty}</p>
-                      <p className="text-sm mt-1">{item.unitPrice.toLocaleString()} VND</p>
+                      <p className="text-xs text-ink/55">
+                        {item.skuCode} {item.color ? `| ${item.color}` : ''} {item.size ? `| ${item.size}` : ''} | Qty: {item.qty}
+                      </p>
+                      <p className="text-sm mt-1 font-semibold">{item.unitPrice.toLocaleString()} VND</p>
                     </div>
                   </div>
                 )) : (
@@ -268,9 +416,15 @@ export function Checkout() {
                   <span>{subtotal.toLocaleString()} VND</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Shipping</span>
-                  <span>Free</span>
+                  <span>Shipping (GHN)</span>
+                  <span>{step === 1 ? 'Calculated at next step' : `${shippingFee.toLocaleString()} VND`}</span>
                 </div>
+                {paymentMethod === 'STRIPE' && (
+                  <div className="flex justify-between text-ink/80">
+                    <span>Stripe Processing Fee</span>
+                    <span>{stripeFee > 0 ? `${stripeFee.toLocaleString()} VND` : '0 VND'}</span>
+                  </div>
+                )}
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-success">
                     <span>Discount</span>

@@ -100,6 +100,14 @@ public class CartService {
                     .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
             itemDto.setSkuCode(variant.getSkuCode());
             itemDto.setName(variant.getProduct().getName());
+            itemDto.setColor(variant.getColor());
+            itemDto.setSize(variant.getSize());
+            if (variant.getProduct() != null && variant.getProduct().getImages() != null) {
+                variant.getProduct().getImages().stream()
+                        .sorted(java.util.Comparator.comparingInt(img -> img.getSortOrder() == null ? 0 : img.getSortOrder()))
+                        .findFirst()
+                        .ifPresent(img -> itemDto.setImageUrl(img.getUrl()));
+            }
             itemDto.setUnitPrice(variant.getPrice());
             return itemDto;
         }).collect(Collectors.toList()));

@@ -128,7 +128,7 @@ export function OrdersManagement() {
               {filteredOrders.map((order) => (
                 <tr key={order.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">{order.orderNumber}</td>
-                  <td className="max-w-xs truncate px-6 py-4 whitespace-nowrap text-sm text-ink/60">{order.shippingAddress}</td>
+                  <td className="max-w-xs truncate px-6 py-4 whitespace-nowrap text-sm text-ink/60">{order.shippingAddress || 'Demo Customer'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">
                     {order.totalAmount.toLocaleString()} {order.currency ?? 'VND'}
                   </td>

@@ -18,6 +18,10 @@ public class OrderDto {
         private Long id;
         private Long variantId;
         private String productName;
+        private String skuCode;
+        private String color;
+        private String size;
+        private String imageUrl;
         private Integer qty;
         private BigDecimal unitPrice;
         private BigDecimal totalPrice;
@@ -29,6 +33,14 @@ public class OrderDto {
         public void setVariantId(Long variantId) { this.variantId = variantId; }
         public String getProductName() { return productName; }
         public void setProductName(String productName) { this.productName = productName; }
+        public String getSkuCode() { return skuCode; }
+        public void setSkuCode(String skuCode) { this.skuCode = skuCode; }
+        public String getColor() { return color; }
+        public void setColor(String color) { this.color = color; }
+        public String getSize() { return size; }
+        public void setSize(String size) { this.size = size; }
+        public String getImageUrl() { return imageUrl; }
+        public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
         public Integer getQty() { return qty; }
         public void setQty(Integer qty) { this.qty = qty; }
         public BigDecimal getUnitPrice() { return unitPrice; }

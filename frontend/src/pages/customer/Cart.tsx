@@ -23,6 +23,9 @@ export function Cart() {
           variantId: item.variantId,
           skuCode: item.skuCode,
           name: item.name,
+          color: item.color,
+          size: item.size,
+          imageUrl: item.imageUrl,
           qty: item.qty,
           unitPrice: Number(item.unitPrice),
         })));
@@ -45,6 +48,9 @@ export function Cart() {
       variantId: item.variantId,
       skuCode: item.skuCode,
       name: item.name,
+      color: item.color,
+      size: item.size,
+      imageUrl: item.imageUrl,
       qty: item.qty,
       unitPrice: Number(item.unitPrice),
     })));
@@ -66,12 +72,22 @@ export function Cart() {
         ) : (
           <div className="grid gap-4">
             {items.map((item) => (
-              <div key={item.variantId} className="grid gap-3 rounded-md border border-primary/20 p-4 md:grid-cols-[minmax(0,1fr)_auto]">
-                <div>
-                  <p className="font-semibold text-ink">{item.name}</p>
-                  <p className="mt-1 text-sm text-ink/60">
-                    {item.skuCode} | {formatCurrency(item.unitPrice)}
-                  </p>
+              <div key={item.variantId} className="grid gap-3 rounded-md border border-primary/20 p-4 md:grid-cols-[minmax(0,1fr)_auto] items-center">
+                <div className="flex gap-4 items-center">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} className="h-16 w-16 rounded-md object-cover border border-primary/20" />
+                  ) : (
+                    <div className="h-16 w-16 rounded-md bg-ink/10 flex items-center justify-center text-xs text-ink/40">No img</div>
+                  )}
+                  <div>
+                    <p className="font-semibold text-ink">{item.name}</p>
+                    <p className="mt-0.5 text-xs text-ink/60">
+                      {item.skuCode} {item.color ? `| Color: ${item.color}` : ''} {item.size ? `| Size: ${item.size}` : ''}
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-ink">
+                      {formatCurrency(item.unitPrice)}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 md:justify-end">
                   <div className="inline-flex items-center rounded-md border border-primary/20">

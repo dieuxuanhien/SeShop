@@ -92,7 +92,15 @@ export function AdminDashboard() {
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Sales Pulse</h2>
               <Badge variant="sale">Live</Badge>
             </div>
-            <div className="mt-4 h-48 rounded-md border border-dashed border-primary/30 bg-ink/5" />
+            <div className="mt-4 h-48 rounded-md border border-dashed border-primary/30 bg-ink/5 p-4 flex items-end justify-between gap-2">
+              <div className="w-1/6 bg-primary/40 h-1/4 rounded-t-sm" title="Mon" />
+              <div className="w-1/6 bg-primary/50 h-2/4 rounded-t-sm" title="Tue" />
+              <div className="w-1/6 bg-primary/60 h-1/3 rounded-t-sm" title="Wed" />
+              <div className="w-1/6 bg-primary/70 h-3/4 rounded-t-sm" title="Thu" />
+              <div className="w-1/6 bg-primary/80 h-full rounded-t-sm" title="Fri" />
+              <div className="w-1/6 bg-primary/90 h-5/6 rounded-t-sm" title="Sat" />
+              <div className="w-1/6 bg-primary/100 h-2/3 rounded-t-sm" title="Sun" />
+            </div>
             <div className="mt-4 grid gap-2 text-xs text-ink/60">
               <p>Top products: Linen Blazer, Silk Scarf, Vintage Denim</p>
               <p>Channel mix: 62% online, 38% POS</p>

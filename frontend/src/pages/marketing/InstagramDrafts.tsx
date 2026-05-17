@@ -188,7 +188,13 @@ export function InstagramDrafts() {
                         {draft.status === 'PUBLISHED' ? 'PUBLISHED' : draft.status.split('_').join(' ')}
                   </Badge>
                 </div>
-                <div className="mt-3 h-24 rounded-md border border-dashed border-primary/30 bg-surface" />
+                <div className="mt-3 h-24 rounded-md border border-dashed border-primary/30 bg-surface overflow-hidden">
+                  {draft.mediaOrder && draft.mediaOrder.length > 0 ? (
+                    <img src={draft.mediaOrder[0]} alt="Draft media" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-xs text-ink/40">No Media</span>
+                  )}
+                </div>
                 <p className="mt-3 text-sm font-semibold text-ink">{draft.caption ?? 'No caption'}</p>
                 <p className="mt-1 text-xs text-ink/50">{draft.createdAt ? `Created ${new Date(draft.createdAt).toLocaleString()}` : 'No timestamp'}</p>
                 <div className="mt-3 flex flex-wrap gap-2">

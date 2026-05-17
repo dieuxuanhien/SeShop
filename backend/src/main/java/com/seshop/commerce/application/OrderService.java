@@ -588,6 +588,19 @@ public class OrderService {
             itemDto.setQty(item.getQty());
             itemDto.setUnitPrice(item.getUnitPrice());
             itemDto.setTotalPrice(item.getTotalPrice());
+            // Enrich with variant details (sku, color, size, image)
+            productVariantRepository.findById(item.getVariantId()).ifPresent(variant -> {
+                itemDto.setSkuCode(variant.getSkuCode());
+                itemDto.setColor(variant.getColor());
+                itemDto.setSize(variant.getSize());
+                // Pick first product image
+                if (variant.getProduct() != null && variant.getProduct().getImages() != null) {
+                    variant.getProduct().getImages().stream()
+                            .sorted(java.util.Comparator.comparingInt(img -> img.getSortOrder() == null ? 0 : img.getSortOrder()))
+                            .findFirst()
+                            .ifPresent(img -> itemDto.setImageUrl(img.getUrl()));
+                }
+            });
             return itemDto;
         }).collect(Collectors.toList()));
         return dto;

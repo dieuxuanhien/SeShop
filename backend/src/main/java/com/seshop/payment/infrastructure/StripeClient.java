@@ -71,6 +71,20 @@ public class StripeClient {
                 .contains(currency);
     }
 
+    /**
+     * Estimates the Stripe processing fee for a given amount based on Stripe's standard pricing formula.
+     * Formula: 2.9% + fixed fee (e.g., 2500 VND or 0.30 USD).
+     */
+    public BigDecimal estimateStripeFee(BigDecimal amount) {
+        if (!properties.isEnabled() || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal percentageFee = amount.multiply(BigDecimal.valueOf(0.029));
+        BigDecimal fixedFee = isZeroDecimal(properties.getCurrency().toLowerCase())
+                ? BigDecimal.valueOf(2500) : BigDecimal.valueOf(0.30);
+        return percentageFee.add(fixedFee).setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
     public record StripePaymentResult(String transactionId, String status, String clientSecret) {
     }
 }

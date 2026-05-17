@@ -70,7 +70,11 @@ public class InstagramService {
     public InstagramConnectionDto getConnectionStatus(Long userId) {
         return connectionRepository.findByUserId(userId)
                 .map(this::mapConnectionToDto)
-                .orElseThrow(() -> new ResourceNotFoundException("SOC_404", "Instagram connection not found"));
+                .orElseGet(() -> {
+                    InstagramConnectionDto dto = new InstagramConnectionDto();
+                    dto.setStatus("DISCONNECTED");
+                    return dto;
+                });
     }
 
     @Transactional

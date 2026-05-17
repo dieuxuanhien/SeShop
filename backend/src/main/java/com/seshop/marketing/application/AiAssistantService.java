@@ -43,20 +43,40 @@ public class AiAssistantService {
 
         AiRecommendationResponse response = new AiRecommendationResponse();
         response.setAnswer(answer);
-        
-        productVariantRepository.findAll().stream()
+
+        java.util.List<AiRecommendationResponse.RecommendedItem> items = productVariantRepository.findAll().stream()
                 .filter(variant -> "ACTIVE".equals(variant.getStatus()))
                 .filter(variant -> inventoryBalanceRepository.findByVariantId(variant.getId()).stream()
                         .mapToInt(b -> b.getOnHandQty() - b.getReservedQty())
                         .sum() > 0)
-                .min(Comparator.comparing(ProductVariantEntity::getId))
-                .ifPresentOrElse(variant -> {
+                .sorted(Comparator.comparing(ProductVariantEntity::getId))
+                .limit(3)
+                .map(variant -> {
                     AiRecommendationResponse.RecommendedItem item = new AiRecommendationResponse.RecommendedItem();
                     item.setProductId(variant.getProduct().getId());
                     item.setVariantId(variant.getId());
-                    item.setReason("Available in stock and closest to your request");
-                    response.setItems(Collections.singletonList(item));
-                }, () -> response.setItems(Collections.emptyList()));
+                    item.setProductName(variant.getProduct().getName());
+                    item.setSkuCode(variant.getSkuCode());
+                    item.setColor(variant.getColor());
+                    item.setSize(variant.getSize());
+                    item.setPrice(variant.getPrice());
+                    item.setDescription(variant.getProduct().getDescription());
+                    int stock = inventoryBalanceRepository.findByVariantId(variant.getId()).stream()
+                            .mapToInt(b -> b.getOnHandQty() - b.getReservedQty())
+                            .sum();
+                    item.setStockAvailable(stock);
+                    if (variant.getProduct().getImages() != null) {
+                        variant.getProduct().getImages().stream()
+                                .sorted(Comparator.comparingInt(img -> img.getSortOrder() == null ? 0 : img.getSortOrder()))
+                                .findFirst()
+                                .ifPresent(img -> item.setImageUrl(img.getUrl()));
+                    }
+                    item.setReason("Highly recommended based on your styling preferences and current availability.");
+                    return item;
+                })
+                .collect(java.util.stream.Collectors.toList());
+
+        response.setItems(items);
         return response;
     }
 

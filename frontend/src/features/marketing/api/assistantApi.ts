@@ -6,6 +6,14 @@ export type AiRecommendationResponse = {
   items?: Array<{
     productId: number;
     variantId: number;
+    productName?: string;
+    skuCode?: string;
+    color?: string;
+    size?: string;
+    price?: number;
+    imageUrl?: string;
+    description?: string;
+    stockAvailable?: number;
     reason: string;
   }>;
 };

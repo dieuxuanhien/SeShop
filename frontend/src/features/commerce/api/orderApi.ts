@@ -1,12 +1,29 @@
 import { apiClient } from '@/shared/api/client';
 import type { ApiResponse, PageResponse } from '@/shared/types/api';
 
+export type OrderItem = {
+  id: number;
+  variantId: number;
+  productName: string;
+  skuCode?: string;
+  color?: string;
+  size?: string;
+  imageUrl?: string;
+  qty: number;
+  unitPrice: number;
+  totalPrice: number;
+};
+
 export type CustomerOrder = {
   id: number;
   orderNumber: string;
   status: string;
+  paymentStatus?: string;
+  shipmentStatus?: string;
   totalAmount: number;
+  currency?: string;
   shippingAddress?: string;
+  items?: OrderItem[];
 };
 
 export type ShipmentTrackingEvent = {
