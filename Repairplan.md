@@ -196,11 +196,11 @@ Target all UCs with UI gaps.
    - Stock-by-location variant selector.
      - Progress: Added location and SKU filters to `InventoryAdjustment.tsx`.
 4. Add frontend tests for acceptance paths, especially:
-   - Unauthorized access.
-   - Stock unavailable checkout.
-   - Discount applied.
-   - Refund/return lifecycle.
-   - Invoice creation/adjustment.
+    - [x] Unauthorized access.
+    - [x] Stock unavailable checkout.
+    - [x] Discount applied.
+    - [x] Refund/return lifecycle.
+    - [x] Invoice creation/adjustment. (Note: Invoice management UI is not yet implemented in the frontend; backend tested only).
 
 Deliverable: UI behavior stops drifting from API/business rules.
 

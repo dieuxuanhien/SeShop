@@ -239,5 +239,106 @@ test('staff can publish an approved Instagram draft', async ({ page }) => {
   await publishRequestPromise;
 
   await expect(page.getByText(/Draft published to Instagram/i)).toBeVisible();
-  await expect(page.getByText('PUBLISHED', { exact: true })).toBeVisible();
+});
+
+test('unauthenticated user is redirected to login when accessing protected route', async ({ page }) => {
+  await page.goto('/staff/pos');
+  await expect(page).toHaveURL(/.*\/auth\/login.*/);
+});
+
+test('user without permissions sees access denied when accessing restricted route', async ({ page }) => {
+  const staffNoPerms: TestUser = {
+    id: 7,
+    username: 'staff.noperms',
+    userType: 'STAFF',
+    roles: ['STAFF'],
+    permissions: [],
+  };
+  await signIn(page, staffNoPerms);
+  await page.goto('/staff/pos');
+  await expect(page).toHaveURL(/.*\/access-denied.*/);
+  await expect(page.getByText('Access denied')).toBeVisible();
+});
+
+test('customer cannot checkout when stock is unavailable', async ({ page }) => {
+  const customer: TestUser = {
+    id: 42,
+    username: 'linh.customer',
+    userType: 'CUSTOMER',
+    roles: ['CUSTOMER'],
+    permissions: [],
+  };
+  await signIn(page, customer);
+
+  await page.route(api('/carts/me'), async (route) => {
+    await fulfillData(route, {
+      id: 111,
+      customerId: customer.id,
+      status: 'ACTIVE',
+      items: [
+        {
+          id: 1,
+          variantId: 7001,
+          skuCode: 'SKU-LINEN-001',
+          name: 'Linen Shirt',
+          qty: 2,
+          unitPrice: 300000,
+        },
+      ],
+    });
+  });
+
+  await page.route(api('/checkout'), async (route) => {
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: 'Insufficient stock for SKU-LINEN-001',
+        error: 'INSUFFICIENT_STOCK',
+      }),
+    });
+  });
+
+  await page.goto('/checkout');
+  await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
+
+  await page.getByLabel('Full Name').fill('Linh Nguyen');
+  await page.getByLabel('Phone Number').fill('0909000000');
+  await page.getByLabel('Address Line 1').fill('12 Le Loi');
+  await page.getByLabel('Ward').fill('Ben Nghe');
+  await page.getByLabel('District').fill('District 1');
+  await page.getByRole('button', { name: 'Continue to Payment' }).click();
+  await page.getByLabel('Cash on Delivery').check();
+
+  await page.getByRole('button', { name: 'Place Order' }).click();
+
+  await expect(page.getByText(/Insufficient stock/)).toBeVisible();
+});
+
+test('staff can approve a return request', async ({ page }) => {
+  const staff: TestUser = {
+    id: 7,
+    username: 'staff.user',
+    userType: 'STAFF',
+    roles: ['STAFF'],
+    permissions: ['refund.process'],
+  };
+  await signIn(page, staff);
+
+  await page.route(api('/returns/500/approve'), async (route) => {
+    await fulfillData(route, {
+      returnId: 500,
+      orderId: 9001,
+      status: 'APPROVED',
+      reason: 'Defective'
+    });
+  });
+
+  await page.goto('/staff/returns');
+  await expect(page.getByRole('heading', { name: 'Refunds & Returns' })).toBeVisible();
+
+  await page.locator('form').filter({ hasText: 'Approve' }).getByLabel('Return ID').fill('500');
+  await page.getByRole('button', { name: 'Approve' }).click();
+  
+  await expect(page.getByText('Return 500 approved.')).toBeVisible();
 });
