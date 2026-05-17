@@ -39,7 +39,10 @@ export function OrdersManagement() {
     try {
       if (action === 'allocate') await allocateOrder(orderId);
       if (action === 'pack') await packOrder(orderId);
-      if (action === 'ship') await shipOrder(orderId, `TRACK-${orderId}`);
+      if (action === 'ship') {
+        const order = orders.find((item) => item.id === orderId);
+        await shipOrder(orderId, getRecipient(order));
+      }
       await fetchOrders();
     } catch (e) {
       console.error(e);
@@ -47,6 +50,14 @@ export function OrdersManagement() {
       setActionLoading(null);
     }
   };
+
+  function getRecipient(order?: StaffOrder) {
+    const [name, phone] = order?.shippingAddress?.split(',').map((part) => part.trim()) ?? [];
+    return {
+      recipientName: name || 'SeShop Dev Recipient',
+      recipientPhone: phone || '0987654321',
+    };
+  }
 
   if (isLoading) {
     return (

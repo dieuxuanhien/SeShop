@@ -83,9 +83,12 @@ export async function getProducts(params: ProductListParams = {}): Promise<PageR
   const response = await apiClient.get<ApiResponse<BackendPage<BackendProduct>>>('/products', {
     params: {
       page: Math.max(0, (params.page ?? 1) - 1),
-      size: params.size ?? 9,
+      pageSize: params.size ?? 9,
       keyword: params.search || undefined,
       brand: params.brand || undefined,
+      categoryId: params.categoryId || undefined,
+      minPrice: params.minPrice || undefined,
+      maxPrice: params.maxPrice || undefined,
       sort,
     },
   });

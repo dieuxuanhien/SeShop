@@ -28,6 +28,12 @@ export async function packOrder(orderId: number): Promise<void> {
   await apiClient.post(`/staff/orders/${orderId}/pack`);
 }
 
-export async function shipOrder(orderId: number, trackingNumber: string): Promise<void> {
-  await apiClient.post(`/staff/orders/${orderId}/ship`, { carrier: 'GHN', trackingNumber });
+export type ShipOrderPayload = {
+  recipientName: string;
+  recipientPhone: string;
+  trackingNumber?: string;
+};
+
+export async function shipOrder(orderId: number, payload: ShipOrderPayload): Promise<void> {
+  await apiClient.post(`/staff/orders/${orderId}/ship`, { carrier: 'GHN', ...payload });
 }

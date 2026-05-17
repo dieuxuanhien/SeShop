@@ -375,21 +375,30 @@ package "SeShop Backend (Spring Boot)" {
   [Catalog] as Catalog
   [Inventory] as Inventory
   [Commerce] as Commerce
-  [POS & Returns] as POS
+  [Payment] as Payment
+  [Shipping] as Shipping
+  [POS & Invoices] as POS
+  [Returns & Refunds] as Refund
   [Marketing & Social] as Marketing
-  [Customer Engagement] as Engagement
+  [Customer Engagement] as Review
+  [Audit] as Audit
+  [Notification] as Notification
   [Shared Platform Services] as Shared
 }
 
 Commerce --> Inventory : stock reservation
 Commerce --> Catalog : product/price lookup
-Commerce --> Shared : audit + notifications
+Commerce --> Payment : process payment
+Commerce --> Shipping : fulfill order
 POS --> Inventory : stock decrement/restock
-POS --> Shared : audit + invoice events
-Inventory --> Shared : audit + transfer notifications
+POS --> Refund : process return
+Inventory --> Notification : transfer notifications
 Marketing --> Catalog : product media lookup
-Engagement --> Catalog : review aggregate update
-Identity --> Shared : security/audit events
+Review --> Catalog : review aggregate update
+Identity --> Audit : security events
+Commerce --> Audit : order events
+POS --> Audit : invoice events
+Refund --> Audit : refund events
 @enduml
 ```
 
@@ -397,14 +406,19 @@ Identity --> Shared : security/audit events
 
 | Module         | Bounded Context          | Key Entities                                                                          | Owned Tables                                                                                                                                                                                                                                     | Main Use Cases                           |
 | -------------- | ------------------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
-| `identity`   | Identity & RBAC          | User, Role, Permission, AuditLog                                                      | `users`, `roles`, `permissions`, `role_permissions`, `user_roles`, `audit_logs`                                                                                                                                                      | UC1-UC4                                  |
+| `identity`   | Identity & RBAC          | User, Role, Permission, AuditLog                                                      | `users`, `roles`, `permissions`, `role_permissions`, `user_roles`                                                                                                                                                      | UC1-UC4                                  |
 | `catalog`    | Catalog                  | Product, ProductVariant, Category, ProductImage                                       | `products`, `product_variants`, `product_categories`, `product_images`, `categories`                                                                                                                                                   | UC5, UC13                                |
 | `inventory`  | Inventory                | Location, InventoryBalance, Transfer, CycleCount, PurchaseOrder, GoodsReceipt         | `locations`, `inventory_balances`, `inventory_transfers`, `inventory_transfer_items`, `cycle_counts`, `cycle_count_items`, `suppliers`, `purchase_orders`, `purchase_order_items`, `goods_receipts`, `goods_receipt_items` | UC6, UC7, UC16, UC22, UC23, UC25         |
-| `commerce`   | Commerce                 | Cart, Order, Payment, Shipment, DiscountCode                                          | `carts`, `cart_items`, `orders`, `order_items`, `order_allocations`, `shipments`, `payments`, `discount_codes`, `discount_redemptions`                                                                                         | UC10, UC12, UC13, UC15, UC17, UC19, UC20 |
-| `pos`        | POS & Returns            | POSShift, POSReceipt, CashReconciliation, ReturnRequest, Refund, Exchange, TaxInvoice | `pos_shifts`, `pos_receipts`, `pos_receipt_items`, `cash_reconciliations`, `return_requests`, `return_items`, `refunds`, `exchanges`, `tax_invoices`, `invoice_adjustment_notes`                                             | UC8, UC9, UC24, UC26, UC27               |
+| `commerce`   | Commerce                 | Cart, Order, DiscountCode                                                             | `carts`, `cart_items`, `orders`, `order_items`, `order_allocations`, `discount_codes`, `discount_redemptions`                                                                                                          | UC10, UC12, UC13, UC15, UC17, UC19, UC20 |
+| `payment`    | Payment                  | Payment                                                                               | `payments`                                                                                                                                                                                                                                     | UC15                                     |
+| `shipping`   | Shipping                 | Shipment                                                                              | `shipments`                                                                                                                                                                                                                                    | UC17                                     |
+| `pos`        | POS & Invoices           | POSShift, POSReceipt, CashReconciliation, TaxInvoice                                  | `pos_shifts`, `pos_receipts`, `pos_receipt_items`, `cash_reconciliations`, `tax_invoices`, `invoice_adjustment_notes`                                                                                                            | UC24, UC26, UC27                         |
+| `refund`     | Returns & Refunds        | ReturnRequest, Refund, Exchange                                                       | `return_requests`, `return_items`, `refunds`, `exchanges`                                                                                                                                                                                | UC8, UC9                                 |
 | `marketing`  | Marketing & Social       | InstagramConnection, InstagramDraft                                                   | `instagram_connections`, `instagram_drafts`                                                                                                                                                                                                  | UC11, UC21                               |
-| `engagement` | Customer Engagement      | Review                                                                                | `reviews`                                                                                                                                                                                                                                      | UC14, UC18                               |
-| `shared`     | Shared Platform Services | Notification, FileStorage, ErrorHandling, Config                                      | Cross-cutting services; durable records remain owned by domain modules                                                                                                                                                                           | Supporting all modules                   |
+| `review`     | Customer Engagement      | Review                                                                                | `reviews`                                                                                                                                                                                                                                      | UC14, UC18                               |
+| `audit`      | Audit                    | AuditLog                                                                              | `audit_logs`                                                                                                                                                                                                                                   | Cross-cutting                            |
+| `notification`| Notification             | Notification                                                                          | (None / external)                                                                                                                                                                                                                              | Cross-cutting                            |
+| `shared`     | Shared Platform Services | FileStorage, ErrorHandling, Config                                                    | (None)                                                                                                                                                                                                                                         | Cross-cutting                            |
 
 ##### 3.1.5.1.3 Context Diagram
 
@@ -462,14 +476,12 @@ Dependency direction is `api -> application -> domain <- infrastructure`. The do
 
 ```text
 src/
+├── app/            app-level configuration, global styles, providers, router
 ├── pages/          route-level screens
-├── components/     auth, catalog, cart, checkout, customer, admin, staff, instagram, common
-├── hooks/          reusable workflow hooks
-├── context/        auth, cart, notification, theme providers
-├── services/api/   domain-specific API clients
-├── store/          client state management
-├── types/          TypeScript type definitions
-└── utils/          formatters, validators, constants
+├── features/       user interactions, business logic (auth, checkout, cart)
+├── entities/       business entities, shared UI components for domains
+├── shared/         reusable UI components, utilities, api clients, types
+└── locales/        i18n translation files
 ```
 
 ##### 3.1.5.3.2 Behavior

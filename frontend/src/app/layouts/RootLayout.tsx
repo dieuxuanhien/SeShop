@@ -3,32 +3,34 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { useCartStore } from '@/features/cart/model/cartStore';
+import { hasPermission, hasRole } from '@/shared/lib/permissions';
 import { Button } from '@/shared/ui/Button';
 
 const navGroups = [
   {
     label: 'Staff',
     links: [
-      ['/staff/dashboard', 'Dashboard'],
-      ['/staff/catalog', 'Catalog'],
-      ['/staff/inventory', 'Inventory'],
-      ['/staff/transfers', 'Transfers'],
-      ['/staff/orders', 'Orders'],
-      ['/staff/returns', 'Returns'],
-      ['/staff/discounts', 'Discounts'],
-      ['/staff/pos', 'POS'],
-      ['/staff/pos/shift-close', 'Shift Close'],
-      ['/staff/marketing/drafts', 'Instagram Drafts'],
+      { to: '/staff/dashboard', label: 'Dashboard', role: 'STAFF' },
+      { to: '/staff/catalog', label: 'Catalog', role: 'STAFF', permission: 'catalog.write' },
+      { to: '/staff/inventory', label: 'Inventory', role: 'STAFF', permission: 'inventory.adjust' },
+      { to: '/staff/transfers', label: 'Transfers', role: 'STAFF', permission: 'inventory.transfer' },
+      { to: '/staff/orders', label: 'Orders', role: 'STAFF', permission: 'order.read' },
+      { to: '/staff/returns', label: 'Returns', role: 'STAFF', permission: 'refund.process' },
+      { to: '/staff/discounts', label: 'Discounts', role: 'STAFF', permission: 'promo.manage' },
+      { to: '/staff/pos', label: 'POS', role: 'STAFF', permission: 'pos.sell' },
+      { to: '/staff/pos/shift-close', label: 'Shift Close', role: 'STAFF', permission: 'pos.shift.manage' },
+      { to: '/staff/marketing/instagram', label: 'Instagram Account', role: 'STAFF', permission: 'social.connect' },
+      { to: '/staff/marketing/drafts', label: 'Instagram Drafts', role: 'STAFF', permission: 'social.compose' },
     ],
   },
   {
     label: 'Admin',
     links: [
-      ['/admin/dashboard', 'Dashboard'],
-      ['/admin/users-roles', 'Users & Roles'],
-      ['/admin/locations', 'Locations'],
-      ['/admin/audit-logs', 'Audit Logs'],
-      ['/admin/settings', 'Settings'],
+      { to: '/admin/dashboard', label: 'Dashboard', role: 'ADMIN' },
+      { to: '/admin/users-roles', label: 'Users & Roles', role: 'ADMIN', permission: 'role.create' },
+      { to: '/admin/locations', label: 'Locations', role: 'ADMIN' },
+      { to: '/admin/audit-logs', label: 'Audit Logs', role: 'ADMIN', permission: 'audit.read' },
+      { to: '/admin/settings', label: 'Settings', role: 'ADMIN' },
     ],
   },
 ] as const;
@@ -43,6 +45,16 @@ export function RootLayout() {
     logout();
     navigate('/');
   }
+
+  const visibleNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      links: group.links.filter((link) => {
+        const permission = 'permission' in link ? link.permission : undefined;
+        return hasRole(user, link.role) && hasPermission(user, permission);
+      }),
+    }))
+    .filter((group) => group.links.length > 0);
 
   return (
     <div className="min-h-screen bg-ink text-surface">
@@ -78,11 +90,11 @@ export function RootLayout() {
         {mobileOpen ? (
           <aside className="border-b border-primary/20 bg-ink/95 p-4 lg:hidden">
             <nav className="grid gap-6">
-              {navGroups.map((group) => (
+              {visibleNavGroups.map((group) => (
                 <section key={group.label}>
                   <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface/60">{group.label}</h2>
                   <div className="grid gap-1">
-                    {group.links.map(([to, label]) => (
+                    {group.links.map(({ to, label }) => (
                       <NavLink
                         key={to}
                         to={to}
@@ -104,11 +116,11 @@ export function RootLayout() {
         ) : null}
         <aside className="hidden border-r border-primary/20 bg-ink/90 p-4 lg:block">
           <nav className="grid gap-6">
-            {navGroups.map((group) => (
+            {visibleNavGroups.map((group) => (
               <section key={group.label}>
                 <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface/60">{group.label}</h2>
                 <div className="grid gap-1">
-                  {group.links.map(([to, label]) => (
+                  {group.links.map(({ to, label }) => (
                     <NavLink
                       key={to}
                       to={to}

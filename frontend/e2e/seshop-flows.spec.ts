@@ -135,7 +135,7 @@ test('staff can scan a SKU and complete a POS cash sale', async ({ page }) => {
     username: 'staff.user',
     userType: 'STAFF',
     roles: ['STAFF'],
-    permissions: [],
+    permissions: ['pos.sell'],
   };
 
   await signIn(page, staff);
@@ -195,7 +195,7 @@ test('staff can publish an approved Instagram draft', async ({ page }) => {
     username: 'staff.user',
     userType: 'STAFF',
     roles: ['STAFF'],
-    permissions: [],
+    permissions: ['social.compose'],
   };
 
   await signIn(page, staff);

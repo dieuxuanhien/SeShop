@@ -5,15 +5,14 @@ import { Input } from '@/shared/ui/Input';
 import { validateDiscount, processCheckout, type CheckoutRequest, type CheckoutResponse } from '@/features/commerce/api/checkoutApi';
 import { getMyCart } from '@/features/commerce/api/cartApi';
 import { useCartStore } from '@/features/cart/model/cartStore';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe } from '@stripe/stripe-js/pure';
 import { Elements } from '@stripe/react-stripe-js';
 import { env } from '@/shared/config/env';
 import { StripePaymentForm } from '@/features/commerce/ui/StripePaymentForm';
 
-const stripePromise = loadStripe(env.stripePublishableKey);
-
 export function Checkout() {
   const navigate = useNavigate();
+  const stripePromise = useMemo(() => loadStripe(env.stripePublishableKey), []);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
