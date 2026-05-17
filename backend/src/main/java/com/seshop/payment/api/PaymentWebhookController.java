@@ -15,6 +15,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -47,6 +48,7 @@ public class PaymentWebhookController {
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<Map<String, Object>> handleStripeEvent(
             @RequestHeader(value = "Stripe-Signature", required = false) String signature,
             @RequestBody String payload
@@ -84,9 +86,22 @@ public class PaymentWebhookController {
 
     private java.util.Optional<PaymentIntent> paymentIntent(Event event) {
         EventDataObjectDeserializer dataObjectDeserializer = event.getDataObjectDeserializer();
-        return dataObjectDeserializer.getObject()
-                .filter(PaymentIntent.class::isInstance)
-                .map(PaymentIntent.class::cast);
+        if (dataObjectDeserializer.getObject().isPresent()) {
+            com.stripe.model.StripeObject stripeObject = dataObjectDeserializer.getObject().get();
+            if (stripeObject instanceof PaymentIntent) {
+                return java.util.Optional.of((PaymentIntent) stripeObject);
+            }
+        } else {
+            try {
+                com.stripe.model.StripeObject stripeObject = dataObjectDeserializer.deserializeUnsafe();
+                if (stripeObject instanceof PaymentIntent) {
+                    return java.util.Optional.of((PaymentIntent) stripeObject);
+                }
+            } catch (com.stripe.exception.EventDataObjectDeserializationException e) {
+                log.error("Failed to deserialize event data object unsafe: {}", e.getMessage());
+            }
+        }
+        return java.util.Optional.empty();
     }
 
     private void handlePaymentSucceeded(PaymentIntent paymentIntent) {

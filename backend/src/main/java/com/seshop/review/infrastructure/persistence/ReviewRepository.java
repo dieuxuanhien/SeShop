@@ -32,4 +32,16 @@ public interface ReviewRepository extends JpaRepository<ReviewEntity, Long> {
         and review.status = 'PUBLISHED'
       """)
   Double averageRatingByProductId(@Param("productId") Long productId);
+
+  @Query("""
+      select count(review)
+      from ReviewEntity review
+      join OrderItemEntity orderItem on orderItem.id = review.orderItemId
+      join ProductVariantEntity variant on variant.id = orderItem.variantId
+      where variant.product.id = :productId
+        and review.status = 'PUBLISHED'
+      """)
+  Integer countPublishedByProductId(@Param("productId") Long productId);
+
+  List<ReviewEntity> findByStatus(String status);
 }

@@ -147,19 +147,23 @@ Target UCs: UC5, UC11-UC14, UC18, UC21.
    - Required category, base price, images.
    - Validate SKU attributes.
    - Audit product changes.
+   - Progress: CatalogService creates variants and ensures SKU uniqueness, emitting audit metadata.
 2. Fix browse/filter/compare.
    - Backend filters: category, size, color, price, brand.
    - Frontend compare view.
+   - Progress: PublicCatalogController filters by category, size, color, and price.
 3. Improve AI recommendation.
    - Stock-aware recommendations.
    - Return variant/product IDs usable by frontend.
    - Add-to-cart from recommendation.
+   - Progress: AiAssistantService checks available stock by summing InventoryBalance quantities.
 4. Implement review rules.
    - Delivered-order check.
    - Review window.
    - Image upload.
    - Moderation state.
    - Aggregate score update.
+   - Progress: ReviewService enforces ownership, delivered status, review window, and moderation state; provides staff approve/reject endpoints.
 5. Harden Instagram.
    - Secure OAuth state.
    - Validate scopes.

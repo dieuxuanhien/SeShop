@@ -69,6 +69,9 @@ class CatalogControllerContractTest {
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
+    @MockBean
+    private com.seshop.review.application.ReviewService reviewService;
+
     @BeforeEach
     void setUpJwt() {
         List<String> permissions = List.of("catalog.write");

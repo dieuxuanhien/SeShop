@@ -61,6 +61,9 @@ class ReviewControllerContractTest {
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
+    @MockBean
+    private com.seshop.shared.security.PermissionValidator permissionValidator;
+
     @BeforeEach
     void setUpJwt() {
         List<String> permissions = List.of();

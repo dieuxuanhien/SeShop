@@ -1,5 +1,7 @@
 package com.seshop.review.application;
 
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
 import com.seshop.commerce.infrastructure.persistence.OrderItemEntity;
 import com.seshop.commerce.infrastructure.persistence.OrderItemRepository;
@@ -11,7 +13,9 @@ import com.seshop.shared.exception.BusinessException;
 import com.seshop.shared.exception.ForbiddenOperationException;
 import com.seshop.shared.exception.ResourceNotFoundException;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
  * visible.
  * - getReviewsByProduct returns only PUBLISHED reviews (moderation gate).
  * - getAverageRating returns the aggregate score across all PUBLISHED reviews.
+ * - Staff can approve or reject reviews (moderation workflow).
  */
 @Service
 @Transactional
@@ -37,14 +42,17 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final OrderItemRepository orderItemRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final AuditService auditService;
 
     public ReviewService(
             ReviewRepository reviewRepository,
             OrderItemRepository orderItemRepository,
-            ProductVariantRepository productVariantRepository) {
+            ProductVariantRepository productVariantRepository,
+            AuditService auditService) {
         this.reviewRepository = reviewRepository;
         this.orderItemRepository = orderItemRepository;
         this.productVariantRepository = productVariantRepository;
+        this.auditService = auditService;
     }
 
     public ReviewDto createReview(Long customerId, CreateReviewRequest request) {
@@ -84,7 +92,76 @@ public class ReviewService {
         // publishing
         review.setStatus("PENDING_MODERATION");
 
-        return mapToDto(reviewRepository.save(review), resolveProductId(orderItem));
+        ReviewEntity saved = reviewRepository.save(review);
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("reviewId", saved.getId());
+        metadata.put("orderItemId", saved.getOrderItemId());
+        metadata.put("customerId", customerId);
+        metadata.put("rating", saved.getRating());
+        metadata.put("status", saved.getStatus());
+        auditService.write(AuditAction.REVIEW_SUBMITTED, "Review", saved.getId().toString(), metadata);
+
+        return mapToDto(saved, resolveProductId(orderItem));
+    }
+
+    /**
+     * Staff moderation: approve a review so it becomes publicly visible.
+     */
+    public ReviewDto approveReview(Long reviewId) {
+        ReviewEntity review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("REV_404", "Review not found"));
+
+        if (!"PENDING_MODERATION".equals(review.getStatus())) {
+            throw new BusinessException("REV_003",
+                    "Only pending reviews can be approved; current status: " + review.getStatus());
+        }
+
+        review.setStatus("PUBLISHED");
+        ReviewEntity saved = reviewRepository.save(review);
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("reviewId", saved.getId());
+        metadata.put("previousStatus", "PENDING_MODERATION");
+        metadata.put("newStatus", "PUBLISHED");
+        auditService.write(AuditAction.REVIEW_MODERATED, "Review", saved.getId().toString(), metadata);
+
+        return mapToDto(saved, resolveProductId(saved.getOrderItemId()));
+    }
+
+    /**
+     * Staff moderation: reject a review so it will not be published.
+     */
+    public ReviewDto rejectReview(Long reviewId, String reason) {
+        ReviewEntity review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("REV_404", "Review not found"));
+
+        if (!"PENDING_MODERATION".equals(review.getStatus())) {
+            throw new BusinessException("REV_003",
+                    "Only pending reviews can be rejected; current status: " + review.getStatus());
+        }
+
+        review.setStatus("REJECTED");
+        ReviewEntity saved = reviewRepository.save(review);
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("reviewId", saved.getId());
+        metadata.put("previousStatus", "PENDING_MODERATION");
+        metadata.put("newStatus", "REJECTED");
+        metadata.put("reason", reason);
+        auditService.write(AuditAction.REVIEW_MODERATED, "Review", saved.getId().toString(), metadata);
+
+        return mapToDto(saved, resolveProductId(saved.getOrderItemId()));
+    }
+
+    /**
+     * Staff: list all reviews pending moderation.
+     */
+    @Transactional(readOnly = true)
+    public List<ReviewDto> getPendingReviews() {
+        return reviewRepository.findByStatus("PENDING_MODERATION").stream()
+                .map(review -> mapToDto(review, resolveProductId(review.getOrderItemId())))
+                .toList();
     }
 
     @Transactional(readOnly = true)

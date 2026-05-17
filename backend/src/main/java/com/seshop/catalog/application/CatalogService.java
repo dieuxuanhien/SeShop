@@ -8,11 +8,14 @@ import com.seshop.catalog.api.dto.CreateVariantRequest;
 import com.seshop.catalog.api.dto.ProductDto;
 import com.seshop.catalog.api.dto.RegisterProductImageRequest;
 import com.seshop.catalog.infrastructure.persistence.*;
+import com.seshop.review.infrastructure.persistence.ReviewRepository;
+import com.seshop.shared.exception.BusinessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,17 +30,20 @@ public class CatalogService {
     private final CategoryRepository categoryRepository;
     private final com.seshop.shared.util.FileStorageService fileStorageService;
     private final AuditService auditService;
+    private final ReviewRepository reviewRepository;
 
     public CatalogService(ProductRepository productRepository,
             ProductVariantRepository productVariantRepository,
             CategoryRepository categoryRepository,
             com.seshop.shared.util.FileStorageService fileStorageService,
-            AuditService auditService) {
+            AuditService auditService,
+            ReviewRepository reviewRepository) {
         this.productRepository = productRepository;
         this.productVariantRepository = productVariantRepository;
         this.categoryRepository = categoryRepository;
         this.fileStorageService = fileStorageService;
         this.auditService = auditService;
+        this.reviewRepository = reviewRepository;
     }
 
     public ProductDto createProduct(CreateProductRequest request) {
@@ -94,6 +100,12 @@ public class CatalogService {
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
         for (CreateVariantRequest request : requests) {
+            // BR14: SKU code must be unique across all products
+            productVariantRepository.findBySkuCode(request.getSkuCode()).ifPresent(existing -> {
+                throw new BusinessException("CAT_002",
+                        "SKU code '" + request.getSkuCode() + "' is already in use");
+            });
+
             ProductVariantEntity variant = new ProductVariantEntity();
             variant.setProduct(product);
             variant.setSkuCode(request.getSkuCode());
@@ -149,6 +161,27 @@ public class CatalogService {
                 .map(this::mapToDto);
     }
 
+    /**
+     * Extended browse supporting category, size, color, and price range filters.
+     * UC13: Browse and filter products/variants.
+     */
+    @Transactional(readOnly = true)
+    public Page<ProductDto> getPublishedProductsFiltered(String keyword, String brand,
+            Long categoryId, String size, String color,
+            BigDecimal minPrice, BigDecimal maxPrice,
+            Pageable pageable) {
+        return productRepository.findPublishedProductsFiltered(
+                normalizeFilter(keyword),
+                normalizeFilter(brand),
+                categoryId,
+                normalizeFilter(size),
+                normalizeFilter(color),
+                minPrice,
+                maxPrice,
+                pageable)
+                .map(this::mapToDto);
+    }
+
     @Transactional(readOnly = true)
     public ProductDto getProductById(Long productId) {
         ProductEntity product = productRepository.findById(productId)
@@ -199,6 +232,12 @@ public class CatalogService {
                 imageDto.setInstagramReady(image.getIsInstagramReady());
                 return imageDto;
             }).collect(Collectors.toList()));
+        }
+
+        // Aggregate review stats (UC14)
+        if (entity.getId() != null) {
+            dto.setAverageRating(reviewRepository.averageRatingByProductId(entity.getId()));
+            dto.setReviewCount(reviewRepository.countPublishedByProductId(entity.getId()));
         }
 
         return dto;

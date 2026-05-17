@@ -11,6 +11,8 @@ public class ProductDto {
     private String status;
     private List<VariantDto> variants;
     private List<ImageDto> images;
+    private Double averageRating;
+    private Integer reviewCount;
 
     public static class VariantDto {
         private Long id;
@@ -66,4 +68,8 @@ public class ProductDto {
     public void setVariants(List<VariantDto> variants) { this.variants = variants; }
     public List<ImageDto> getImages() { return images; }
     public void setImages(List<ImageDto> images) { this.images = images; }
+    public Double getAverageRating() { return averageRating; }
+    public void setAverageRating(Double averageRating) { this.averageRating = averageRating; }
+    public Integer getReviewCount() { return reviewCount; }
+    public void setReviewCount(Integer reviewCount) { this.reviewCount = reviewCount; }
 }

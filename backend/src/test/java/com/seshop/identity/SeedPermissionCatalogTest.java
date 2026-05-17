@@ -32,7 +32,9 @@ class SeedPermissionCatalogTest {
             "social.connect",
             "customer.read",
             "customer.write",
-            "report.read"
+            "report.read",
+            "review.moderate",
+            "inventory.cycle_count"
     );
 
     @Test

@@ -19,5 +19,7 @@ VALUES
   ('social.connect', 'Connect or reconnect Instagram account'),
   ('customer.read', 'View customer profiles'),
   ('customer.write', 'Manage customer accounts'),
-  ('report.read', 'View sales and inventory reports')
+  ('report.read', 'View sales and inventory reports'),
+  ('review.moderate', 'Approve or reject customer reviews'),
+  ('inventory.cycle_count', 'Create and manage cycle counts')
 ON CONFLICT (code) DO NOTHING;

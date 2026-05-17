@@ -3,6 +3,7 @@ package com.seshop.catalog.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 
 import com.seshop.audit.application.AuditService;
@@ -14,7 +15,10 @@ import com.seshop.catalog.infrastructure.persistence.CategoryEntity;
 import com.seshop.catalog.infrastructure.persistence.CategoryRepository;
 import com.seshop.catalog.infrastructure.persistence.ProductEntity;
 import com.seshop.catalog.infrastructure.persistence.ProductRepository;
+import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
+import com.seshop.review.infrastructure.persistence.ReviewRepository;
+import com.seshop.shared.exception.BusinessException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -44,13 +48,15 @@ class CatalogServiceTest {
     private com.seshop.shared.util.FileStorageService fileStorageService;
     @Mock
     private AuditService auditService;
+    @Mock
+    private ReviewRepository reviewRepository;
 
     private CatalogService service;
 
     @BeforeEach
     void setUp() {
         service = new CatalogService(productRepository, productVariantRepository, categoryRepository,
-                fileStorageService, auditService);
+                fileStorageService, auditService, reviewRepository);
     }
 
     // ── createProduct ───────────────────────────────────────────────────────
@@ -114,6 +120,7 @@ class CatalogServiceTest {
         ProductEntity existing = productEntity(10L, "Shirt", "Brand", "DRAFT");
         given(productRepository.findById(10L)).willReturn(Optional.of(existing));
         given(productRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+        given(productVariantRepository.findBySkuCode("SKU-SHIRT-M")).willReturn(Optional.empty());
 
         CreateVariantRequest variantRequest = new CreateVariantRequest();
         variantRequest.setSkuCode("SKU-SHIRT-M");
@@ -126,6 +133,24 @@ class CatalogServiceTest {
 
         assertThat(result.getVariants()).hasSize(1);
         assertThat(result.getVariants().get(0).getSkuCode()).isEqualTo("SKU-SHIRT-M");
+    }
+
+    @Test
+    void createVariantsRejectsDuplicateSkuCode() {
+        ProductEntity existing = productEntity(10L, "Shirt", "Brand", "DRAFT");
+        given(productRepository.findById(10L)).willReturn(Optional.of(existing));
+        given(productVariantRepository.findBySkuCode("SKU-DUP")).willReturn(Optional.of(new ProductVariantEntity()));
+
+        CreateVariantRequest variantRequest = new CreateVariantRequest();
+        variantRequest.setSkuCode("SKU-DUP");
+        variantRequest.setSize("S");
+        variantRequest.setColor("Red");
+        variantRequest.setPrice(new BigDecimal("100000"));
+        variantRequest.setStatus("ACTIVE");
+
+        assertThatThrownBy(() -> service.createVariants(10L, List.of(variantRequest)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("already in use");
     }
 
     // ── getPublishedProducts ────────────────────────────────────────────────

@@ -61,8 +61,11 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of("AUTH_002", "Insufficient permission", List.of(), traceId()));
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception exception) {
+        log.error("Unexpected server error: ", exception);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of("GEN_500", "Unexpected server error", List.of(), traceId()));
