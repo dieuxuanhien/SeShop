@@ -10,6 +10,7 @@ public class ReviewDto {
     private Integer rating;
     private String comment;
     private String imageUrl;
+    private String status;
     private OffsetDateTime createdAt;
 
     public Long getReviewId() {
@@ -58,6 +59,14 @@ public class ReviewDto {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public OffsetDateTime getCreatedAt() {

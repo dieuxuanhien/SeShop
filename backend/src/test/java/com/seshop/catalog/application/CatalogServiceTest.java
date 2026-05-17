@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
+import com.seshop.audit.application.AuditService;
 import com.seshop.catalog.api.dto.CategoryDto;
 import com.seshop.catalog.api.dto.CreateProductRequest;
 import com.seshop.catalog.api.dto.CreateVariantRequest;
@@ -26,7 +27,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 /**
- * UC5: Add product and SKUs – BR13 (mandatory fields), BR14 (SKU uniqueness), BR15 (media).
+ * UC5: Add product and SKUs – BR13 (mandatory fields), BR14 (SKU uniqueness),
+ * BR15 (media).
  * UC13: Browse and filter variants.
  */
 @ExtendWith(MockitoExtension.class)
@@ -40,12 +42,15 @@ class CatalogServiceTest {
     private CategoryRepository categoryRepository;
     @Mock
     private com.seshop.shared.util.FileStorageService fileStorageService;
+    @Mock
+    private AuditService auditService;
 
     private CatalogService service;
 
     @BeforeEach
     void setUp() {
-        service = new CatalogService(productRepository, productVariantRepository, categoryRepository, fileStorageService);
+        service = new CatalogService(productRepository, productVariantRepository, categoryRepository,
+                fileStorageService, auditService);
     }
 
     // ── createProduct ───────────────────────────────────────────────────────

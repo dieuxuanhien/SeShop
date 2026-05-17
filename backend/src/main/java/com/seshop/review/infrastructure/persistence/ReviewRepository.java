@@ -10,16 +10,26 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ReviewRepository extends JpaRepository<ReviewEntity, Long> {
 
-    Optional<ReviewEntity> findByOrderItemIdAndCustomerUserId(Long orderItemId, Long customerUserId);
+  Optional<ReviewEntity> findByOrderItemIdAndCustomerUserId(Long orderItemId, Long customerUserId);
 
-    @Query("""
-            select review
-            from ReviewEntity review
-            join OrderItemEntity orderItem on orderItem.id = review.orderItemId
-            join ProductVariantEntity variant on variant.id = orderItem.variantId
-            where variant.product.id = :productId
-              and review.status = 'PUBLISHED'
-            order by review.createdAt desc
-            """)
-    List<ReviewEntity> findPublishedByProductId(@Param("productId") Long productId);
+  @Query("""
+      select review
+      from ReviewEntity review
+      join OrderItemEntity orderItem on orderItem.id = review.orderItemId
+      join ProductVariantEntity variant on variant.id = orderItem.variantId
+      where variant.product.id = :productId
+        and review.status = 'PUBLISHED'
+      order by review.createdAt desc
+      """)
+  List<ReviewEntity> findPublishedByProductId(@Param("productId") Long productId);
+
+  @Query("""
+      select avg(review.rating)
+      from ReviewEntity review
+      join OrderItemEntity orderItem on orderItem.id = review.orderItemId
+      join ProductVariantEntity variant on variant.id = orderItem.variantId
+      where variant.product.id = :productId
+        and review.status = 'PUBLISHED'
+      """)
+  Double averageRatingByProductId(@Param("productId") Long productId);
 }

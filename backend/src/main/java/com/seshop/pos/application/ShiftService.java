@@ -30,9 +30,9 @@ public class ShiftService {
     private final AuditService auditService;
 
     public ShiftService(PosShiftRepository shiftRepository,
-                        PosReceiptRepository receiptRepository,
-                        CashReconciliationRepository reconciliationRepository,
-                        AuditService auditService) {
+            PosReceiptRepository receiptRepository,
+            CashReconciliationRepository reconciliationRepository,
+            AuditService auditService) {
         this.shiftRepository = shiftRepository;
         this.receiptRepository = receiptRepository;
         this.reconciliationRepository = reconciliationRepository;
@@ -55,6 +55,9 @@ public class ShiftService {
         return mapToDto(saved);
     }
 
+    /** Maximum allowed cash variance (in VND) before a reason is mandatory. */
+    private static final BigDecimal VARIANCE_THRESHOLD = new BigDecimal("50000");
+
     public ShiftDto closeShift(Long shiftId, CloseShiftRequest request) {
         PosShiftEntity shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new ResourceNotFoundException("POS_002", "Shift not found"));
@@ -67,7 +70,27 @@ public class ShiftService {
         if (actualCash == null) {
             throw new BusinessException("POS_001", "Ending cash is required");
         }
-        BigDecimal expectedCash = request.getExpectedCash() != null ? request.getExpectedCash() : expectedCash(shift.getId());
+
+        // Approver must be a different person from the cashier
+        Long approverId = request.getApproverId();
+        if (approverId == null) {
+            throw new BusinessException("POS_003", "Approver ID is required to close a shift");
+        }
+        if (approverId.equals(shift.getStaffId())) {
+            throw new BusinessException("POS_003",
+                    "Cashier cannot approve their own shift close; a manager must approve");
+        }
+
+        BigDecimal expectedCash = request.getExpectedCash() != null ? request.getExpectedCash()
+                : expectedCash(shift.getId());
+        BigDecimal variance = actualCash.subtract(expectedCash).abs();
+
+        // Reason is mandatory when variance exceeds threshold
+        if (variance.compareTo(VARIANCE_THRESHOLD) > 0
+                && (request.getReason() == null || request.getReason().isBlank())) {
+            throw new BusinessException("POS_004",
+                    "A discrepancy reason is required when cash variance exceeds " + VARIANCE_THRESHOLD);
+        }
 
         shift.setEndTime(OffsetDateTime.now());
         shift.setStatus("CLOSED");
@@ -79,7 +102,7 @@ public class ShiftService {
         reconciliation.setActualCash(actualCash);
         reconciliation.setVarianceAmount(actualCash.subtract(expectedCash));
         reconciliation.setReason(request.getReason());
-        reconciliation.setApprovedBy(shift.getStaffId());
+        reconciliation.setApprovedBy(approverId);
         reconciliation.setApprovedAt(OffsetDateTime.now());
         reconciliationRepository.save(reconciliation);
 

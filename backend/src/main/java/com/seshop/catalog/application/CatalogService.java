@@ -1,5 +1,7 @@
 package com.seshop.catalog.application;
 
+import com.seshop.audit.application.AuditService;
+import com.seshop.audit.domain.AuditAction;
 import com.seshop.catalog.api.dto.CategoryDto;
 import com.seshop.catalog.api.dto.CreateProductRequest;
 import com.seshop.catalog.api.dto.CreateVariantRequest;
@@ -11,7 +13,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,15 +26,18 @@ public class CatalogService {
     private final ProductVariantRepository productVariantRepository;
     private final CategoryRepository categoryRepository;
     private final com.seshop.shared.util.FileStorageService fileStorageService;
+    private final AuditService auditService;
 
-    public CatalogService(ProductRepository productRepository, 
-                          ProductVariantRepository productVariantRepository,
-                          CategoryRepository categoryRepository,
-                          com.seshop.shared.util.FileStorageService fileStorageService) {
+    public CatalogService(ProductRepository productRepository,
+            ProductVariantRepository productVariantRepository,
+            CategoryRepository categoryRepository,
+            com.seshop.shared.util.FileStorageService fileStorageService,
+            AuditService auditService) {
         this.productRepository = productRepository;
         this.productVariantRepository = productVariantRepository;
         this.categoryRepository = categoryRepository;
         this.fileStorageService = fileStorageService;
+        this.auditService = auditService;
     }
 
     public ProductDto createProduct(CreateProductRequest request) {
@@ -41,17 +48,45 @@ public class CatalogService {
         entity.setStatus(request.getStatus());
 
         ProductEntity saved = productRepository.save(entity);
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("productId", saved.getId());
+        metadata.put("name", saved.getName());
+        metadata.put("brand", saved.getBrand());
+        metadata.put("status", saved.getStatus());
+        auditService.write(AuditAction.PRODUCT_CREATED, "Product", saved.getId().toString(), metadata);
+
         return mapToDto(saved);
     }
 
     public ProductDto updateProduct(Long productId, CreateProductRequest request) {
         ProductEntity entity = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        // capture before-state for audit
+        Map<String, Object> before = new LinkedHashMap<>();
+        before.put("name", entity.getName());
+        before.put("brand", entity.getBrand());
+        before.put("status", entity.getStatus());
+
         entity.setName(request.getName());
         entity.setBrand(request.getBrand());
         entity.setDescription(request.getDescription());
         entity.setStatus(request.getStatus());
-        return mapToDto(productRepository.save(entity));
+        ProductEntity saved = productRepository.save(entity);
+
+        Map<String, Object> after = new LinkedHashMap<>();
+        after.put("name", saved.getName());
+        after.put("brand", saved.getBrand());
+        after.put("status", saved.getStatus());
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("productId", productId);
+        metadata.put("before", before);
+        metadata.put("after", after);
+        auditService.write(AuditAction.PRODUCT_UPDATED, "Product", productId.toString(), metadata);
+
+        return mapToDto(saved);
     }
 
     public ProductDto createVariants(Long productId, List<CreateVariantRequest> requests) {
@@ -66,7 +101,7 @@ public class CatalogService {
             variant.setColor(request.getColor());
             variant.setPrice(request.getPrice());
             variant.setStatus(request.getStatus());
-            
+
             product.getVariants().add(variant);
         }
 
@@ -89,16 +124,16 @@ public class CatalogService {
     public ProductDto uploadImage(Long productId, org.springframework.web.multipart.MultipartFile file) {
         ProductEntity product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
-        
+
         String url = fileStorageService.store(file);
-        
+
         ProductImageEntity image = new ProductImageEntity();
         image.setProduct(product);
         image.setUrl(url);
         image.setSortOrder(product.getImages().size());
         image.setIsInstagramReady(true);
         product.getImages().add(image);
-        
+
         return mapToDto(productRepository.save(product));
     }
 
@@ -113,7 +148,7 @@ public class CatalogService {
         return productRepository.findPublishedProducts(normalizeFilter(keyword), normalizeFilter(brand), pageable)
                 .map(this::mapToDto);
     }
-    
+
     @Transactional(readOnly = true)
     public ProductDto getProductById(Long productId) {
         ProductEntity product = productRepository.findById(productId)
@@ -128,7 +163,8 @@ public class CatalogService {
                     CategoryDto dto = new CategoryDto();
                     dto.setId(category.getId());
                     dto.setName(category.getName());
-                    dto.setSlug(category.getName().toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", ""));
+                    dto.setSlug(
+                            category.getName().toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", ""));
                     return dto;
                 })
                 .toList();
@@ -141,7 +177,7 @@ public class CatalogService {
         dto.setBrand(entity.getBrand());
         dto.setDescription(entity.getDescription());
         dto.setStatus(entity.getStatus());
-        
+
         if (entity.getVariants() != null) {
             dto.setVariants(entity.getVariants().stream().map(v -> {
                 ProductDto.VariantDto vDto = new ProductDto.VariantDto();
@@ -164,7 +200,7 @@ public class CatalogService {
                 return imageDto;
             }).collect(Collectors.toList()));
         }
-        
+
         return dto;
     }
 
