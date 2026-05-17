@@ -48,7 +48,7 @@ The following constraints define the allowed architecture space for SeShop. They
 - **Database technology:** PostgreSQL 15 is the transactional system of record.
 - **Cache technology:** Redis may be used for hot catalog and availability reads, but it is not a source of truth.
 - **API style:** External application communication uses REST/JSON over HTTPS under the `/api/v1` namespace.
-- **Module isolation:** Backend modules must communicate through application service interfaces or domain events. A module must not directly access another module's owned tables.
+- **Module boundaries:** Backend modules are logically separated but may communicate through shared services or repositories within the monolith context. Strict isolation is not enforced.
 - **Stock consistency:** Checkout, POS sale, refund, transfer, cycle count, goods receipt, and allocation operations must update stock inside a database transaction.
 - **Availability calculation:** `available_qty` is computed as `on_hand_qty - reserved_qty`; it must not be stored as an independent column.
 - **Payment scope:** Version 1 supports Stripe, Cash on Delivery, and in-store POS payment.
@@ -279,7 +279,7 @@ Identity --> Shared : security events
 
 ## 3.2 Implementation View
 
-The implementation view maps logical modules to code organization. Each backend module follows hexagonal architecture so domain logic remains independent from web, database, and integration details.
+The implementation view maps logical modules to code organization. Each backend module follows a layered architecture (Controller, Service, Repository) to organize domain logic, web interactions, and database access.
 
 ```text
 com.seshop

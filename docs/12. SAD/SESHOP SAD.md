@@ -299,7 +299,7 @@ The architecture satisfies the main quality attributes through:
 - Permission-driven RBAC in backend controllers/services.
 - Append-only audit records for sensitive operations.
 - Indexed PostgreSQL tables and optional Redis caching for hot reads.
-- Hexagonal module internals to isolate domain rules from infrastructure.
+- Layered module internals to organize domain rules, application logic, and infrastructure.
 - Idempotency keys for checkout, payment confirmation, refunds, and transfer confirmation.
 - Adapter interfaces for Stripe, shipping, Instagram, AI, object storage, and cache.
 
@@ -345,7 +345,7 @@ The Module View shows how SeShop is statically decomposed into backend bounded c
 | View Packet            | Contents                                                                |
 | ---------------------- | ----------------------------------------------------------------------- |
 | Backend Module Packet  | Bounded contexts, responsibilities, owned tables, and dependency rules. |
-| Internal Layer Packet  | Hexagonal layer structure used inside backend modules.                  |
+| Internal Layer Packet  | Layered structure used inside backend modules.                          |
 | Frontend Module Packet | React feature organization and client-side responsibilities.            |
 
 ### 3.1.3 Architecture Background

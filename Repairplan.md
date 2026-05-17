@@ -205,16 +205,16 @@ Target all UCs with UI gaps.
 Deliverable: UI behavior stops drifting from API/business rules.
 
 **Phase 7: Docs Reconciliation**
-1. Update SRS/BRD/SAD/ADD after implementation, not before.
-2. Resolve BRD/SRS mismatch:
+1. [x] Update SRS/BRD/SAD/ADD after implementation, not before.
+2. [x] Resolve BRD/SRS mismatch:
    - Either BRD has 27 primary use cases, or SRS marks some as derived/secondary.
-3. Remove or rewrite false architecture claims:
+3. [x] Remove or rewrite false architecture claims:
    - Hexagonal isolation.
    - Full audit coverage.
    - Encrypted tokens.
    - Localization.
    - Module isolation.
-4. Make requirements verifiable:
+4. [x] Make requirements verifiable:
    - Replace TBDs.
    - Define “real-time.”
    - Add measurable acceptance criteria.

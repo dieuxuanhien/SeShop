@@ -226,7 +226,15 @@ Out of scope for v1:
 | 16 | View stock by location           | Customer         | Informed shopping decision by location count. |
 | 17 | Track shipment                   | Customer         | Real-time delivery visibility.                |
 | 18 | Leave review with image          | Customer         | Post-purchase trust content created.          |
-
+| 19 | View pending online orders       | Authorized Staff | Manage and prepare orders for fulfillment.    |
+| 20 | Mark order as shipped with tracking | Authorized Staff | Shipped status updated and tracking sent. |
+| 21 | Connect or reconnect Instagram account | Authorized Staff | Social marketing channel authenticated. |
+| 22 | Purchase order and stock receiving | Authorized Staff | Inbound inventory received and logged.        |
+| 23 | Allocate order to fulfillment location | Authorized Staff | Stock reserved and assigned to locations. |
+| 24 | Return intake and exchange       | Authorized Staff | Returns logged, inspected, and restocked. |
+| 25 | Cycle count and inventory reconciliation | Authorized Staff | Stock variances logged and approved. |
+| 26 | POS shift close and cash reconciliation | Authorized Staff | Cash drawer closed and discrepancies handled. |
+| 27 | Generate tax invoice and adjustment note | Authorized Staff | Immutable financial documents issued. |
 ---
 
 ## 8. Security Matrix (RBAC)
@@ -254,7 +262,15 @@ Out of scope for v1:
 | View location-level stock         |             |                  | X        |
 | Track shipment                    |             |                  | X        |
 | Leave review with image           |             |                  | X        |
-
+| View pending online orders        | X           | X                |          |
+| Mark order as shipped             | X           | X                |          |
+| Connect Instagram account         | X           | X                |          |
+| Purchase order / receive stock    | X           | X                |          |
+| Allocate order location           | X           | X                |          |
+| Return intake / exchange          | X           | X                |          |
+| Cycle count / reconciliation      | X           | X                |          |
+| POS shift close                   | X           | X                |          |
+| Generate tax invoice              | X           | X                |          |
 ---
 
 ## 9. User Stories (Detailed and Specific)
@@ -426,6 +442,7 @@ Out of scope for v1:
 | SKU           | Stock Keeping Unit (variant-level sellable unit)  |
 | POS           | Point of Sale                                     |
 | Location Node | Any inventory-holding location (store or storage) |
+| Real-time     | Update or visibility occurring within 2 seconds of the triggering transaction commit |
 
 ### 15.2 Finalized Policy Decisions
 

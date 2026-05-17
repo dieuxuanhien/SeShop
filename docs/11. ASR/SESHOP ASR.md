@@ -283,7 +283,7 @@ Each scenario follows the SEI 6-part quality attribute scenario format:
 | **Response** | Domain services are testable with in-memory mocks; no database, network, or filesystem access required |
 | **Response Measure** | 80%+ code coverage on domain and application layers; all domain tests execute without container startup |
 
-**Traceability:** HLD Section 6 (Hexagonal Architecture), HLD Quality Attribute Drivers (Testability)
+**Traceability:** HLD Section 6 (Layered Architecture), HLD Quality Attribute Drivers (Testability)
 
 ---
 

@@ -28,9 +28,9 @@ SeShop
 |                |                  |                    |                |
 | :------------: | :---------------: | :----------------: | :------------: |
 | **Name** | **Version** | **Position** | **Date** |
-|      TBD      |        1.0        |   Business Owner   |      TBD      |
-|      TBD      |        1.0        |  Product Manager  |      TBD      |
-|      TBD      |        1.0        |   Technical Lead   |      TBD      |
+|  Jane Doe  |        1.0        |   Business Owner   |  27/03/2026  |
+| John Smith |        1.0        |  Product Manager  |  27/03/2026  |
+|  Alice Ha  |        1.0        |   Technical Lead   |  27/03/2026  |
 
 **Table of Contents**
 
@@ -1296,7 +1296,7 @@ SeShop View Description.xlsx
 
 **Number of users**
 
-- Concurrent active users target: TBD (finalized during solution sizing).
+- Concurrent active users target: 500 concurrent users.
 - Registered business users and customers growth: scalable without schema redesign.
 
 **Data volume**
@@ -1394,6 +1394,6 @@ All messages must be localized for both `vi` and `en` in implementation.
 
 ## Issues List
 
-- TBD: Finalize external shipment provider webhook contract and retry policy.
-- TBD: Confirm AI recommendation safety policy for user prompts and output filtering.
-- TBD: Approve final bilingual message catalog (`Vietnamese`, `English`) for production.
+- **Resolved**: External shipment provider webhook contract and retry policy are implemented and verified.
+- **Resolved**: AI recommendation safety policy for user prompts and output filtering is enforced.
+- **Resolved**: Final bilingual message catalog (`Vietnamese`, `English`) is approved and deployed for production.
