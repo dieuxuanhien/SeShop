@@ -8,17 +8,21 @@ import { Select } from '@/shared/ui/Select';
 import { useAuth } from '@/features/auth';
 import {
   assignPermissions,
+  assignLocationToUser,
   assignRoleToUser,
   createRole,
   createUser,
   deleteRole,
   deleteUser,
+  getLocations,
   getPermissions,
   getRoles,
   getUsers,
+  revokeLocationFromUser,
   revokeRoleFromUser,
   updateRole,
   updateUser,
+  type AdminLocation,
   type AdminUser,
   type Permission,
   type Role,
@@ -74,6 +78,7 @@ export function UserRoleManagement() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [locations, setLocations] = useState<AdminLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -87,6 +92,7 @@ export function UserRoleManagement() {
   const [userForm, setUserForm] = useState<UserForm>(emptyUserForm);
   const [assignUserId, setAssignUserId] = useState<number | null>(null);
   const [assignRoleId, setAssignRoleId] = useState<number | null>(null);
+  const [assignLocationId, setAssignLocationId] = useState<number | null>(null);
 
   const canReadIdentity = hasAnyPermission(user, IDENTITY_ADMIN_PERMISSIONS);
   const canCreateRole = hasPermission(user, 'role.create');
@@ -94,10 +100,11 @@ export function UserRoleManagement() {
   const canDeleteRole = hasPermission(user, 'role.delete');
   const canAssignPermissions = hasPermission(user, 'role.permission.assign');
   const canAssignRoles = hasPermission(user, 'staff.role.assign');
+  const canAssignLocations = hasPermission(user, 'staff.location.assign');
   const canCreateUser = hasPermission(user, 'staff.user.create');
   const canUpdateUser = hasPermission(user, 'staff.user.update');
   const canDeleteUser = hasPermission(user, 'staff.user.delete');
-  const canReadUsers = hasAnyPermission(user, ['staff.user.read', 'staff.user.create', 'staff.user.update', 'staff.user.delete', 'staff.role.assign']);
+  const canReadUsers = hasAnyPermission(user, ['staff.user.read', 'staff.user.create', 'staff.user.update', 'staff.user.delete', 'staff.role.assign', 'staff.location.assign']);
 
   const selectedRole = roles.find((role) => role.id === selectedRoleId);
   const selectedUser = users.find((row) => row.id === selectedUserId);
@@ -118,6 +125,17 @@ export function UserRoleManagement() {
     [users],
   );
 
+  const locationOptions = useMemo(
+    () => [
+      { label: 'Select location', value: '' },
+      ...locations.map((location) => ({
+        label: `${location.displayName} (${location.code})`,
+        value: String(location.id),
+      })),
+    ],
+    [locations],
+  );
+
   const filteredPermissions = useMemo(() => {
     const search = permissionSearch.trim().toLowerCase();
     if (!search) {
@@ -130,25 +148,31 @@ export function UserRoleManagement() {
 
   async function loadAccessData() {
     setIsLoading(true);
-    const [roleResult, permissionResult, userResult] = await Promise.allSettled([
+    const [roleResult, permissionResult, userResult, locationResult] = await Promise.allSettled([
       canReadIdentity ? getRoles() : Promise.resolve([]),
       canAssignPermissions || canCreateRole || canUpdateRole || canDeleteRole || canAssignRoles ? getPermissions() : Promise.resolve([]),
       canReadUsers ? getUsers() : Promise.resolve([]),
+      canAssignLocations ? getLocations() : Promise.resolve([]),
     ]);
 
     const loadedRoles = roleResult.status === 'fulfilled' ? roleResult.value : [];
     const loadedPermissions = permissionResult.status === 'fulfilled' ? permissionResult.value : [];
     const loadedUsers = userResult.status === 'fulfilled' ? userResult.value : [];
+    const loadedLocations = locationResult.status === 'fulfilled' ? locationResult.value : [];
 
     setRoles(loadedRoles);
     setPermissions(loadedPermissions);
     setUsers(loadedUsers);
+    setLocations(loadedLocations);
 
     if (!selectedRoleId && loadedRoles.length > 0) {
       selectRole(loadedRoles[0]);
     }
     if (!selectedUserId && loadedUsers.length > 0) {
       selectUser(loadedUsers[0]);
+    }
+    if (!assignLocationId && loadedLocations.length > 0) {
+      setAssignLocationId(loadedLocations[0].id);
     }
     setIsLoading(false);
   }
@@ -158,6 +182,7 @@ export function UserRoleManagement() {
       setRoles([]);
       setPermissions([]);
       setUsers([]);
+      setLocations([]);
       setIsLoading(false);
     });
     // The permission booleans are derived from the persisted auth user and should reload the screen when the signer changes.
@@ -356,6 +381,41 @@ export function UserRoleManagement() {
     }
   }
 
+  async function handleAssignLocation(event: React.FormEvent) {
+    event.preventDefault();
+    if (!assignUserId || !assignLocationId || !canAssignLocations) return;
+
+    setIsSaving(true);
+    setMessage('');
+    try {
+      await assignLocationToUser(assignUserId, assignLocationId);
+      const assignedLocation = locations.find((location) => location.id === assignLocationId);
+      const assignedUser = users.find((row) => row.id === assignUserId);
+      setMessage(`${assignedLocation?.displayName ?? 'Location'} assigned to ${assignedUser?.username ?? 'user'}.`);
+      await loadAccessData();
+    } catch {
+      setMessage('Location could not be assigned.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleRevokeLocation(row: AdminUser, assignmentId: number) {
+    if (!canAssignLocations) return;
+
+    setIsSaving(true);
+    setMessage('');
+    try {
+      await revokeLocationFromUser(row.id, assignmentId);
+      setMessage(`Location revoked from ${row.username}.`);
+      await loadAccessData();
+    } catch {
+      setMessage('Location could not be revoked.');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <PageScaffold
       title="User & Role Management"
@@ -490,22 +550,23 @@ export function UserRoleManagement() {
               <thead className="text-xs uppercase text-ink/50">
                 <tr>
                   <th className="px-3 py-2">User</th>
-                  <th className="px-3 py-2">Contact</th>
-                  <th className="px-3 py-2">Type</th>
-                  <th className="px-3 py-2">Roles</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2 text-right">Action</th>
-                </tr>
+	                  <th className="px-3 py-2">Contact</th>
+	                  <th className="px-3 py-2">Type</th>
+	                  <th className="px-3 py-2">Roles</th>
+	                  <th className="px-3 py-2">Locations</th>
+	                  <th className="px-3 py-2">Status</th>
+	                  <th className="px-3 py-2 text-right">Action</th>
+	                </tr>
               </thead>
               <tbody className="divide-y divide-primary/10">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-ink/60">Loading users...</td>
-                  </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-ink/60">No users available for this permission set.</td>
-                  </tr>
+	                    <td colSpan={7} className="px-3 py-6 text-center text-sm text-ink/60">Loading users...</td>
+	                  </tr>
+	                ) : users.length === 0 ? (
+	                  <tr>
+	                    <td colSpan={7} className="px-3 py-6 text-center text-sm text-ink/60">No users available for this permission set.</td>
+	                  </tr>
                 ) : users.map((row) => (
                   <tr key={row.id} className="text-ink/80">
                     <td className="px-3 py-3">
@@ -517,8 +578,8 @@ export function UserRoleManagement() {
                       <p className="text-xs text-ink/50">{row.phoneNumber}</p>
                     </td>
                     <td className="px-3 py-3">{row.userType}</td>
-                    <td className="px-3 py-3">
-                      <div className="flex flex-wrap gap-1">
+	                    <td className="px-3 py-3">
+	                      <div className="flex flex-wrap gap-1">
                         {row.roles.length === 0 ? (
                           <span className="text-xs text-ink/45">No roles</span>
                         ) : row.roles.map((assignment) => (
@@ -532,9 +593,26 @@ export function UserRoleManagement() {
                             {assignment.roleName}
                           </button>
                         ))}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3">
+	                      </div>
+	                    </td>
+	                    <td className="px-3 py-3">
+	                      <div className="flex flex-wrap gap-1">
+	                        {row.assignedLocations.length === 0 ? (
+	                          <span className="text-xs text-ink/45">No locations</span>
+	                        ) : row.assignedLocations.map((assignment) => (
+	                          <button
+	                            key={assignment.assignmentId}
+	                            type="button"
+	                            onClick={() => handleRevokeLocation(row, assignment.assignmentId)}
+	                            disabled={!canAssignLocations || isSaving}
+	                            className="rounded-md border border-primary/20 px-2 py-1 text-xs text-primary disabled:opacity-50"
+	                          >
+	                            {assignment.locationName}
+	                          </button>
+	                        ))}
+	                      </div>
+	                    </td>
+	                    <td className="px-3 py-3">
                       <Badge variant={row.status === 'ACTIVE' ? 'success' : row.status === 'LOCKED' ? 'danger' : 'warning'}>{row.status}</Badge>
                     </td>
                     <td className="px-3 py-3 text-right">
@@ -564,6 +642,25 @@ export function UserRoleManagement() {
                 options={roleOptions}
               />
               <Button type="submit" disabled={!assignUserId || !assignRoleId || !canAssignRoles} isLoading={isSaving}>Assign Role</Button>
+            </form>
+          </Card>
+
+          <Card className="border border-primary/20 bg-surface/95 p-5">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Location Assignment</h2>
+            <form onSubmit={handleAssignLocation} className="mt-4 grid gap-4">
+              <Select
+                label="User"
+                value={assignUserId ? String(assignUserId) : ''}
+                onChange={(event) => setAssignUserId(event.target.value ? Number(event.target.value) : null)}
+                options={userOptions}
+              />
+              <Select
+                label="Location"
+                value={assignLocationId ? String(assignLocationId) : ''}
+                onChange={(event) => setAssignLocationId(event.target.value ? Number(event.target.value) : null)}
+                options={locationOptions}
+              />
+              <Button type="submit" disabled={!assignUserId || !assignLocationId || !canAssignLocations} isLoading={isSaving}>Assign Location</Button>
             </form>
           </Card>
 

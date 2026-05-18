@@ -1,5 +1,6 @@
 package com.seshop.api;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -16,6 +17,8 @@ import com.seshop.shared.exception.GlobalExceptionHandler;
 import com.seshop.shared.security.AuthenticatedUser;
 import com.seshop.shared.security.JwtAuthenticationFilter;
 import com.seshop.shared.security.JwtTokenProvider;
+import com.seshop.shared.security.LocationAccessService;
+import com.seshop.shared.security.LocationScope;
 import com.seshop.shared.security.PermissionValidator;
 import com.seshop.shared.security.RestAccessDeniedHandler;
 import com.seshop.shared.security.RestAuthenticationEntryPoint;
@@ -62,10 +65,13 @@ class StaffOrderControllerContractTest {
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
+    @MockBean
+    private LocationAccessService locationAccessService;
+
     @Test
     void listOrdersRequiresOrderReadPermission() throws Exception {
         authenticate("order-read-token", List.of("order.read"));
-        given(orderService.listOrdersForStaff(0, 20))
+        given(orderService.listOrdersForStaff(eq(0), eq(20), any()))
                 .willReturn(new PageImpl<>(List.of(order(1001L, "ORD-1001", "PAID")), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/api/v1/staff/orders")
@@ -95,7 +101,7 @@ class StaffOrderControllerContractTest {
     void shipOrderRequiresOrderShipPermission() throws Exception {
         authenticate("order-ship-token", List.of("order.ship"));
         OrderDto shipped = order(1001L, "ORD-1001", "SHIPPED");
-        given(orderService.shipOrder(eq(1001L), eq("GHN"), eq("Nguyen Van A"), eq("+84901000001"), eq("GHN-123")))
+        given(orderService.shipOrder(eq(1001L), eq("GHN"), eq("Nguyen Van A"), eq("+84901000001"), eq("GHN-123"), any()))
                 .willReturn(shipped);
 
         mockMvc.perform(post("/api/v1/staff/orders/1001/ship")
@@ -144,6 +150,7 @@ class StaffOrderControllerContractTest {
 
         given(jwtTokenProvider.validate(token)).willReturn(true);
         given(jwtTokenProvider.authentication(token)).willReturn(authentication);
+        given(locationAccessService.scopeFor(any())).willReturn(LocationScope.all());
     }
 
     private String bearerToken(String token) {

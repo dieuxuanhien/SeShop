@@ -5,6 +5,7 @@ import com.seshop.pos.api.dto.OpenShiftRequest;
 import com.seshop.pos.api.dto.ShiftDto;
 import com.seshop.pos.application.ShiftService;
 import com.seshop.shared.security.AuthenticatedUser;
+import com.seshop.shared.security.LocationAccessService;
 import com.seshop.shared.security.PermissionValidator;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -23,10 +24,15 @@ public class ShiftController {
 
     private final ShiftService shiftService;
     private final PermissionValidator permissionValidator;
+    private final LocationAccessService locationAccessService;
 
-    public ShiftController(ShiftService shiftService, PermissionValidator permissionValidator) {
+    public ShiftController(
+            ShiftService shiftService,
+            PermissionValidator permissionValidator,
+            LocationAccessService locationAccessService) {
         this.shiftService = shiftService;
         this.permissionValidator = permissionValidator;
+        this.locationAccessService = locationAccessService;
     }
 
     @PostMapping({"", "/open"})
@@ -34,6 +40,7 @@ public class ShiftController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody OpenShiftRequest request) {
         permissionValidator.require(POS_SHIFT_MANAGE);
+        locationAccessService.requireLocationAccess(user, request.getLocationId());
         ShiftDto shift = shiftService.openShift(user.userId(), request);
 
         Map<String, Object> response = new HashMap<>();
@@ -70,9 +77,12 @@ public class ShiftController {
     }
 
     @GetMapping("/{shiftId}")
-    public ResponseEntity<Map<String, Object>> getShift(@PathVariable Long shiftId) {
+    public ResponseEntity<Map<String, Object>> getShift(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long shiftId) {
         permissionValidator.require(POS_SHIFT_MANAGE);
         ShiftDto shift = shiftService.getShift(shiftId);
+        locationAccessService.requireLocationAccess(user, shift.getLocationId());
 
         Map<String, Object> response = new HashMap<>();
         response.put("data", shift);
@@ -82,9 +92,12 @@ public class ShiftController {
 
     @PostMapping("/{shiftId}/close")
     public ResponseEntity<Map<String, Object>> closeShift(
+            @AuthenticationPrincipal AuthenticatedUser user,
             @PathVariable Long shiftId, 
             @Valid @RequestBody CloseShiftRequest request) {
         permissionValidator.require(POS_SHIFT_MANAGE);
+        ShiftDto current = shiftService.getShift(shiftId);
+        locationAccessService.requireLocationAccess(user, current.getLocationId());
         ShiftDto shift = shiftService.closeShift(shiftId, request);
 
         Map<String, Object> response = new HashMap<>();

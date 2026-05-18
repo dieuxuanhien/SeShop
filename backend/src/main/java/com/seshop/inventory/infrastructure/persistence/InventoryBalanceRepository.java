@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,5 +35,15 @@ public interface InventoryBalanceRepository extends JpaRepository<InventoryBalan
     Page<InventoryBalanceEntity> search(
             @Param("variantId") Long variantId,
             @Param("locationId") Long locationId,
+            Pageable pageable);
+
+    @Query("SELECT b FROM InventoryBalanceEntity b " +
+            "WHERE (:variantId IS NULL OR b.variantId = :variantId) " +
+            "AND (:locationId IS NULL OR b.location.id = :locationId) " +
+            "AND b.location.id IN :locationIds")
+    Page<InventoryBalanceEntity> searchScoped(
+            @Param("variantId") Long variantId,
+            @Param("locationId") Long locationId,
+            @Param("locationIds") Collection<Long> locationIds,
             Pageable pageable);
 }

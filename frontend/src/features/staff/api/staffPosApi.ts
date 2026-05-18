@@ -52,8 +52,31 @@ export async function getCurrentShift(): Promise<ShiftData> {
   return { ...data, shiftId: data.shiftId ?? data.id ?? 0 };
 }
 
-export async function processPosSale(items: PosItem[], paymentMethod: 'CASH' | 'CARD', amountPaid: number): Promise<{ receiptId: number; changeDue: number }> {
-  const response = await apiClient.post<ApiResponse<{ receiptId: number; changeDue: number }>>('/pos/receipts', {
+export type ReceiptItemResponse = {
+  id: number;
+  variantId: number;
+  skuCode: string;
+  name: string;
+  qty: number;
+  unitPrice: number;
+  totalPrice: number;
+};
+
+export type ProcessPosSaleResponse = {
+  receiptId: number;
+  receiptNumber: string;
+  changeDue: number;
+  totalAmount: number;
+  paymentMethod: string;
+  amountPaid: number;
+  createdAt: string;
+  locationName: string;
+  operatorName: string;
+  items: ReceiptItemResponse[];
+};
+
+export async function processPosSale(items: PosItem[], paymentMethod: 'CASH' | 'CARD', amountPaid: number): Promise<ProcessPosSaleResponse> {
+  const response = await apiClient.post<ApiResponse<ProcessPosSaleResponse>>('/pos/receipts', {
     paymentMethod,
     amountPaid,
     items,

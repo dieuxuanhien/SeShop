@@ -36,6 +36,8 @@ import com.seshop.shared.exception.GlobalExceptionHandler;
 import com.seshop.shared.security.AuthenticatedUser;
 import com.seshop.shared.security.JwtAuthenticationFilter;
 import com.seshop.shared.security.JwtTokenProvider;
+import com.seshop.shared.security.LocationAccessService;
+import com.seshop.shared.security.LocationScope;
 import com.seshop.shared.security.PermissionValidator;
 import com.seshop.shared.security.RestAccessDeniedHandler;
 import com.seshop.shared.security.RestAuthenticationEntryPoint;
@@ -95,6 +97,9 @@ class ApiControllerContractTest {
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
+    @MockBean
+    private LocationAccessService locationAccessService;
+
     @BeforeEach
     void setUpJwtAuthentication() {
         List<String> permissions = List.of(
@@ -117,6 +122,7 @@ class ApiControllerContractTest {
 
         given(jwtTokenProvider.validate(STAFF_TOKEN)).willReturn(true);
         given(jwtTokenProvider.authentication(STAFF_TOKEN)).willReturn(authentication);
+        given(locationAccessService.scopeFor(any())).willReturn(LocationScope.all());
     }
 
     @Test
@@ -152,7 +158,7 @@ class ApiControllerContractTest {
         balance.setReservedQty(1);
         balance.setAvailableQty(15);
 
-        given(inventoryService.listBalances(null, null, "SKU-001", 0, 10))
+        given(inventoryService.listBalances(eq(null), eq(null), eq("SKU-001"), eq(0), eq(10), any()))
                 .willReturn(new PageResponse<>(List.of(balance), 0, 10, 1, 1));
 
         mockMvc.perform(get("/api/v1/staff/inventory/balances")
@@ -188,7 +194,7 @@ class ApiControllerContractTest {
         response.setReservedQty(0);
         response.setAvailableQty(-1);
 
-        given(inventoryService.adjustInventory(any(InventoryAdjustmentRequest.class), eq(true)))
+        given(inventoryService.adjustInventory(any(InventoryAdjustmentRequest.class), eq(true), any()))
                 .willReturn(response);
 
         mockMvc.perform(post("/api/v1/staff/inventory/adjustments")
@@ -210,7 +216,7 @@ class ApiControllerContractTest {
 
         ArgumentCaptor<InventoryAdjustmentRequest> requestCaptor =
                 ArgumentCaptor.forClass(InventoryAdjustmentRequest.class);
-        then(inventoryService).should().adjustInventory(requestCaptor.capture(), eq(true));
+        then(inventoryService).should().adjustInventory(requestCaptor.capture(), eq(true), any());
         assertThat(requestCaptor.getValue().getReasonCode()).isEqualTo("OVERRIDE");
     }
 
@@ -234,7 +240,7 @@ class ApiControllerContractTest {
 
     @Test
     void createInventoryTransferUsesAuthenticatedStaffId() throws Exception {
-        given(inventoryService.createTransfer(any(CreateTransferRequest.class), eq(42L)))
+        given(inventoryService.createTransfer(any(CreateTransferRequest.class), eq(42L), any()))
                 .willReturn(9001L);
 
         mockMvc.perform(post("/api/v1/staff/inventory/transfers")
@@ -258,7 +264,7 @@ class ApiControllerContractTest {
                 .andExpect(jsonPath("$.data.transferId").value(9001));
 
         ArgumentCaptor<CreateTransferRequest> requestCaptor = ArgumentCaptor.forClass(CreateTransferRequest.class);
-        then(inventoryService).should().createTransfer(requestCaptor.capture(), eq(42L));
+        then(inventoryService).should().createTransfer(requestCaptor.capture(), eq(42L), any());
         CreateTransferRequest capturedRequest = requestCaptor.getValue();
         assertThat(capturedRequest.getSourceLocationId()).isEqualTo(11L);
         assertThat(capturedRequest.getDestinationLocationId()).isEqualTo(12L);
@@ -274,7 +280,7 @@ class ApiControllerContractTest {
                         .header(TraceIdFilter.TRACE_HEADER, "trace-transfer-cancel"))
                 .andExpect(status().isOk());
 
-        then(inventoryService).should().cancelTransfer(9001L);
+        then(inventoryService).should().cancelTransfer(eq(9001L), any());
     }
 
     @Test
@@ -284,7 +290,7 @@ class ApiControllerContractTest {
         response.setReceiptNumber("POS-12345678");
         response.setChangeDue(new BigDecimal("10000.00"));
 
-        given(receiptService.createReceipt(any(ProcessPosSaleRequest.class), eq(42L)))
+        given(receiptService.createReceipt(any(ProcessPosSaleRequest.class), eq(42L), any()))
                 .willReturn(response);
 
         mockMvc.perform(post("/api/v1/pos/receipts")
@@ -310,7 +316,7 @@ class ApiControllerContractTest {
                 .andExpect(jsonPath("$.data.changeDue").value(10000.00))
                 .andExpect(jsonPath("$.meta.traceId").value("trace-pos"));
 
-        then(receiptService).should().createReceipt(any(ProcessPosSaleRequest.class), eq(42L));
+        then(receiptService).should().createReceipt(any(ProcessPosSaleRequest.class), eq(42L), any());
     }
 
     @Test
@@ -376,7 +382,7 @@ class ApiControllerContractTest {
         response.setRefundAmount(new BigDecimal("590000.00"));
         response.setReason("Customer return");
 
-        given(returnService.processReturn(any(ProcessReturnRequest.class), eq(42L)))
+        given(returnService.processReturn(any(ProcessReturnRequest.class), eq(42L), any()))
                 .willReturn(response);
 
         mockMvc.perform(post("/api/v1/pos/returns")
@@ -404,7 +410,7 @@ class ApiControllerContractTest {
 
         ArgumentCaptor<ProcessReturnRequest> requestCaptor =
                 ArgumentCaptor.forClass(ProcessReturnRequest.class);
-        then(returnService).should().processReturn(requestCaptor.capture(), eq(42L));
+        then(returnService).should().processReturn(requestCaptor.capture(), eq(42L), any());
         assertThat(requestCaptor.getValue().getOriginalOrderId()).isEqualTo(501L);
         assertThat(requestCaptor.getValue().getItems()).hasSize(1);
         assertThat(requestCaptor.getValue().getItems().getFirst().getDisposition()).isEqualTo("RESTOCK");
@@ -454,6 +460,7 @@ class ApiControllerContractTest {
         shift.setStatus("CLOSED");
         shift.setEndingCash(new BigDecimal("2500000.00"));
 
+        given(shiftService.getShift(501L)).willReturn(shift);
         given(shiftService.closeShift(eq(501L), any(CloseShiftRequest.class))).willReturn(shift);
 
         mockMvc.perform(post("/api/v1/pos/shifts/501/close")

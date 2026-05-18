@@ -3,7 +3,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { PageScaffold } from '@/shared/ui/PageScaffold';
-import { locationsFromBalances, type LocationSummary } from '@/features/admin/api/adminApi';
+import { getLocations, locationsFromBalances, type LocationSummary } from '@/features/admin/api/adminApi';
 import { getInventoryBalances, type InventoryBalance } from '@/features/staff/api/staffInventoryApi';
 
 export function LocationsManagement() {
@@ -13,10 +13,21 @@ export function LocationsManagement() {
 
   function loadLocations() {
     setIsLoading(true);
-    getInventoryBalances(1, 100)
-      .then((page) => {
+    Promise.all([getLocations(), getInventoryBalances(1, 100)])
+      .then(([locationRows, page]) => {
         setBalances(page.items);
-        setLocations(locationsFromBalances(page.items));
+        const stockLocations = locationsFromBalances(page.items);
+        setLocations(locationRows.map((location) => {
+          const stock = stockLocations.find((row) => row.id === location.id);
+          return {
+            id: location.id,
+            code: location.code,
+            name: location.displayName,
+            type: location.locationType,
+            status: location.status,
+            skus: stock?.skus ?? 0,
+          };
+        }));
       })
       .catch(() => {
         setBalances([]);
@@ -54,27 +65,29 @@ export function LocationsManagement() {
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead className="text-xs uppercase text-ink/50">
-                <tr>
-                  <th className="px-3 py-2">ID</th>
-                  <th className="px-3 py-2">Location</th>
-                  <th className="px-3 py-2 text-right">SKU Count</th>
-                  <th className="px-3 py-2 text-right">Action</th>
-                </tr>
+	                <tr>
+	                  <th className="px-3 py-2">Code</th>
+	                  <th className="px-3 py-2">Location</th>
+	                  <th className="px-3 py-2">Type</th>
+	                  <th className="px-3 py-2 text-right">SKU Count</th>
+	                  <th className="px-3 py-2 text-right">Action</th>
+	                </tr>
               </thead>
               <tbody className="divide-y divide-primary/10">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-6 text-center text-sm text-ink/60">Loading locations...</td>
-                  </tr>
-                ) : totalsByLocation.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-3 py-6 text-center text-sm text-ink/60">No locations returned by inventory balances.</td>
-                  </tr>
-                ) : totalsByLocation.map((location) => (
-                  <tr key={location.id} className="text-ink/80">
-                    <td className="px-3 py-3 font-semibold text-ink">LOC-{location.id}</td>
-                    <td className="px-3 py-3">{location.name}</td>
-                    <td className="px-3 py-3 text-right">{location.skus} SKUs / {location.available} units</td>
+	                    <td colSpan={5} className="px-3 py-6 text-center text-sm text-ink/60">Loading locations...</td>
+	                  </tr>
+	                ) : totalsByLocation.length === 0 ? (
+	                  <tr>
+	                    <td colSpan={5} className="px-3 py-6 text-center text-sm text-ink/60">No locations returned.</td>
+	                  </tr>
+	                ) : totalsByLocation.map((location) => (
+	                  <tr key={location.id} className="text-ink/80">
+	                    <td className="px-3 py-3 font-semibold text-ink">{location.code ?? `LOC-${location.id}`}</td>
+	                    <td className="px-3 py-3">{location.name}</td>
+	                    <td className="px-3 py-3">{location.type ?? 'STORE'}</td>
+	                    <td className="px-3 py-3 text-right">{location.skus} SKUs / {location.available} units</td>
                     <td className="px-3 py-3 text-right">
                       <Badge variant={location.available < 5 ? 'warning' : 'success'}>{location.available < 5 ? 'Review' : 'Active'}</Badge>
                     </td>

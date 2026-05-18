@@ -18,9 +18,11 @@ import com.seshop.shared.exception.BusinessException;
 import com.seshop.shared.exception.ForbiddenOperationException;
 import com.seshop.shared.exception.ResourceNotFoundException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.seshop.shared.security.LocationScope;
 
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -87,6 +89,17 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public PageResponse<InventoryBalanceDto> listBalances(Long variantId, Long locationId, String skuCode, int page, int size) {
+        return listBalances(variantId, locationId, skuCode, page, size, LocationScope.all());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<InventoryBalanceDto> listBalances(
+            Long variantId,
+            Long locationId,
+            String skuCode,
+            int page,
+            int size,
+            LocationScope locationScope) {
         Long resolvedVariantId = variantId;
         if (skuCode != null && !skuCode.isBlank()) {
             resolvedVariantId = productVariantRepository.findBySkuCode(skuCode)
@@ -94,10 +107,16 @@ public class InventoryService {
                     .orElse(-1L);
         }
 
-        Page<InventoryBalanceEntity> balances = balanceRepository.search(
-                resolvedVariantId,
-                locationId,
-                PageRequest.of(page, size));
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Page<InventoryBalanceEntity> balances = locationScope.isEmpty()
+                ? new PageImpl<>(List.of(), pageRequest, 0)
+                : locationScope.allLocations()
+                        ? balanceRepository.search(resolvedVariantId, locationId, pageRequest)
+                        : balanceRepository.searchScoped(
+                                resolvedVariantId,
+                                locationId,
+                                locationScope.locationIds(),
+                                pageRequest);
 
         return new PageResponse<>(
                 balances.getContent().stream().map(this::mapBalance).toList(),
@@ -109,7 +128,17 @@ public class InventoryService {
 
     @Transactional(readOnly = true)
     public PageResponse<StockTransferDto> listTransfers(int page, int size) {
-        Page<InventoryTransferEntity> transfers = transferRepository.findAll(PageRequest.of(page, size));
+        return listTransfers(page, size, LocationScope.all());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<StockTransferDto> listTransfers(int page, int size, LocationScope locationScope) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Page<InventoryTransferEntity> transfers = locationScope.isEmpty()
+                ? new PageImpl<>(List.of(), pageRequest, 0)
+                : locationScope.allLocations()
+                        ? transferRepository.findAll(pageRequest)
+                        : transferRepository.findByLocationScope(locationScope.locationIds(), pageRequest);
         return new PageResponse<>(
                 transfers.getContent().stream().map(this::mapTransfer).toList(),
                 transfers.getNumber(),
@@ -126,6 +155,15 @@ public class InventoryService {
     }
 
     public InventoryAdjustmentResponse adjustInventory(InventoryAdjustmentRequest request, boolean canOverrideNegativeStock) {
+        return adjustInventory(request, canOverrideNegativeStock, LocationScope.all());
+    }
+
+    public InventoryAdjustmentResponse adjustInventory(
+            InventoryAdjustmentRequest request,
+            boolean canOverrideNegativeStock,
+            LocationScope locationScope) {
+        requireLocationScope(locationScope, request.getLocationId());
+
         productVariantRepository.findById(request.getVariantId())
                 .orElseThrow(() -> new ResourceNotFoundException("CAT_404", "Variant not found"));
 
@@ -178,6 +216,12 @@ public class InventoryService {
     }
 
     public Long createTransfer(CreateTransferRequest request, Long createdBy) {
+        return createTransfer(request, createdBy, LocationScope.all());
+    }
+
+    public Long createTransfer(CreateTransferRequest request, Long createdBy, LocationScope locationScope) {
+        requireLocationScope(locationScope, request.getSourceLocationId());
+
         LocationEntity source = locationRepository.findById(request.getSourceLocationId())
                 .orElseThrow(() -> new ResourceNotFoundException("INV_003", "Source location not found"));
         LocationEntity destination = locationRepository.findById(request.getDestinationLocationId())
@@ -217,8 +261,13 @@ public class InventoryService {
     }
 
     public void approveTransfer(Long transferId) {
+        approveTransfer(transferId, LocationScope.all());
+    }
+
+    public void approveTransfer(Long transferId, LocationScope locationScope) {
         InventoryTransferEntity transfer = transferRepository.findById(transferId)
                 .orElseThrow(() -> new ResourceNotFoundException("INV_002", "Transfer not found"));
+        requireLocationScope(locationScope, transfer.getSourceLocation().getId());
 
         if (!"DRAFT".equals(transfer.getStatus())) {
             throw new BusinessException("INV_002", "Transfer must be in DRAFT state to approve");
@@ -260,8 +309,13 @@ public class InventoryService {
     }
 
     public void cancelTransfer(Long transferId) {
+        cancelTransfer(transferId, LocationScope.all());
+    }
+
+    public void cancelTransfer(Long transferId, LocationScope locationScope) {
         InventoryTransferEntity transfer = transferRepository.findById(transferId)
                 .orElseThrow(() -> new ResourceNotFoundException("INV_002", "Transfer not found"));
+        requireLocationScope(locationScope, transfer.getSourceLocation().getId());
 
         if (!"DRAFT".equals(transfer.getStatus()) && !"IN_TRANSIT".equals(transfer.getStatus())) {
             throw new BusinessException("INV_002", "Only DRAFT or IN_TRANSIT transfers can be cancelled");
@@ -299,8 +353,13 @@ public class InventoryService {
     }
 
     public void receiveTransfer(Long transferId, ReceiveTransferRequest request) {
+        receiveTransfer(transferId, request, LocationScope.all());
+    }
+
+    public void receiveTransfer(Long transferId, ReceiveTransferRequest request, LocationScope locationScope) {
         InventoryTransferEntity transfer = transferRepository.findById(transferId)
                 .orElseThrow(() -> new ResourceNotFoundException("INV_002", "Transfer not found"));
+        requireLocationScope(locationScope, transfer.getDestinationLocation().getId());
 
         if (!"IN_TRANSIT".equals(transfer.getStatus())) {
             throw new BusinessException("INV_002", "Transfer must be in IN_TRANSIT state to receive");
@@ -367,6 +426,14 @@ public class InventoryService {
         transfer.setCompletedAt(OffsetDateTime.now());
         InventoryTransferEntity savedTransfer = transferRepository.save(transfer);
         auditTransferStatusChange(savedTransfer, fromStatus, "COMPLETED", Map.of("items", auditedItems));
+    }
+
+
+
+    private void requireLocationScope(LocationScope locationScope, Long locationId) {
+        if (!locationScope.allows(locationId)) {
+            throw new ForbiddenOperationException("Missing location access: " + locationId);
+        }
     }
 
     private void auditTransferStatusChange(

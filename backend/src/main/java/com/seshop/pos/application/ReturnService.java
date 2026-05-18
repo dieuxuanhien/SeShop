@@ -14,7 +14,9 @@ import com.seshop.pos.infrastructure.persistence.PosReturnItemEntity;
 import com.seshop.pos.infrastructure.persistence.PosReturnItemRepository;
 import com.seshop.pos.infrastructure.persistence.PosReturnRepository;
 import com.seshop.shared.exception.BusinessException;
+import com.seshop.shared.exception.ForbiddenOperationException;
 import com.seshop.shared.exception.ResourceNotFoundException;
+import com.seshop.shared.security.LocationScope;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -53,10 +55,17 @@ public class ReturnService {
     }
 
     public ReturnDto processReturn(ProcessReturnRequest request, Long staffId) {
+        return processReturn(request, staffId, LocationScope.all());
+    }
+
+    public ReturnDto processReturn(ProcessReturnRequest request, Long staffId, LocationScope locationScope) {
         PosReceiptEntity receipt = receiptRepository.findById(request.getOriginalOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("POS_404", "Original receipt not found"));
         if (receipt.getShift() == null || receipt.getShift().getLocationId() == null) {
             throw new BusinessException("POS_RET_001", "Original receipt has no return location");
+        }
+        if (!locationScope.allows(receipt.getShift().getLocationId())) {
+            throw new ForbiddenOperationException("Missing location access: " + receipt.getShift().getLocationId());
         }
 
         PosReturnEntity posReturn = new PosReturnEntity();

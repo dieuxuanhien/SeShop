@@ -9,6 +9,8 @@ VALUES
   ('staff.user.create', 'Create staff or customer user accounts'),
   ('staff.user.update', 'Edit staff or customer user accounts'),
   ('staff.user.delete', 'Deactivate staff or customer user accounts'),
+  ('staff.location.assign', 'Assign staff accounts to store or storage locations'),
+  ('location.scope.all', 'Read and manage data across every store and storage location'),
   ('audit.read', 'View audit logs'),
   ('catalog.write', 'Create or update products and variants'),
   ('inventory.adjust', 'Adjust SKU inventory'),

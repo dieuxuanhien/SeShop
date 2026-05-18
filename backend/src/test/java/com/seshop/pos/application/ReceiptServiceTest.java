@@ -47,6 +47,12 @@ class ReceiptServiceTest {
     @Mock
     private AuditService auditService;
 
+    @Mock
+    private com.seshop.inventory.infrastructure.persistence.LocationRepository locationRepository;
+
+    @Mock
+    private com.seshop.identity.infrastructure.persistence.UserRepository userRepository;
+
     @Test
     void createReceiptDecrementsInventoryAtShiftLocation() {
         ReceiptService service = new ReceiptService(
@@ -54,8 +60,13 @@ class ReceiptServiceTest {
                 shiftRepository,
                 productVariantRepository,
                 balanceRepository,
-                auditService
+                auditService,
+                locationRepository,
+                userRepository
         );
+
+        given(locationRepository.findById(11L)).willReturn(Optional.empty());
+        given(userRepository.findById(42L)).willReturn(Optional.empty());
 
         PosShiftEntity shift = new PosShiftEntity();
         shift.setId(501L);

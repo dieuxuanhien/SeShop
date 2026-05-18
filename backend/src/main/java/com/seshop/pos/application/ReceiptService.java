@@ -18,7 +18,9 @@ import com.seshop.shared.api.PageResponse;
 import com.seshop.shared.exception.BusinessException;
 import com.seshop.shared.exception.ForbiddenOperationException;
 import com.seshop.shared.exception.ResourceNotFoundException;
+import com.seshop.shared.security.LocationScope;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import com.seshop.inventory.infrastructure.persistence.LocationEntity;
+import com.seshop.inventory.infrastructure.persistence.LocationRepository;
+import com.seshop.identity.infrastructure.persistence.UserEntity;
+import com.seshop.identity.infrastructure.persistence.UserRepository;
+
 @Service
 @Transactional
 public class ReceiptService {
@@ -39,34 +46,61 @@ public class ReceiptService {
     private final ProductVariantRepository productVariantRepository;
     private final InventoryBalanceRepository balanceRepository;
     private final AuditService auditService;
+    private final LocationRepository locationRepository;
+    private final UserRepository userRepository;
 
     public ReceiptService(PosReceiptRepository receiptRepository,
                           PosShiftRepository shiftRepository,
                           ProductVariantRepository productVariantRepository,
                           InventoryBalanceRepository balanceRepository,
-                          AuditService auditService) {
+                          AuditService auditService,
+                          LocationRepository locationRepository,
+                          UserRepository userRepository) {
         this.receiptRepository = receiptRepository;
         this.shiftRepository = shiftRepository;
         this.productVariantRepository = productVariantRepository;
         this.balanceRepository = balanceRepository;
         this.auditService = auditService;
+        this.locationRepository = locationRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
     public ReceiptDto getReceipt(String receiptNumber) {
-        return getReceipt(parseReceiptId(receiptNumber));
+        return getReceipt(receiptNumber, LocationScope.all());
+    }
+
+    @Transactional(readOnly = true)
+    public ReceiptDto getReceipt(String receiptNumber, LocationScope locationScope) {
+        return getReceipt(parseReceiptId(receiptNumber), locationScope);
     }
 
     @Transactional(readOnly = true)
     public ReceiptDto getReceipt(Long receiptId) {
+        return getReceipt(receiptId, LocationScope.all());
+    }
+
+    @Transactional(readOnly = true)
+    public ReceiptDto getReceipt(Long receiptId, LocationScope locationScope) {
         PosReceiptEntity receipt = receiptRepository.findById(receiptId)
                 .orElseThrow(() -> new ResourceNotFoundException("POS_404", "Receipt not found"));
+        requireLocationScope(locationScope, receipt.getShift().getLocationId());
         return mapToDto(receipt);
     }
 
     @Transactional(readOnly = true)
     public PageResponse<ReceiptDto> listReceipts(int page, int size) {
-        Page<PosReceiptEntity> receipts = receiptRepository.findAll(PageRequest.of(page, size));
+        return listReceipts(page, size, LocationScope.all());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ReceiptDto> listReceipts(int page, int size, LocationScope locationScope) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Page<PosReceiptEntity> receipts = locationScope.isEmpty()
+                ? new PageImpl<>(List.of(), pageRequest, 0)
+                : locationScope.allLocations()
+                        ? receiptRepository.findAll(pageRequest)
+                        : receiptRepository.findByShiftLocationIds(locationScope.locationIds(), pageRequest);
         return new PageResponse<>(
                 receipts.getContent().stream().map(this::mapToDto).toList(),
                 receipts.getNumber(),
@@ -76,6 +110,10 @@ public class ReceiptService {
     }
 
     public ProcessPosSaleResponse createReceipt(ProcessPosSaleRequest request, Long staffId) {
+        return createReceipt(request, staffId, LocationScope.all());
+    }
+
+    public ProcessPosSaleResponse createReceipt(ProcessPosSaleRequest request, Long staffId, LocationScope locationScope) {
         String paymentMethod = normalizePaymentMethod(request.getPaymentMethod());
         PosShiftEntity shift = request.getShiftId() != null
                 ? shiftRepository.findById(request.getShiftId())
@@ -89,6 +127,7 @@ public class ReceiptService {
         if (!shift.getStaffId().equals(staffId)) {
             throw new ForbiddenOperationException("Shift belongs to another staff member");
         }
+        requireLocationScope(locationScope, shift.getLocationId());
 
         PosReceiptEntity receipt = new PosReceiptEntity();
         receipt.setShift(shift);
@@ -142,9 +181,37 @@ public class ReceiptService {
         ProcessPosSaleResponse response = new ProcessPosSaleResponse();
         response.setReceiptId(savedReceipt.getId());
         response.setReceiptNumber(receiptNumber);
-        response.setChangeDue("CASH".equals(paymentMethod)
+        BigDecimal changeDue = "CASH".equals(paymentMethod)
                 ? request.getAmountPaid().subtract(total)
-                : BigDecimal.ZERO);
+                : BigDecimal.ZERO;
+        response.setChangeDue(changeDue);
+        response.setTotalAmount(total);
+        response.setPaymentMethod(paymentMethod);
+        response.setAmountPaid(request.getAmountPaid());
+        response.setCreatedAt(savedReceipt.getCreatedAt());
+
+        LocationEntity location = locationRepository.findById(shift.getLocationId()).orElse(null);
+        response.setLocationName(location != null ? location.getDisplayName() : "Unknown Store");
+
+        UserEntity staffUser = userRepository.findById(staffId).orElse(null);
+        response.setOperatorName(staffUser != null ? staffUser.getUsername() : "Staff");
+
+        List<ProcessPosSaleResponse.ItemResponse> itemResponses = new ArrayList<>();
+        for (PosReceiptItemEntity savedItem : savedReceipt.getItems()) {
+            ProductVariantEntity variant = productVariantRepository.findById(savedItem.getVariantId()).orElse(null);
+            
+            ProcessPosSaleResponse.ItemResponse itemResp = new ProcessPosSaleResponse.ItemResponse();
+            itemResp.setId(savedItem.getId());
+            itemResp.setVariantId(savedItem.getVariantId());
+            itemResp.setSkuCode(variant != null ? variant.getSkuCode() : "N/A");
+            itemResp.setName(variant != null && variant.getProduct() != null ? variant.getProduct().getName() : "Unknown Variant");
+            itemResp.setQty(savedItem.getQty());
+            itemResp.setUnitPrice(savedItem.getUnitPrice());
+            itemResp.setTotalPrice(savedItem.getUnitPrice().multiply(BigDecimal.valueOf(savedItem.getQty())));
+            itemResponses.add(itemResp);
+        }
+        response.setItems(itemResponses);
+
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("receiptNumber", receiptNumber);
         metadata.put("staffId", staffId);
@@ -158,6 +225,12 @@ public class ReceiptService {
         metadata.put("items", auditedItems);
         auditService.write(AuditAction.POS_SALE_COMPLETED, "PosReceipt", savedReceipt.getId().toString(), metadata);
         return response;
+    }
+
+    private void requireLocationScope(LocationScope locationScope, Long locationId) {
+        if (!locationScope.allows(locationId)) {
+            throw new ForbiddenOperationException("Missing location access: " + locationId);
+        }
     }
 
     private ReceiptDto mapToDto(PosReceiptEntity entity) {

@@ -33,6 +33,7 @@ public class RoleController {
     private static final String STAFF_USER_CREATE = "staff.user.create";
     private static final String STAFF_USER_UPDATE = "staff.user.update";
     private static final String STAFF_USER_DELETE = "staff.user.delete";
+    private static final String STAFF_LOCATION_ASSIGN = "staff.location.assign";
 
     private final RoleService roleService;
     private final PermissionValidator permissionValidator;
@@ -102,9 +103,33 @@ public class RoleController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/users/{userId}/locations")
+    public ResponseEntity<?> assignLocationToUser(@PathVariable Long userId,
+                                                  @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+                                                  @Valid @RequestBody AssignLocationRequest request) {
+        permissionValidator.require(STAFF_LOCATION_ASSIGN);
+        Long assignedByUserId = authenticatedUser == null ? null : authenticatedUser.userId();
+        roleService.assignLocationToUser(userId, request.locationId(), assignedByUserId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(Map.of("success", true)));
+    }
+
+    @DeleteMapping("/users/{userId}/locations/{assignmentId}")
+    public ResponseEntity<?> revokeLocationFromUser(@PathVariable Long userId,
+                                                    @PathVariable Long assignmentId) {
+        permissionValidator.require(STAFF_LOCATION_ASSIGN);
+        roleService.revokeLocationFromUser(userId, assignmentId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<Map<String, Object>>> listUsers() {
-        permissionValidator.requireAny(STAFF_USER_READ, STAFF_USER_CREATE, STAFF_USER_UPDATE, STAFF_USER_DELETE, STAFF_ROLE_ASSIGN);
+        permissionValidator.requireAny(
+                STAFF_USER_READ,
+                STAFF_USER_CREATE,
+                STAFF_USER_UPDATE,
+                STAFF_USER_DELETE,
+                STAFF_ROLE_ASSIGN,
+                STAFF_LOCATION_ASSIGN);
         return ResponseEntity.ok(ApiResponse.success(Map.of("items", roleService.listUsers())));
     }
 

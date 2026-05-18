@@ -19,7 +19,10 @@ import com.seshop.shipping.infrastructure.GhnClient;
 import com.seshop.shipping.infrastructure.persistence.ShipmentEntity;
 import com.seshop.shipping.infrastructure.persistence.ShipmentRepository;
 import com.seshop.shared.exception.BusinessException;
+import com.seshop.shared.exception.ForbiddenOperationException;
+import com.seshop.shared.security.LocationScope;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -205,7 +208,19 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Page<OrderDto> listOrdersForStaff(int page, int size) {
-        return orderRepository.findAll(PageRequest.of(page, size)).map(this::mapToDto);
+        return listOrdersForStaff(page, size, LocationScope.all());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderDto> listOrdersForStaff(int page, int size, LocationScope locationScope) {
+        PageRequest pageRequest = PageRequest.of(page, size);
+        if (locationScope.isEmpty()) {
+            return new PageImpl<>(List.of(), pageRequest, 0);
+        }
+        Page<OrderEntity> orders = locationScope.allLocations()
+                ? orderRepository.findAll(pageRequest)
+                : orderRepository.findByAllocatedLocationIds(locationScope.locationIds(), pageRequest);
+        return orders.map(this::mapToDto);
     }
 
     @Transactional(readOnly = true)
@@ -222,7 +237,17 @@ public class OrderService {
         return mapToDto(order);
     }
 
+    public OrderDto getOrder(Long orderId, LocationScope locationScope) {
+        requireOrderScope(orderId, locationScope);
+        return getOrder(orderId);
+    }
+
     public OrderDto processOrder(Long orderId, ProcessOrderRequest request) {
+        return processOrder(orderId, request, LocationScope.all());
+    }
+
+    public OrderDto processOrder(Long orderId, ProcessOrderRequest request, LocationScope locationScope) {
+        requireOrderScope(orderId, locationScope);
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
 
@@ -252,6 +277,11 @@ public class OrderService {
     }
 
     public OrderDto allocateOrder(Long orderId) {
+        return allocateOrder(orderId, LocationScope.all());
+    }
+
+    public OrderDto allocateOrder(Long orderId, LocationScope locationScope) {
+        requireOrderScope(orderId, locationScope);
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
         allocateStockForOrder(order);
@@ -259,6 +289,11 @@ public class OrderService {
     }
 
     public OrderDto packOrder(Long orderId) {
+        return packOrder(orderId, LocationScope.all());
+    }
+
+    public OrderDto packOrder(Long orderId, LocationScope locationScope) {
+        requireOrderScope(orderId, locationScope);
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
         order.setStatus(STATUS_PACKED);
@@ -266,6 +301,17 @@ public class OrderService {
     }
 
     public OrderDto shipOrder(Long orderId, String carrier, String toName, String toPhone, String trackingNumber) {
+        return shipOrder(orderId, carrier, toName, toPhone, trackingNumber, LocationScope.all());
+    }
+
+    public OrderDto shipOrder(
+            Long orderId,
+            String carrier,
+            String toName,
+            String toPhone,
+            String trackingNumber,
+            LocationScope locationScope) {
+        requireOrderScope(orderId, locationScope);
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
         validateOrderCanShip(order);
@@ -329,6 +375,11 @@ public class OrderService {
     }
 
     public OrderDto cancelOrder(Long orderId) {
+        return cancelOrder(orderId, LocationScope.all());
+    }
+
+    public OrderDto cancelOrder(Long orderId, LocationScope locationScope) {
+        requireOrderScope(orderId, locationScope);
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
         releaseAllocatedStock(order);
@@ -604,6 +655,16 @@ public class OrderService {
             return itemDto;
         }).collect(Collectors.toList()));
         return dto;
+    }
+
+    private void requireOrderScope(Long orderId, LocationScope locationScope) {
+        if (locationScope.allLocations()) {
+            return;
+        }
+        if (locationScope.isEmpty()
+                || !allocationRepository.existsByOrderIdAndLocationIds(orderId, locationScope.locationIds())) {
+            throw new ForbiddenOperationException("Missing location access for order: " + orderId);
+        }
     }
 
     private void completeCodPaymentIfPending(OrderEntity order) {

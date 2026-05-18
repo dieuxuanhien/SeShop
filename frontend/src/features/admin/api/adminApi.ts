@@ -40,6 +40,13 @@ export type UserRoleAssignment = {
   assignedAt?: string;
 };
 
+export type StaffLocationAssignment = {
+  assignmentId: number;
+  locationId: number;
+  locationName: string;
+  assignedAt?: string;
+};
+
 export type AdminUser = {
   id: number;
   username: string;
@@ -48,6 +55,7 @@ export type AdminUser = {
   userType: 'ADMIN' | 'STAFF' | 'CUSTOMER';
   status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
   roles: UserRoleAssignment[];
+  assignedLocations: StaffLocationAssignment[];
   permissions: string[];
 };
 
@@ -111,6 +119,14 @@ export async function revokeRoleFromUser(userId: number, assignmentId: number): 
   await apiClient.delete(`/admin/users/${userId}/roles/${assignmentId}`);
 }
 
+export async function assignLocationToUser(userId: number, locationId: number): Promise<void> {
+  await apiClient.post(`/admin/users/${userId}/locations`, { locationId });
+}
+
+export async function revokeLocationFromUser(userId: number, assignmentId: number): Promise<void> {
+  await apiClient.delete(`/admin/users/${userId}/locations/${assignmentId}`);
+}
+
 export async function getUsers(): Promise<AdminUser[]> {
   const response = await apiClient.get<ApiResponse<UsersResponse>>('/admin/users');
   return response.data.data.items;
@@ -132,9 +148,29 @@ export async function deleteUser(userId: number): Promise<void> {
 
 export type LocationSummary = {
   id: number;
+  code?: string;
   name: string;
+  type?: string;
+  status?: string;
   skus: number;
 };
+
+export type AdminLocation = {
+  id: number;
+  code: string;
+  displayName: string;
+  locationType: 'STORE' | 'STORAGE';
+  status: 'ACTIVE' | 'INACTIVE';
+};
+
+type LocationsResponse = {
+  items: AdminLocation[];
+};
+
+export async function getLocations(): Promise<AdminLocation[]> {
+  const response = await apiClient.get<ApiResponse<LocationsResponse>>('/admin/locations');
+  return response.data.data.items;
+}
 
 export function locationsFromBalances(balances: InventoryBalance[]): LocationSummary[] {
   const byLocation = new Map<number, LocationSummary>();
@@ -146,7 +182,10 @@ export function locationsFromBalances(balances: InventoryBalance[]): LocationSum
     }
     byLocation.set(balance.locationId, {
       id: balance.locationId,
+      code: undefined,
       name: balance.locationName,
+      type: undefined,
+      status: undefined,
       skus: 1,
     });
   });

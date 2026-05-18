@@ -4,6 +4,7 @@ import com.seshop.pos.api.dto.ProcessReturnRequest;
 import com.seshop.pos.api.dto.ReturnDto;
 import com.seshop.pos.application.ReturnService;
 import com.seshop.shared.security.AuthenticatedUser;
+import com.seshop.shared.security.LocationAccessService;
 import com.seshop.shared.security.PermissionValidator;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -22,10 +23,15 @@ public class ReturnController {
 
     private final ReturnService returnService;
     private final PermissionValidator permissionValidator;
+    private final LocationAccessService locationAccessService;
 
-    public ReturnController(ReturnService returnService, PermissionValidator permissionValidator) {
+    public ReturnController(
+            ReturnService returnService,
+            PermissionValidator permissionValidator,
+            LocationAccessService locationAccessService) {
         this.returnService = returnService;
         this.permissionValidator = permissionValidator;
+        this.locationAccessService = locationAccessService;
     }
 
     @PostMapping
@@ -33,7 +39,7 @@ public class ReturnController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody ProcessReturnRequest request) {
         permissionValidator.require(REFUND_PROCESS);
-        ReturnDto returnDto = returnService.processReturn(request, user.userId());
+        ReturnDto returnDto = returnService.processReturn(request, user.userId(), locationAccessService.scopeFor(user));
 
         Map<String, Object> response = new HashMap<>();
         response.put("data", returnDto);

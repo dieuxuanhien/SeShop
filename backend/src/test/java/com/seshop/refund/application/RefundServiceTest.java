@@ -9,6 +9,7 @@ import static org.mockito.BDDMockito.then;
 
 import com.seshop.audit.application.AuditService;
 import com.seshop.audit.domain.AuditAction;
+import com.seshop.commerce.infrastructure.persistence.OrderAllocationRepository;
 import com.seshop.commerce.infrastructure.persistence.OrderEntity;
 import com.seshop.commerce.infrastructure.persistence.OrderItemEntity;
 import com.seshop.commerce.infrastructure.persistence.OrderItemRepository;
@@ -55,6 +56,9 @@ class RefundServiceTest {
 
     @Mock
     private OrderRepository orderRepository;
+
+    @Mock
+    private OrderAllocationRepository orderAllocationRepository;
 
     @Mock
     private OrderItemRepository orderItemRepository;
@@ -202,6 +206,7 @@ class RefundServiceTest {
                 returnItemRepository,
                 refundRepository,
                 orderRepository,
+                orderAllocationRepository,
                 orderItemRepository,
                 paymentRepository,
                 auditService

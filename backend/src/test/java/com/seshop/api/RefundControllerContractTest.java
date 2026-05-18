@@ -2,6 +2,7 @@ package com.seshop.api;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,6 +18,8 @@ import com.seshop.shared.exception.GlobalExceptionHandler;
 import com.seshop.shared.security.AuthenticatedUser;
 import com.seshop.shared.security.JwtAuthenticationFilter;
 import com.seshop.shared.security.JwtTokenProvider;
+import com.seshop.shared.security.LocationAccessService;
+import com.seshop.shared.security.LocationScope;
 import com.seshop.shared.security.PermissionValidator;
 import com.seshop.shared.security.RestAccessDeniedHandler;
 import com.seshop.shared.security.RestAuthenticationEntryPoint;
@@ -65,6 +68,9 @@ class RefundControllerContractTest {
     @MockBean
     private JwtTokenProvider jwtTokenProvider;
 
+    @MockBean
+    private LocationAccessService locationAccessService;
+
     @BeforeEach
     void setUpJwt() {
         List<String> permissions = List.of("refund.process");
@@ -74,6 +80,7 @@ class RefundControllerContractTest {
         Authentication auth = new UsernamePasswordAuthenticationToken(principal, STAFF_TOKEN, authorities);
         given(jwtTokenProvider.validate(STAFF_TOKEN)).willReturn(true);
         given(jwtTokenProvider.authentication(STAFF_TOKEN)).willReturn(auth);
+        given(locationAccessService.scopeFor(any())).willReturn(LocationScope.all());
     }
 
     @Test
@@ -84,7 +91,7 @@ class RefundControllerContractTest {
         dto.setReason("Size too small");
         dto.setStatus("PENDING");
         dto.setCreatedAt(OffsetDateTime.now());
-        given(refundService.createReturn(any())).willReturn(dto);
+        given(refundService.createReturn(any(), any())).willReturn(dto);
 
         mockMvc.perform(post("/api/v1/returns")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + STAFF_TOKEN)
@@ -155,7 +162,7 @@ class RefundControllerContractTest {
         ReturnDto dto = new ReturnDto();
         dto.setReturnId(201L);
         dto.setStatus("APPROVED");
-        given(refundService.approveReturn(201L)).willReturn(dto);
+        given(refundService.approveReturn(eq(201L), any())).willReturn(dto);
 
         mockMvc.perform(post("/api/v1/returns/201/approve")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + STAFF_TOKEN)
@@ -171,7 +178,7 @@ class RefundControllerContractTest {
         dto.setOrderId(1001L);
         dto.setAmount(new BigDecimal("548000"));
         dto.setStatus("COMPLETED");
-        given(refundService.createRefund(any())).willReturn(dto);
+        given(refundService.createRefund(any(), any())).willReturn(dto);
 
         mockMvc.perform(post("/api/v1/refunds")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + STAFF_TOKEN)
@@ -195,7 +202,7 @@ class RefundControllerContractTest {
         RefundDto dto = new RefundDto();
         dto.setRefundId(301L);
         dto.setStatus("COMPLETED");
-        given(refundService.getRefund(301L)).willReturn(dto);
+        given(refundService.getRefund(eq(301L), any())).willReturn(dto);
 
         mockMvc.perform(get("/api/v1/refunds/301")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + STAFF_TOKEN)

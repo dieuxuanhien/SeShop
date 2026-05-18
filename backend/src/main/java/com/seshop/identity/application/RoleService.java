@@ -4,6 +4,7 @@ import com.seshop.audit.application.AuditService;
 import com.seshop.audit.domain.AuditAction;
 import com.seshop.identity.api.AdminRoleDto;
 import com.seshop.identity.api.AdminUserDto;
+import com.seshop.identity.api.StaffLocationAssignmentDto;
 import com.seshop.identity.api.CreateAdminUserRequest;
 import com.seshop.identity.api.CreateRoleRequest;
 import com.seshop.identity.api.PermissionDto;
@@ -12,16 +13,20 @@ import com.seshop.identity.api.UpdateRoleRequest;
 import com.seshop.identity.api.UserRoleAssignmentDto;
 import com.seshop.identity.domain.RoleStatus;
 import com.seshop.identity.domain.UserStatus;
+import com.seshop.identity.domain.UserType;
 import com.seshop.identity.infrastructure.persistence.PermissionEntity;
 import com.seshop.identity.infrastructure.persistence.PermissionRepository;
 import com.seshop.identity.infrastructure.persistence.RoleEntity;
 import com.seshop.identity.infrastructure.persistence.RolePermissionEntity;
 import com.seshop.identity.infrastructure.persistence.RolePermissionRepository;
 import com.seshop.identity.infrastructure.persistence.RoleRepository;
+import com.seshop.identity.infrastructure.persistence.StaffLocationAssignmentEntity;
+import com.seshop.identity.infrastructure.persistence.StaffLocationAssignmentRepository;
 import com.seshop.identity.infrastructure.persistence.UserEntity;
 import com.seshop.identity.infrastructure.persistence.UserRepository;
 import com.seshop.identity.infrastructure.persistence.UserRoleEntity;
 import com.seshop.identity.infrastructure.persistence.UserRoleRepository;
+import com.seshop.inventory.infrastructure.persistence.LocationRepository;
 import com.seshop.shared.exception.DuplicateResourceException;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,21 +46,27 @@ public class RoleService {
     private final RolePermissionRepository rolePermissionRepository;
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
+    private final StaffLocationAssignmentRepository staffLocationAssignmentRepository;
+    private final LocationRepository locationRepository;
     private final AuditService auditService;
     private final PasswordEncoder passwordEncoder;
 
     public RoleService(RoleRepository roleRepository,
                        PermissionRepository permissionRepository,
-                       RolePermissionRepository rolePermissionRepository,
-                       UserRepository userRepository,
-                       UserRoleRepository userRoleRepository,
-                       AuditService auditService,
-                       PasswordEncoder passwordEncoder) {
+	                       RolePermissionRepository rolePermissionRepository,
+	                       UserRepository userRepository,
+	                       UserRoleRepository userRoleRepository,
+                           StaffLocationAssignmentRepository staffLocationAssignmentRepository,
+                           LocationRepository locationRepository,
+	                       AuditService auditService,
+	                       PasswordEncoder passwordEncoder) {
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
+        this.staffLocationAssignmentRepository = staffLocationAssignmentRepository;
+        this.locationRepository = locationRepository;
         this.auditService = auditService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -224,6 +235,54 @@ public class RoleService {
         auditService.write(AuditAction.USER_ROLE_REVOKED, "User", userId.toString(), metadata);
     }
 
+    @Transactional
+    public void assignLocationToUser(Long userId, Long locationId, Long assignedByUserId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new IllegalArgumentException("User must be active before location assignment");
+        }
+        if (user.getUserType() == UserType.CUSTOMER) {
+            throw new IllegalArgumentException("Only staff or admin users can be assigned to locations");
+        }
+        locationRepository.findById(locationId)
+                .orElseThrow(() -> new IllegalArgumentException("Location not found"));
+        if (staffLocationAssignmentRepository
+                .findByUserIdAndLocationIdAndRevokedAtIsNull(userId, locationId)
+                .isPresent()) {
+            throw new IllegalArgumentException("Location already assigned to user");
+        }
+
+        UserEntity assignedBy = assignedByUserId != null ? userRepository.findById(assignedByUserId).orElse(null) : null;
+        StaffLocationAssignmentEntity assignment = new StaffLocationAssignmentEntity();
+        assignment.setUser(user);
+        assignment.setLocationId(locationId);
+        assignment.setAssignedBy(assignedBy);
+        staffLocationAssignmentRepository.save(assignment);
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("locationId", locationId);
+        metadata.put("assignedByUserId", assignedByUserId);
+        auditService.write(AuditAction.USER_LOCATION_ASSIGNED, "User", userId.toString(), metadata);
+    }
+
+    @Transactional
+    public void revokeLocationFromUser(Long userId, Long assignmentId) {
+        StaffLocationAssignmentEntity assignment = staffLocationAssignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Staff location assignment not found"));
+        if (!assignment.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("Staff location assignment does not belong to user");
+        }
+
+        assignment.setRevokedAt(OffsetDateTime.now());
+        staffLocationAssignmentRepository.save(assignment);
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("assignmentId", assignmentId);
+        metadata.put("locationId", assignment.getLocationId());
+        auditService.write(AuditAction.USER_LOCATION_REVOKED, "User", userId.toString(), metadata);
+    }
+
     @Transactional(readOnly = true)
     public List<AdminUserDto> listUsers() {
         return userRepository.findAll(Sort.by("username")).stream()
@@ -332,6 +391,15 @@ public class RoleService {
                 .distinct()
                 .sorted()
                 .toList();
+        List<StaffLocationAssignmentDto> assignedLocations = staffLocationAssignmentRepository
+                .findByUserIdAndRevokedAtIsNull(user.getId()).stream()
+                .map(assignment -> new StaffLocationAssignmentDto(
+                        assignment.getId(),
+                        assignment.getLocationId(),
+                        locationName(assignment.getLocationId()),
+                        assignment.getAssignedAt()
+                ))
+                .toList();
         return new AdminUserDto(
                 user.getId(),
                 user.getUsername(),
@@ -340,8 +408,15 @@ public class RoleService {
                 user.getUserType().name(),
                 user.getStatus().name(),
                 roleAssignments,
+                assignedLocations,
                 permissions
         );
+    }
+
+    private String locationName(Long locationId) {
+        return locationRepository.findById(locationId)
+                .map(location -> location.getDisplayName())
+                .orElse("Location " + locationId);
     }
 
     private void ensureRoleNameAvailable(String name, Long existingRoleId) {

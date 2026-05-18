@@ -22,6 +22,8 @@ class SeedPermissionCatalogTest {
             "staff.user.create",
             "staff.user.update",
             "staff.user.delete",
+            "staff.location.assign",
+            "location.scope.all",
             "audit.read",
             "catalog.write",
             "inventory.adjust",

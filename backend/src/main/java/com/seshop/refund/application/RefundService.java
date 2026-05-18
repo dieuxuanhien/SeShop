@@ -3,6 +3,7 @@ package com.seshop.refund.application;
 import com.seshop.audit.application.AuditService;
 import com.seshop.audit.domain.AuditAction;
 import com.seshop.commerce.infrastructure.persistence.OrderEntity;
+import com.seshop.commerce.infrastructure.persistence.OrderAllocationRepository;
 import com.seshop.commerce.infrastructure.persistence.OrderItemEntity;
 import com.seshop.commerce.infrastructure.persistence.OrderItemRepository;
 import com.seshop.commerce.infrastructure.persistence.OrderRepository;
@@ -21,7 +22,9 @@ import com.seshop.refund.infrastructure.persistence.ReturnRequestEntity;
 import com.seshop.refund.infrastructure.persistence.ReturnRequestRepository;
 import com.seshop.shared.exception.ResourceNotFoundException;
 import com.seshop.shared.exception.BusinessException;
+import com.seshop.shared.exception.ForbiddenOperationException;
 import com.seshop.shared.security.AuthenticatedUser;
+import com.seshop.shared.security.LocationScope;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
@@ -48,27 +51,35 @@ public class RefundService {
     private final ReturnItemRepository returnItemRepository;
     private final RefundRepository refundRepository;
     private final OrderRepository orderRepository;
+    private final OrderAllocationRepository orderAllocationRepository;
     private final OrderItemRepository orderItemRepository;
     private final PaymentRepository paymentRepository;
     private final AuditService auditService;
 
     public RefundService(ReturnRequestRepository returnRequestRepository,
                          ReturnItemRepository returnItemRepository,
-                         RefundRepository refundRepository,
-                         OrderRepository orderRepository,
-                         OrderItemRepository orderItemRepository,
-                         PaymentRepository paymentRepository,
-                         AuditService auditService) {
+	                         RefundRepository refundRepository,
+	                         OrderRepository orderRepository,
+                             OrderAllocationRepository orderAllocationRepository,
+	                         OrderItemRepository orderItemRepository,
+	                         PaymentRepository paymentRepository,
+	                         AuditService auditService) {
         this.returnRequestRepository = returnRequestRepository;
         this.returnItemRepository = returnItemRepository;
         this.refundRepository = refundRepository;
         this.orderRepository = orderRepository;
+        this.orderAllocationRepository = orderAllocationRepository;
         this.orderItemRepository = orderItemRepository;
         this.paymentRepository = paymentRepository;
         this.auditService = auditService;
     }
 
     public ReturnDto createReturn(CreateReturnRequest request) {
+        return createReturn(request, LocationScope.all());
+    }
+
+    public ReturnDto createReturn(CreateReturnRequest request, LocationScope locationScope) {
+        requireOrderScope(request.getOrderId(), locationScope);
         OrderEntity order = orderRepository.findById(request.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("ORD_002", "Order not found"));
         validateReturnableOrder(order);
@@ -101,8 +112,13 @@ public class RefundService {
     }
 
     public ReturnDto approveReturn(Long returnId) {
+        return approveReturn(returnId, LocationScope.all());
+    }
+
+    public ReturnDto approveReturn(Long returnId, LocationScope locationScope) {
         ReturnRequestEntity returnRequest = returnRequestRepository.findById(returnId)
                 .orElseThrow(() -> new ResourceNotFoundException("REF_001", "Return request not found"));
+        requireOrderScope(returnRequest.getOrderId(), locationScope);
         if (!STATUS_PENDING.equals(returnRequest.getStatus())) {
             throw new BusinessException("REF_002", "Only pending return requests can be approved");
         }
@@ -125,6 +141,11 @@ public class RefundService {
     }
 
     public RefundDto createRefund(CreateRefundRequest request) {
+        return createRefund(request, LocationScope.all());
+    }
+
+    public RefundDto createRefund(CreateRefundRequest request, LocationScope locationScope) {
+        requireOrderScope(request.getOrderId(), locationScope);
         ReturnRequestEntity returnRequest = returnRequestRepository.findById(request.getReturnRequestId())
                 .orElseThrow(() -> new ResourceNotFoundException("REF_001", "Return request does not exist"));
         if (!returnRequest.getOrderId().equals(request.getOrderId())) {
@@ -172,9 +193,25 @@ public class RefundService {
 
     @Transactional(readOnly = true)
     public RefundDto getRefund(Long refundId) {
+        return getRefund(refundId, LocationScope.all());
+    }
+
+    @Transactional(readOnly = true)
+    public RefundDto getRefund(Long refundId, LocationScope locationScope) {
         RefundEntity refund = refundRepository.findById(refundId)
                 .orElseThrow(() -> new ResourceNotFoundException("REF_001", "Refund not found"));
+        requireOrderScope(refund.getOrderId(), locationScope);
         return mapToRefundDto(refund);
+    }
+
+    private void requireOrderScope(Long orderId, LocationScope locationScope) {
+        if (locationScope.allLocations()) {
+            return;
+        }
+        if (locationScope.isEmpty()
+                || !orderAllocationRepository.existsByOrderIdAndLocationIds(orderId, locationScope.locationIds())) {
+            throw new ForbiddenOperationException("Missing location access for order: " + orderId);
+        }
     }
 
     private void validateReturnableOrder(OrderEntity order) {

@@ -20,10 +20,12 @@ import com.seshop.identity.infrastructure.persistence.RoleEntity;
 import com.seshop.identity.infrastructure.persistence.RolePermissionEntity;
 import com.seshop.identity.infrastructure.persistence.RolePermissionRepository;
 import com.seshop.identity.infrastructure.persistence.RoleRepository;
+import com.seshop.identity.infrastructure.persistence.StaffLocationAssignmentRepository;
 import com.seshop.identity.infrastructure.persistence.UserEntity;
 import com.seshop.identity.infrastructure.persistence.UserRepository;
 import com.seshop.identity.infrastructure.persistence.UserRoleEntity;
 import com.seshop.identity.infrastructure.persistence.UserRoleRepository;
+import com.seshop.inventory.infrastructure.persistence.LocationRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,6 +52,10 @@ class RoleServiceTest {
     @Mock
     private UserRoleRepository userRoleRepository;
     @Mock
+    private StaffLocationAssignmentRepository staffLocationAssignmentRepository;
+    @Mock
+    private LocationRepository locationRepository;
+    @Mock
     private AuditService auditService;
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -64,6 +70,8 @@ class RoleServiceTest {
                 rolePermissionRepository,
                 userRepository,
                 userRoleRepository,
+                staffLocationAssignmentRepository,
+                locationRepository,
                 auditService,
                 passwordEncoder
         );

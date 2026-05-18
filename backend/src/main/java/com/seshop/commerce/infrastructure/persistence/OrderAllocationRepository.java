@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
 
 @Repository
 public interface OrderAllocationRepository extends JpaRepository<OrderAllocationEntity, Long> {
@@ -17,4 +18,11 @@ public interface OrderAllocationRepository extends JpaRepository<OrderAllocation
     List<OrderAllocationEntity> findByOrderIdAndStatus(
             @Param("orderId") Long orderId,
             @Param("status") String status);
+
+    @Query("SELECT COUNT(a) > 0 FROM OrderAllocationEntity a " +
+            "JOIN a.orderItem oi " +
+            "WHERE oi.order.id = :orderId AND a.location.id IN :locationIds")
+    boolean existsByOrderIdAndLocationIds(
+            @Param("orderId") Long orderId,
+            @Param("locationIds") Collection<Long> locationIds);
 }

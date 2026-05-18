@@ -7,6 +7,7 @@ import com.seshop.inventory.api.dto.PurchaseOrderResponse;
 import com.seshop.inventory.application.ProcurementService;
 import com.seshop.shared.api.ApiResponse;
 import com.seshop.shared.security.AuthenticatedUser;
+import com.seshop.shared.security.LocationAccessService;
 import com.seshop.shared.security.PermissionValidator;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -21,10 +22,15 @@ public class StaffProcurementController {
 
     private final ProcurementService procurementService;
     private final PermissionValidator permissionValidator;
+    private final LocationAccessService locationAccessService;
 
-    public StaffProcurementController(ProcurementService procurementService, PermissionValidator permissionValidator) {
+    public StaffProcurementController(
+            ProcurementService procurementService,
+            PermissionValidator permissionValidator,
+            LocationAccessService locationAccessService) {
         this.procurementService = procurementService;
         this.permissionValidator = permissionValidator;
+        this.locationAccessService = locationAccessService;
     }
 
     @PostMapping("/purchase-orders")
@@ -33,6 +39,7 @@ public class StaffProcurementController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody CreatePurchaseOrderRequest request) {
         permissionValidator.require(INVENTORY_TRANSFER);
+        locationAccessService.requireLocationAccess(user, request.getDestinationLocationId());
         return ApiResponse.success(procurementService.createPurchaseOrder(request, user.userId()));
     }
 
@@ -42,6 +49,8 @@ public class StaffProcurementController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody GoodsReceiptRequest request) {
         permissionValidator.require(INVENTORY_TRANSFER);
+        Long destinationLocationId = procurementService.destinationLocationIdForPurchaseOrder(request.getPurchaseOrderId());
+        locationAccessService.requireLocationAccess(user, destinationLocationId);
         return ApiResponse.success(procurementService.createGoodsReceipt(request, user.userId()));
     }
 }

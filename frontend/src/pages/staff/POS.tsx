@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
-import { processPosSale, lookupProductBySku, type PosItem } from '@/features/staff/api/staffPosApi';
+import { processPosSale, lookupProductBySku, type PosItem, type ProcessPosSaleResponse } from '@/features/staff/api/staffPosApi';
 
 export function POS() {
   const [items, setItems] = useState<PosItem[]>([]);
@@ -10,7 +10,7 @@ export function POS() {
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD'>('CASH');
   const [amountPaid, setAmountPaid] = useState<number | ''>('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [receipt, setReceipt] = useState<{ id: number; changeDue: number } | null>(null);
+  const [receipt, setReceipt] = useState<ProcessPosSaleResponse | null>(null);
   const [skuError, setSkuError] = useState('');
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -56,7 +56,7 @@ export function POS() {
     try {
       const paid = paymentMethod === 'CASH' ? Number(amountPaid) : total;
       const res = await processPosSale(items, paymentMethod, paid);
-      setReceipt({ id: res.receiptId, changeDue: res.changeDue });
+      setReceipt(res);
     } catch (e) {
       console.error(e);
     } finally {
@@ -76,20 +76,149 @@ export function POS() {
   if (receipt) {
     return (
       <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-md border border-primary/20 bg-surface p-8 text-center shadow-soft">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-success/10 text-success">
-            <CheckCircle2 size={34} />
+        {/* Printable Receipt Container (Hidden on screen, visible only during print) */}
+        <div id="pos-receipt-print" className="hidden print:block text-black bg-white p-4 font-mono text-[11px] w-[80mm] mx-auto">
+          <div className="text-center mb-4">
+            <h2 className="text-base font-bold uppercase tracking-wider">SESHOP</h2>
+            <p className="text-[10px]">{receipt.locationName}</p>
+            <p className="text-[10px]">Date: {new Date(receipt.createdAt).toLocaleString()}</p>
+            <p className="text-[10px]">Receipt: {receipt.receiptNumber}</p>
+            <p className="text-[10px]">Cashier: {receipt.operatorName}</p>
           </div>
-          <h2 className="mb-2 text-2xl font-bold text-ink">Sale Complete</h2>
-          <p className="mb-6 text-ink/55">Receipt #{receipt.id}</p>
           
-          {paymentMethod === 'CASH' && (
-            <div className="mb-6 rounded-md bg-ink/[0.03] p-4 text-left text-ink/70">
-              <div className="flex justify-between mb-2"><span>Total:</span> <span>{total.toLocaleString()} VND</span></div>
-              <div className="flex justify-between mb-2"><span>Paid:</span> <span>{Number(amountPaid).toLocaleString()} VND</span></div>
-              <div className="flex justify-between border-t border-primary/15 pt-2 text-lg font-bold text-ink"><span>Change Due:</span> <span>{receipt.changeDue.toLocaleString()} VND</span></div>
+          <div className="border-t border-b border-dashed border-black py-2 my-2">
+            <table className="w-full text-left text-[11px] border-collapse">
+              <thead>
+                <tr className="border-b border-dashed border-black">
+                  <th className="pb-1">Item Details</th>
+                  <th className="text-right pb-1">Price x Qty</th>
+                  <th className="text-right pb-1">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {receipt.items?.map((item) => (
+                  <tr key={item.id} className="align-top border-b border-black/5 last:border-0">
+                    <td className="py-1">
+                      <div className="font-bold">{item.name}</div>
+                      <div className="text-[9px] text-black/75">
+                        ID: {item.id} | SKU: {item.skuCode}
+                      </div>
+                    </td>
+                    <td className="text-right py-1">
+                      {item.unitPrice.toLocaleString()} x{item.qty}
+                    </td>
+                    <td className="text-right py-1 font-bold">
+                      {item.totalPrice.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-right space-y-1 text-[11px] font-mono">
+            <div className="flex justify-between">
+              <span>Total Amount:</span>
+              <span className="font-bold">{receipt.totalAmount.toLocaleString()} VND</span>
             </div>
-          )}
+            <div className="flex justify-between">
+              <span>Payment Method:</span>
+              <span>{receipt.paymentMethod}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Amount Paid:</span>
+              <span>{receipt.amountPaid.toLocaleString()} VND</span>
+            </div>
+            <div className="flex justify-between border-t border-dashed border-black pt-1 mt-1 font-bold">
+              <span>Change Due:</span>
+              <span>{receipt.changeDue.toLocaleString()} VND</span>
+            </div>
+          </div>
+
+          <div className="text-center mt-6 pt-4 border-t border-dashed border-black text-[9px]">
+            <p className="font-bold">THANK YOU FOR YOUR PURCHASE!</p>
+            <p>Please keep this receipt for refund or return.</p>
+            <p className="mt-1">Powered by SeShop POS</p>
+          </div>
+        </div>
+
+        {/* Beautiful Screen Preview (Visible on screen, hidden on print) */}
+        <div className="w-full max-w-lg rounded-md border border-primary/20 bg-surface p-6 shadow-soft print:hidden">
+          <style dangerouslySetInnerHTML={{__html: `
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              #pos-receipt-print, #pos-receipt-print * {
+                visibility: visible !important;
+              }
+              #pos-receipt-print {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 80mm !important;
+                margin: 0 auto !important;
+                padding: 10px !important;
+                display: block !important;
+                background-color: white !important;
+                color: black !important;
+              }
+            }
+          `}} />
+          <div className="text-center mb-6">
+            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-success/10 text-success">
+              <CheckCircle2 size={28} />
+            </div>
+            <h2 className="text-xl font-bold text-ink">Sale Complete</h2>
+            <p className="text-sm text-ink/55">Transaction processed successfully</p>
+          </div>
+
+          {/* Premium Digital Receipt Card */}
+          <div className="mb-6 overflow-hidden rounded-md border border-primary/10 bg-ink/[0.02] p-5 text-ink/80 shadow-inner">
+            <div className="flex justify-between border-b border-primary/10 pb-3 mb-4 text-sm font-semibold">
+              <span className="text-primary font-bold">SESHOP RECEIPT</span>
+              <span className="text-ink/60">{receipt.receiptNumber}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-y-2 text-xs border-b border-primary/10 pb-4 mb-4">
+              <div><span className="text-ink/40">Location:</span> <p className="font-medium text-ink">{receipt.locationName}</p></div>
+              <div><span className="text-ink/40">Date:</span> <p className="font-medium text-ink">{new Date(receipt.createdAt).toLocaleString()}</p></div>
+              <div><span className="text-ink/40">Cashier:</span> <p className="font-medium text-ink">{receipt.operatorName}</p></div>
+              <div><span className="text-ink/40">Payment:</span> <p className="font-medium text-ink">{receipt.paymentMethod}</p></div>
+            </div>
+
+            {/* List of Purchased items */}
+            <div className="space-y-3 max-h-48 overflow-y-auto mb-4 pr-1">
+              {receipt.items?.map((item) => (
+                <div key={item.id} className="flex justify-between items-start text-xs border-b border-primary/5 pb-2 last:border-0 last:pb-0">
+                  <div>
+                    <p className="font-bold text-ink">{item.name}</p>
+                    <p className="text-[10px] text-ink/45">Item ID: {item.id} | SKU: {item.skuCode}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-ink/60">{item.unitPrice.toLocaleString()} x {item.qty}</p>
+                    <p className="font-bold text-ink">{item.totalPrice.toLocaleString()} VND</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Receipt Summary */}
+            <div className="border-t border-primary/10 pt-3 space-y-2 text-sm font-medium">
+              <div className="flex justify-between text-ink/60">
+                <span>Total Amount:</span>
+                <span className="font-semibold text-ink">{receipt.totalAmount.toLocaleString()} VND</span>
+              </div>
+              <div className="flex justify-between text-ink/60">
+                <span>Amount Tendered:</span>
+                <span className="text-ink">{receipt.amountPaid.toLocaleString()} VND</span>
+              </div>
+              <div className="flex justify-between border-t border-primary/10 pt-2 text-base font-bold text-ink">
+                <span>Change Due:</span>
+                <span className="text-success">{receipt.changeDue.toLocaleString()} VND</span>
+              </div>
+            </div>
+          </div>
 
           <div className="flex gap-4">
             <Button className="flex-1" variant="secondary" onClick={() => window.print()}>Print Receipt</Button>

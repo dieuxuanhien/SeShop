@@ -123,6 +123,13 @@ public class ProcurementService {
         return mapToResponse(saved);
     }
 
+    @Transactional(readOnly = true)
+    public Long destinationLocationIdForPurchaseOrder(Long purchaseOrderId) {
+        return purchaseOrderRepository.findById(purchaseOrderId)
+                .map(PurchaseOrderEntity::getDestinationLocationId)
+                .orElseThrow(() -> new ResourceNotFoundException("INV_404", "Purchase order not found"));
+    }
+
     private PurchaseOrderResponse mapToResponse(PurchaseOrderEntity entity) {
         PurchaseOrderResponse response = new PurchaseOrderResponse();
         response.setId(entity.getId());

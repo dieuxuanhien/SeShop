@@ -10,6 +10,7 @@ public record AdminUserDto(
         String userType,
         String status,
         List<UserRoleAssignmentDto> roles,
+        List<StaffLocationAssignmentDto> assignedLocations,
         List<String> permissions
 ) {
 }
