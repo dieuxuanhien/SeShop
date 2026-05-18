@@ -9,5 +9,6 @@ import java.util.Optional;
 @Repository
 public interface UserRoleRepository extends JpaRepository<UserRoleEntity, Long> {
     List<UserRoleEntity> findByUserIdAndRevokedAtIsNull(Long userId);
+    List<UserRoleEntity> findByRoleIdAndRevokedAtIsNull(Long roleId);
     Optional<UserRoleEntity> findByUserIdAndRoleIdAndRevokedAtIsNull(Long userId, Long roleId);
 }

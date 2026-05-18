@@ -14,7 +14,8 @@ import {
   updateInstagramDraft,
   type InstagramDraft,
 } from '@/features/marketing/api/marketingApi';
-import { getProductById, uploadProductImage } from '@/features/catalog/api/catalogApi';
+import { getProductById, getProducts, uploadProductImage } from '@/features/catalog/api/catalogApi';
+import type { Product } from '@/entities/product/types';
 
 export function InstagramDrafts() {
   const [drafts, setDrafts] = useState<InstagramDraft[]>([]);
@@ -27,12 +28,44 @@ export function InstagramDrafts() {
   const [mediaOrder, setMediaOrder] = useState('');
   const [message, setMessage] = useState('');
   const [selectedDraftStatus, setSelectedDraftStatus] = useState<string>('DRAFT');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [isProductSearchLoading, setIsProductSearchLoading] = useState(false);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const timer = window.setTimeout(() => {
+      setIsProductSearchLoading(true);
+      getProducts({ page: 1, size: 20, search: productSearch.trim() || undefined })
+        .then((page) => {
+          if (isCurrent) {
+            setProducts(page.items);
+          }
+        })
+        .catch(() => {
+          if (isCurrent) {
+            setProducts([]);
+          }
+        })
+        .finally(() => {
+          if (isCurrent) {
+            setIsProductSearchLoading(false);
+          }
+        });
+    }, 250);
+
+    return () => {
+      isCurrent = false;
+      window.clearTimeout(timer);
+    };
+  }, [productSearch]);
 
   useEffect(() => {
     if (!selectedDraftId && productId > 0) {
       getProductById(productId)
         .then((product) => {
           if (product) {
+            setProductSearch(product.name);
             setCaption(`${product.name}\n\n${product.description || ''}`);
             setHashtags(`#${(product.brand || 'SeShop').replace(/\s+/g, '')} #fashion`);
             if (product.images && product.images.length > 0) {
@@ -50,6 +83,7 @@ export function InstagramDrafts() {
     try {
       const product = await getProductById(productId);
       if (product) {
+        setProductSearch(product.name);
         setCaption(`${product.name}\n\n${product.description || ''}`);
         setHashtags(`#${(product.brand || 'SeShop').replace(/\s+/g, '')} #fashion`);
         if (product.images && product.images.length > 0) {
@@ -103,6 +137,9 @@ export function InstagramDrafts() {
     setSelectedDraftId(draft.id);
     setSelectedDraftStatus(draft.status);
     setProductId(draft.productId);
+    getProductById(draft.productId)
+      .then((product) => setProductSearch(product?.name ?? ''))
+      .catch(() => setProductSearch(''));
     setCaption(draft.caption ?? '');
     setHashtags(draft.hashtags ?? '');
     setMediaOrder((draft.mediaOrder ?? []).join(', '));
@@ -113,6 +150,7 @@ export function InstagramDrafts() {
     setSelectedDraftId(null);
     setSelectedDraftStatus('DRAFT');
     setProductId(0);
+    setProductSearch('');
     setCaption('');
     setHashtags('');
     setMediaOrder('');
@@ -270,10 +308,26 @@ export function InstagramDrafts() {
           <Card className="border border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">{selectedDraftId ? `Edit Draft ${selectedDraftId}` : 'Compose Draft'}</h2>
             <form onSubmit={handleSaveDraft} className="mt-4 grid gap-4">
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <Input label="Product ID" type="number" min={1} value={productId || ''} onChange={(event) => setProductId(Number(event.target.value))} required />
-                </div>
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_140px] md:items-end">
+                <Input
+                  label="Find Product"
+                  value={productSearch}
+                  onChange={(event) => setProductSearch(event.target.value)}
+                  placeholder="Search by product name"
+                />
+                <Select
+                  label={isProductSearchLoading ? 'Product (Loading)' : 'Product'}
+                  value={productId ? String(productId) : ''}
+                  onChange={(event) => setProductId(event.target.value ? Number(event.target.value) : 0)}
+                  options={[
+                    { label: products.length ? 'Select product' : 'No products loaded', value: '' },
+                    ...products.map((product) => ({
+                      label: `${product.name}${product.brand ? ` - ${product.brand}` : ''}`,
+                      value: String(product.id),
+                    })),
+                  ]}
+                  required
+                />
                 <Button type="button" variant="secondary" onClick={loadProductDetails} disabled={!productId}>
                   Load Details
                 </Button>
@@ -299,7 +353,7 @@ export function InstagramDrafts() {
                     disabled={!productId}
                     className="block w-full text-sm text-ink/70 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                   />
-                  {!productId && <span className="text-xs text-ink/40">Enter a Product ID first to enable upload</span>}
+                  {!productId && <span className="text-xs text-ink/40">Select a product first to enable upload</span>}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">

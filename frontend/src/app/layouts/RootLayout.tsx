@@ -3,34 +3,41 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { useCartStore } from '@/features/cart/model/cartStore';
-import { hasPermission, hasRole } from '@/shared/lib/permissions';
+import {
+  ADMIN_DASHBOARD_PERMISSIONS,
+  ADMIN_SETTINGS_PERMISSIONS,
+  IDENTITY_ADMIN_PERMISSIONS,
+  LOCATION_VIEW_PERMISSIONS,
+  STAFF_OPERATION_PERMISSIONS,
+} from '@/shared/lib/access';
+import { hasAnyPermission, hasPermission } from '@/shared/lib/permissions';
 import { Button } from '@/shared/ui/Button';
 
 const navGroups = [
   {
     label: 'Staff',
     links: [
-      { to: '/staff/dashboard', label: 'Dashboard', role: 'STAFF' },
-      { to: '/staff/catalog', label: 'Catalog', role: 'STAFF', permission: 'catalog.write' },
-      { to: '/staff/inventory', label: 'Inventory', role: 'STAFF', permission: 'inventory.adjust' },
-      { to: '/staff/transfers', label: 'Transfers', role: 'STAFF', permission: 'inventory.transfer' },
-      { to: '/staff/orders', label: 'Orders', role: 'STAFF', permission: 'order.read' },
-      { to: '/staff/returns', label: 'Returns', role: 'STAFF', permission: 'refund.process' },
-      { to: '/staff/discounts', label: 'Discounts', role: 'STAFF', permission: 'promo.manage' },
-      { to: '/staff/pos', label: 'POS', role: 'STAFF', permission: 'pos.sell' },
-      { to: '/staff/pos/shift-close', label: 'Shift Close', role: 'STAFF', permission: 'pos.shift.manage' },
-      { to: '/staff/marketing/instagram', label: 'Instagram Account', role: 'STAFF', permission: 'social.connect' },
-      { to: '/staff/marketing/drafts', label: 'Instagram Drafts', role: 'STAFF', permission: 'social.compose' },
+      { to: '/staff/dashboard', label: 'Dashboard', permissions: STAFF_OPERATION_PERMISSIONS },
+      { to: '/staff/catalog', label: 'Catalog', permission: 'catalog.write' },
+      { to: '/staff/inventory', label: 'Inventory', permission: 'inventory.adjust' },
+      { to: '/staff/transfers', label: 'Transfers', permission: 'inventory.transfer' },
+      { to: '/staff/orders', label: 'Orders', permission: 'order.read' },
+      { to: '/staff/returns', label: 'Returns', permission: 'refund.process' },
+      { to: '/staff/discounts', label: 'Discounts', permission: 'promo.manage' },
+      { to: '/staff/pos', label: 'POS', permission: 'pos.sell' },
+      { to: '/staff/pos/shift-close', label: 'Shift Close', permission: 'pos.shift.manage' },
+      { to: '/staff/marketing/instagram', label: 'Instagram Account', permission: 'social.connect' },
+      { to: '/staff/marketing/drafts', label: 'Instagram Drafts', permission: 'social.compose' },
     ],
   },
   {
     label: 'Admin',
     links: [
-      { to: '/admin/dashboard', label: 'Dashboard', role: 'ADMIN' },
-      { to: '/admin/users-roles', label: 'Users & Roles', role: 'ADMIN', permission: 'role.create' },
-      { to: '/admin/locations', label: 'Locations', role: 'ADMIN' },
-      { to: '/admin/audit-logs', label: 'Audit Logs', role: 'ADMIN', permission: 'audit.read' },
-      { to: '/admin/settings', label: 'Settings', role: 'ADMIN' },
+      { to: '/admin/dashboard', label: 'Dashboard', permissions: ADMIN_DASHBOARD_PERMISSIONS },
+      { to: '/admin/users-roles', label: 'Users & Roles', permissions: IDENTITY_ADMIN_PERMISSIONS },
+      { to: '/admin/locations', label: 'Locations', permissions: LOCATION_VIEW_PERMISSIONS },
+      { to: '/admin/audit-logs', label: 'Audit Logs', permission: 'audit.read' },
+      { to: '/admin/settings', label: 'Settings', permissions: ADMIN_SETTINGS_PERMISSIONS },
     ],
   },
 ] as const;
@@ -51,7 +58,8 @@ export function RootLayout() {
       ...group,
       links: group.links.filter((link) => {
         const permission = 'permission' in link ? link.permission : undefined;
-        return hasRole(user, link.role) && hasPermission(user, permission);
+        const permissions = 'permissions' in link ? link.permissions : undefined;
+        return hasPermission(user, permission) && hasAnyPermission(user, permissions);
       }),
     }))
     .filter((group) => group.links.length > 0);

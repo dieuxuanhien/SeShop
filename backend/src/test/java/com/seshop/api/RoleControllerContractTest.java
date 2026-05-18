@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.seshop.identity.api.AssignPermissionsRequest;
 import com.seshop.identity.api.AssignRoleRequest;
+import com.seshop.identity.api.AdminRoleDto;
 import com.seshop.identity.api.CreateRoleRequest;
 import com.seshop.identity.api.RoleController;
 import com.seshop.identity.application.RoleService;
@@ -90,6 +91,7 @@ class RoleControllerContractTest {
         authenticate("role-create-token", List.of("role.create"));
         RoleEntity role = role(10L, "INVENTORY_AUDITOR", RoleStatus.INACTIVE);
         given(roleService.createRole(any(CreateRoleRequest.class))).willReturn(role);
+        given(roleService.toRoleDto(role)).willReturn(roleDto(10L, "INVENTORY_AUDITOR", RoleStatus.INACTIVE));
 
         mockMvc.perform(post("/api/v1/admin/roles")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken("role-create-token"))
@@ -109,7 +111,7 @@ class RoleControllerContractTest {
     @Test
     void listRolesAllowsAnyRoleAdministrationPermission() throws Exception {
         authenticate("role-list-token", List.of("role.permission.assign"));
-        given(roleService.listRoles()).willReturn(List.of(role(11L, "STORE_MANAGER", RoleStatus.ACTIVE)));
+        given(roleService.listRoleDetails()).willReturn(List.of(roleDto(11L, "STORE_MANAGER", RoleStatus.ACTIVE)));
 
         mockMvc.perform(get("/api/v1/admin/roles")
                         .header(HttpHeaders.AUTHORIZATION, bearerToken("role-list-token"))
@@ -190,5 +192,9 @@ class RoleControllerContractTest {
         role.setName(name);
         role.setStatus(status);
         return role;
+    }
+
+    private AdminRoleDto roleDto(Long id, String name, RoleStatus status) {
+        return new AdminRoleDto(id, name, name + " description", status.name(), List.of());
     }
 }

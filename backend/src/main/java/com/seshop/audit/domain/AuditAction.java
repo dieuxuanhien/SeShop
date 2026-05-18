@@ -3,7 +3,12 @@ package com.seshop.audit.domain;
 public enum AuditAction {
     USER_REGISTERED,
     USER_LOGGED_IN,
+    USER_CREATED,
+    USER_UPDATED,
+    USER_DELETED,
     ROLE_CREATED,
+    ROLE_UPDATED,
+    ROLE_DELETED,
     ROLE_PERMISSION_ASSIGNED,
     USER_ROLE_ASSIGNED,
     USER_ROLE_REVOKED,

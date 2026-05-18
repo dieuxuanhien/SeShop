@@ -2,6 +2,7 @@ package com.seshop.identity.application;
 
 import com.seshop.audit.application.AuditService;
 import com.seshop.audit.domain.AuditAction;
+import com.seshop.identity.domain.RoleStatus;
 import com.seshop.identity.domain.UserStatus;
 import com.seshop.identity.domain.UserType;
 import com.seshop.identity.infrastructure.persistence.RolePermissionRepository;
@@ -68,7 +69,9 @@ public class AuthApplicationService {
                 .filter(found -> passwordEncoder.matches(command.password(), found.getPasswordHash()))
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-        List<UserRoleEntity> activeRoles = userRoleRepository.findByUserIdAndRevokedAtIsNull(user.getId());
+        List<UserRoleEntity> activeRoles = userRoleRepository.findByUserIdAndRevokedAtIsNull(user.getId()).stream()
+                .filter(userRole -> userRole.getRole().getStatus() == RoleStatus.ACTIVE)
+                .toList();
         List<String> roles = activeRoles.stream()
                 .map(userRole -> userRole.getRole().getName())
                 .distinct()

@@ -33,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +51,8 @@ class RoleServiceTest {
     private UserRoleRepository userRoleRepository;
     @Mock
     private AuditService auditService;
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     private RoleService roleService;
 
@@ -61,7 +64,8 @@ class RoleServiceTest {
                 rolePermissionRepository,
                 userRepository,
                 userRoleRepository,
-                auditService
+                auditService,
+                passwordEncoder
         );
     }
 

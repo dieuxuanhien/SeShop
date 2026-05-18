@@ -1,9 +1,9 @@
 package com.seshop.identity.api;
 
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record AssignPermissionsRequest(
-        @NotEmpty List<String> permissionCodes
+        @NotNull List<String> permissionCodes
 ) {
 }

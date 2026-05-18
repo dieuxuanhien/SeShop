@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth';
 import { useCartStore } from '@/features/cart/model/cartStore';
+import { dashboardPathFor } from '@/shared/lib/access';
 
 export function PublicLayout() {
   const navigate = useNavigate();
@@ -14,6 +15,8 @@ export function PublicLayout() {
     logout();
     navigate('/');
   }
+
+  const dashboardPath = dashboardPathFor(user);
 
   return (
     <div className="min-h-screen bg-ink text-surface font-sans selection:bg-primary/30 selection:text-highlight">
@@ -52,8 +55,8 @@ export function PublicLayout() {
                   <div className="px-4 py-2 border-b border-surface/10 text-xs text-surface/50">{user?.username}</div>
                   <NavLink to="/profile" className="block px-4 py-2 text-sm hover:bg-surface/5">Profile</NavLink>
                   <NavLink to="/orders" className="block px-4 py-2 text-sm hover:bg-surface/5">Orders</NavLink>
-                  {user?.userType === 'ADMIN' || user?.userType === 'STAFF' ? (
-                    <NavLink to={user.userType === 'ADMIN' ? '/admin/dashboard' : '/staff/dashboard'} className="block px-4 py-2 text-sm text-primary hover:bg-surface/5">Dashboard</NavLink>
+                  {dashboardPath !== '/' ? (
+                    <NavLink to={dashboardPath} className="block px-4 py-2 text-sm text-primary hover:bg-surface/5">Dashboard</NavLink>
                   ) : null}
                   <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-surface/5">Logout</button>
                 </div>
@@ -83,6 +86,7 @@ export function PublicLayout() {
               <NavLink to="/products?q=accessories" onClick={() => setMobileOpen(false)} className="hover:text-primary">Accessories</NavLink>
               <NavLink to="/ai-chat" onClick={() => setMobileOpen(false)} className="hover:text-primary">AI Stylist</NavLink>
               {token ? <NavLink to="/orders" onClick={() => setMobileOpen(false)} className="hover:text-primary">Orders</NavLink> : null}
+              {token && dashboardPath !== '/' ? <NavLink to={dashboardPath} onClick={() => setMobileOpen(false)} className="hover:text-primary">Dashboard</NavLink> : null}
             </nav>
           </div>
         )}

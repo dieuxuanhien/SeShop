@@ -16,10 +16,58 @@ export type Role = {
   name: string;
   description?: string;
   status: string;
+  permissionCodes: string[];
 };
 
 type RolesResponse = {
   items: Role[];
+};
+
+export type Permission = {
+  id: number;
+  code: string;
+  description?: string;
+};
+
+type PermissionsResponse = {
+  items: Permission[];
+};
+
+export type UserRoleAssignment = {
+  assignmentId: number;
+  roleId: number;
+  roleName: string;
+  assignedAt?: string;
+};
+
+export type AdminUser = {
+  id: number;
+  username: string;
+  email: string;
+  phoneNumber: string;
+  userType: 'ADMIN' | 'STAFF' | 'CUSTOMER';
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+  roles: UserRoleAssignment[];
+  permissions: string[];
+};
+
+type UsersResponse = {
+  items: AdminUser[];
+};
+
+export type RoleMutationRequest = {
+  name: string;
+  description?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+};
+
+export type UserMutationRequest = {
+  username: string;
+  email: string;
+  phoneNumber: string;
+  password?: string;
+  userType: 'ADMIN' | 'STAFF' | 'CUSTOMER';
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
 };
 
 export async function getAuditLogs(): Promise<AuditLog[]> {
@@ -32,9 +80,23 @@ export async function getRoles(): Promise<Role[]> {
   return response.data.data.items;
 }
 
+export async function getPermissions(): Promise<Permission[]> {
+  const response = await apiClient.get<ApiResponse<PermissionsResponse>>('/admin/permissions');
+  return response.data.data.items;
+}
+
 export async function createRole(name: string, description?: string): Promise<Role> {
   const response = await apiClient.post<ApiResponse<Role>>('/admin/roles', { name, description });
   return response.data.data;
+}
+
+export async function updateRole(roleId: number, request: RoleMutationRequest): Promise<Role> {
+  const response = await apiClient.put<ApiResponse<Role>>(`/admin/roles/${roleId}`, request);
+  return response.data.data;
+}
+
+export async function deleteRole(roleId: number): Promise<void> {
+  await apiClient.delete(`/admin/roles/${roleId}`);
 }
 
 export async function assignPermissions(roleId: number, permissionCodes: string[]): Promise<void> {
@@ -47,6 +109,25 @@ export async function assignRoleToUser(userId: number, roleId: number): Promise<
 
 export async function revokeRoleFromUser(userId: number, assignmentId: number): Promise<void> {
   await apiClient.delete(`/admin/users/${userId}/roles/${assignmentId}`);
+}
+
+export async function getUsers(): Promise<AdminUser[]> {
+  const response = await apiClient.get<ApiResponse<UsersResponse>>('/admin/users');
+  return response.data.data.items;
+}
+
+export async function createUser(request: UserMutationRequest): Promise<AdminUser> {
+  const response = await apiClient.post<ApiResponse<AdminUser>>('/admin/users', request);
+  return response.data.data;
+}
+
+export async function updateUser(userId: number, request: UserMutationRequest): Promise<AdminUser> {
+  const response = await apiClient.put<ApiResponse<AdminUser>>(`/admin/users/${userId}`, request);
+  return response.data.data;
+}
+
+export async function deleteUser(userId: number): Promise<void> {
+  await apiClient.delete(`/admin/users/${userId}`);
 }
 
 export type LocationSummary = {

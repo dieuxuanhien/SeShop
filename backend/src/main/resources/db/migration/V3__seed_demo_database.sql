@@ -78,6 +78,15 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 JOIN permissions p ON p.code IN (
+  'role.create',
+  'role.update',
+  'role.delete',
+  'role.permission.assign',
+  'staff.role.assign',
+  'staff.user.read',
+  'staff.user.create',
+  'staff.user.update',
+  'staff.user.delete',
   'catalog.write',
   'inventory.adjust',
   'inventory.adjust.override',

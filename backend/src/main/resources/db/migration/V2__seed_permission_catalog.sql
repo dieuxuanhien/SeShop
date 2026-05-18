@@ -1,8 +1,14 @@
 INSERT INTO permissions (code, description)
 VALUES
   ('role.create', 'Create custom roles'),
+  ('role.update', 'Edit custom roles'),
+  ('role.delete', 'Delete or deactivate custom roles'),
   ('role.permission.assign', 'Assign permissions to roles'),
   ('staff.role.assign', 'Assign or revoke staff roles'),
+  ('staff.user.read', 'View staff and customer user accounts'),
+  ('staff.user.create', 'Create staff or customer user accounts'),
+  ('staff.user.update', 'Edit staff or customer user accounts'),
+  ('staff.user.delete', 'Deactivate staff or customer user accounts'),
   ('audit.read', 'View audit logs'),
   ('catalog.write', 'Create or update products and variants'),
   ('inventory.adjust', 'Adjust SKU inventory'),

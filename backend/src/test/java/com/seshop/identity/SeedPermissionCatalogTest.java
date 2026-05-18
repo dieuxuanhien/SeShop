@@ -14,8 +14,14 @@ class SeedPermissionCatalogTest {
 
     private static final List<String> EXPECTED_PERMISSION_CODES = List.of(
             "role.create",
+            "role.update",
+            "role.delete",
             "role.permission.assign",
             "staff.role.assign",
+            "staff.user.read",
+            "staff.user.create",
+            "staff.user.update",
+            "staff.user.delete",
             "audit.read",
             "catalog.write",
             "inventory.adjust",
@@ -58,6 +64,15 @@ class SeedPermissionCatalogTest {
                 .matcher(seed);
         assertThat(matcher.find()).isTrue();
         assertThat(splitSqlStringList(matcher.group(1))).containsExactly(
+                "role.create",
+                "role.update",
+                "role.delete",
+                "role.permission.assign",
+                "staff.role.assign",
+                "staff.user.read",
+                "staff.user.create",
+                "staff.user.update",
+                "staff.user.delete",
                 "catalog.write",
                 "inventory.adjust",
                 "inventory.adjust.override",

@@ -7,9 +7,16 @@ export function hasPermission(user: AuthUser | null, permission?: string) {
   return user?.permissions.includes(permission) ?? false;
 }
 
+export function hasAnyPermission(user: AuthUser | null, permissions?: readonly string[]) {
+  if (!permissions || permissions.length === 0) {
+    return true;
+  }
+  return permissions.some((permission) => hasPermission(user, permission));
+}
+
 export function hasRole(user: AuthUser | null, role?: string) {
   if (!role) {
     return true;
   }
-  return user?.userType === 'ADMIN' || user?.roles.includes('SUPER_ADMIN') || user?.roles.includes(role) || user?.userType === role;
+  return user?.roles.includes(role) || user?.userType === role;
 }

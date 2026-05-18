@@ -61,7 +61,7 @@ export function Checkout() {
     line1: '',
     ward: '',
     district: '',
-    city: '',
+    city: 'Ho Chi Minh City',
   });
   const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'COD'>('STRIPE');
   const [orderResponse, setOrderResponse] = useState<CheckoutResponse | null>(null);
@@ -268,53 +268,82 @@ export function Checkout() {
                   />
                 </div>
 
-                {/* Cascading Combo Boxes for Province, District, Ward */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-surface">Province / City</label>
-                  <select
-                    value={selectedProvinceId ?? ''}
-                    onChange={(e) => setSelectedProvinceId(Number(e.target.value))}
-                    className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none"
-                    required
-                  >
-                    <option value="">Select Province / City</option>
-                    {provinces.map((p) => (
-                      <option key={p.ProvinceID} value={p.ProvinceID}>{p.ProvinceName}</option>
-                    ))}
-                  </select>
-                </div>
+                {provinces.length === 0 ? (
+                  <>
+                    <Input
+                      label="Province / City"
+                      value={address.city}
+                      onChange={(e) => setAddress({ ...address, city: e.target.value })}
+                      required
+                    />
+                    <Input
+                      label="District"
+                      value={address.district}
+                      onChange={(e) => setAddress({ ...address, district: e.target.value })}
+                      required
+                    />
+                    <div className="md:col-span-2">
+                      <Input
+                        label="Ward / Commune"
+                        value={address.ward}
+                        onChange={(e) => setAddress({ ...address, ward: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor="checkout-province" className="text-xs font-medium text-surface">Province / City</label>
+                      <select
+                        id="checkout-province"
+                        value={selectedProvinceId ?? ''}
+                        onChange={(e) => setSelectedProvinceId(Number(e.target.value))}
+                        className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none"
+                        required
+                      >
+                        <option value="">Select Province / City</option>
+                        {provinces.map((p) => (
+                          <option key={p.ProvinceID} value={p.ProvinceID}>{p.ProvinceName}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-surface">District</label>
-                  <select
-                    value={selectedDistrictId ?? ''}
-                    onChange={(e) => setSelectedDistrictId(Number(e.target.value))}
-                    disabled={!selectedProvinceId}
-                    className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none disabled:opacity-50"
-                    required
-                  >
-                    <option value="">Select District</option>
-                    {districts.map((d) => (
-                      <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>
-                    ))}
-                  </select>
-                </div>
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor="checkout-district" className="text-xs font-medium text-surface">District</label>
+                      <select
+                        id="checkout-district"
+                        value={selectedDistrictId ?? ''}
+                        onChange={(e) => setSelectedDistrictId(Number(e.target.value))}
+                        disabled={!selectedProvinceId}
+                        className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none disabled:opacity-50"
+                        required
+                      >
+                        <option value="">Select District</option>
+                        {districts.map((d) => (
+                          <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="text-xs font-medium text-surface">Ward / Commune</label>
-                  <select
-                    value={selectedWardCode}
-                    onChange={(e) => handleWardChange(e.target.value)}
-                    disabled={!selectedDistrictId}
-                    className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none disabled:opacity-50"
-                    required
-                  >
-                    <option value="">Select Ward / Commune</option>
-                    {wards.map((w) => (
-                      <option key={w.WardCode} value={w.WardCode}>{w.WardName}</option>
-                    ))}
-                  </select>
-                </div>
+                    <div className="flex flex-col gap-1 md:col-span-2">
+                      <label htmlFor="checkout-ward" className="text-xs font-medium text-surface">Ward / Commune</label>
+                      <select
+                        id="checkout-ward"
+                        value={selectedWardCode}
+                        onChange={(e) => handleWardChange(e.target.value)}
+                        disabled={!selectedDistrictId}
+                        className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none disabled:opacity-50"
+                        required
+                      >
+                        <option value="">Select Ward / Commune</option>
+                        {wards.map((w) => (
+                          <option key={w.WardCode} value={w.WardCode}>{w.WardName}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
               {step === 1 && (
                 <div className="mt-6 flex justify-end">
