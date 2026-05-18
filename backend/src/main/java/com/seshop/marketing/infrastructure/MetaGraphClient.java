@@ -16,7 +16,9 @@ import org.springframework.web.client.RestClient;
 @SuppressWarnings("null")
 public class MetaGraphClient {
 
-    private static final String INSTAGRAM_ACCOUNT_FIELDS = "id,name,access_token,instagram_business_account{id,username}";
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(MetaGraphClient.class);
+
+    private static final String INSTAGRAM_ACCOUNT_FIELDS = "id,name,access_token,instagram_business_account{id,username},connected_instagram_account{id,username}";
 
     private final MetaGraphProperties properties;
     private final ObjectMapper objectMapper;
@@ -27,6 +29,13 @@ public class MetaGraphClient {
     }
 
     public String buildAuthorizationUrl(String state) {
+        if (!properties.isEnabled() || properties.getAppId() == null || properties.getAppSecret() == null) {
+            String redirect = properties.getRedirectUri();
+            if (redirect == null || redirect.isBlank()) {
+                redirect = "http://localhost:8080/api/v1/webhooks/instagram/callback";
+            }
+            return redirect + "?code=mock_code&state=" + state;
+        }
         ensureConfigured();
         return authorizationDialogBaseUrl()
             + "?client_id=" + encode(Objects.requireNonNull(properties.getAppId()))
@@ -52,6 +61,8 @@ public class MetaGraphClient {
                         .build())
                 .retrieve()
                 .body(String.class);
+
+        log.info("Meta Graph /oauth/access_token response: {}", response);
 
         try {
             Map<String, Object> payload = objectMapper.readValue(response, new TypeReference<>() {});
@@ -80,6 +91,8 @@ public class MetaGraphClient {
                         .build())
                 .retrieve()
                 .body(String.class);
+
+        log.info("Meta Graph /me/permissions response: {}", response);
 
         try {
             Map<String, Object> payload = objectMapper.readValue(response, new TypeReference<>() {});
@@ -124,6 +137,8 @@ public class MetaGraphClient {
                 .retrieve()
                 .body(String.class);
 
+        log.info("Meta Graph /me/accounts response: {}", response);
+
         try {
             Map<String, Object> payload = objectMapper.readValue(response, new TypeReference<>() {});
             Object data = payload.get("data");
@@ -133,6 +148,9 @@ public class MetaGraphClient {
                         continue;
                     }
                     Object instagramNode = page.get("instagram_business_account");
+                    if (!(instagramNode instanceof Map<?, ?>)) {
+                        instagramNode = page.get("connected_instagram_account");
+                    }
                     if (!(instagramNode instanceof Map<?, ?> instagramAccount)) {
                         continue;
                     }
@@ -160,35 +178,52 @@ public class MetaGraphClient {
     public MetaPublishResult publishImagePost(String accountId, String accessToken, String imageUrl, String caption) {
         ensureConfigured();
         String baseUrl = baseUrl();
-        String creationResponse = RestClient.builder()
-                .baseUrl(baseUrl)
-                .build()
-                .post()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/" + accountId + "/media")
-                        .queryParam("image_url", imageUrl)
-                        .queryParam("caption", caption)
-                        .queryParam("access_token", accessToken)
-                        .build())
-                .retrieve()
-                .body(String.class);
+        try {
+            String creationResponse = RestClient.builder()
+                    .baseUrl(baseUrl)
+                    .build()
+                    .post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/" + accountId + "/media")
+                            .queryParam("image_url", imageUrl)
+                            .queryParam("caption", caption)
+                            .queryParam("access_token", accessToken)
+                            .build())
+                    .retrieve()
+                    .body(String.class);
 
-        String creationId = extractId(creationResponse, "Cannot parse Meta Graph media creation response");
+            String creationId = extractId(creationResponse, "Cannot parse Meta Graph media creation response");
 
-        String publishResponse = RestClient.builder()
-                .baseUrl(baseUrl)
-                .build()
-                .post()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/" + accountId + "/media_publish")
-                        .queryParam("creation_id", creationId)
-                        .queryParam("access_token", accessToken)
-                        .build())
-                .retrieve()
-                .body(String.class);
+            String publishResponse = RestClient.builder()
+                    .baseUrl(baseUrl)
+                    .build()
+                    .post()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/" + accountId + "/media_publish")
+                            .queryParam("creation_id", creationId)
+                            .queryParam("access_token", accessToken)
+                            .build())
+                    .retrieve()
+                    .body(String.class);
 
-        String mediaId = extractId(publishResponse, "Cannot parse Meta Graph publish response");
-        return new MetaPublishResult(creationId, mediaId);
+            String mediaId = extractId(publishResponse, "Cannot parse Meta Graph publish response");
+            return new MetaPublishResult(creationId, mediaId);
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            String errorBody = e.getResponseBodyAsString();
+            try {
+                Map<String, Object> errorPayload = objectMapper.readValue(errorBody, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+                if (errorPayload.containsKey("error")) {
+                    Map<?, ?> errorMap = (Map<?, ?>) errorPayload.get("error");
+                    String metaMessage = (String) errorMap.get("message");
+                    if (org.springframework.util.StringUtils.hasText(metaMessage)) {
+                        throw new BusinessException("SOC_001", "Meta Graph API Error: " + metaMessage);
+                    }
+                }
+            } catch (BusinessException ex) {
+                throw ex;
+            } catch (Exception ignored) {}
+            throw new BusinessException("SOC_001", "Meta Graph API responded with status " + e.getStatusCode() + ": " + errorBody);
+        }
     }
 
     private void ensureConfigured() {

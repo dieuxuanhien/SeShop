@@ -169,10 +169,10 @@ This proves your Meta account setup is valid even if the app callback is not.
 4. Call:
 
 ```text
-GET /me/accounts?fields=id,name,access_token,instagram_business_account{id,username}
+GET /me/accounts?fields=id,name,access_token,instagram_business_account{id,username},connected_instagram_account{id,username}
 ```
 
-5. Confirm one Page returns `instagram_business_account.id`.
+5. Confirm one Page returns `instagram_business_account.id` or `connected_instagram_account.id`.
 6. Use that IG ID and Page access token to create a media container:
 
 ```text

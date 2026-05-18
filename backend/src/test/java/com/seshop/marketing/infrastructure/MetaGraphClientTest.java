@@ -104,8 +104,53 @@ class MetaGraphClientTest {
         assertThat(requests.get(1).getPath()).isEqualTo("/v25.0/me/accounts");
         Map<String, List<String>> accountsQuery = queryParams(requests.get(1));
         assertThat(first(accountsQuery, "fields"))
-                .isEqualTo("id,name,access_token,instagram_business_account{id,username}");
+                .isEqualTo("id,name,access_token,instagram_business_account{id,username},connected_instagram_account{id,username}");
         assertThat(first(accountsQuery, "access_token")).isEqualTo("user-token");
+    }
+
+    @Test
+    void exchangesCodeAndFindsConnectedInstagramAccountThroughV25Flow() throws IOException {
+        List<URI> requests = new ArrayList<>();
+        server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/v25.0/oauth/access_token", exchange -> {
+            requests.add(exchange.getRequestURI());
+            respond(exchange, """
+                    {
+                      "access_token": "user-token",
+                      "expires_in": 5184000
+                    }
+                    """);
+        });
+        server.createContext("/v25.0/me/accounts", exchange -> {
+            requests.add(exchange.getRequestURI());
+            respond(exchange, """
+                    {
+                      "data": [
+                        {
+                          "id": "page-1",
+                          "name": "SeShop",
+                          "access_token": "page-token",
+                          "connected_instagram_account": {
+                            "id": "ig-456",
+                            "username": "seshop_connected"
+                          }
+                        }
+                      ]
+                    }
+                    """);
+        });
+        server.start();
+
+        MetaGraphProperties properties = configuredProperties();
+        properties.setBaseUrl("http://localhost:" + server.getAddress().getPort() + "/v25.0");
+        MetaGraphClient client = new MetaGraphClient(properties, objectMapper);
+
+        MetaGraphClient.MetaTokenResult token = client.exchangeCode("auth-code");
+        MetaGraphClient.MetaAccountResult account = client.getAccount(token.accessToken());
+
+        assertThat(account.accountId()).isEqualTo("ig-456");
+        assertThat(account.username()).isEqualTo("seshop_connected");
+        assertThat(account.accessToken()).isEqualTo("page-token");
     }
 
         @Test

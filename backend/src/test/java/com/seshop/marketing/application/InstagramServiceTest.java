@@ -71,7 +71,7 @@ class InstagramServiceTest {
         when(draftRepository.save(any(InstagramDraftEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0, InstagramDraftEntity.class));
 
-        InstagramPublishResultDto result = service.publishDraft(11L);
+        InstagramPublishResultDto result = service.publishDraft(7L, 11L);
 
         assertThat(result.getDraftId()).isEqualTo(11L);
         assertThat(result.getStatus()).isEqualTo("PUBLISHED");

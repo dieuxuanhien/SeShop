@@ -20,10 +20,13 @@ public class InstagramWebhookController {
     }
 
     @GetMapping("/callback")
-    public ApiResponse<InstagramConnectionDto> callback(
+    public org.springframework.http.ResponseEntity<Void> callback(
             @RequestParam("code") String code,
             @RequestParam("state") String state
     ) {
-        return ApiResponse.success(instagramService.completeConnection(state, code));
+        instagramService.completeConnection(state, code);
+        return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                .header(org.springframework.http.HttpHeaders.LOCATION, "http://localhost:5173/staff/marketing/instagram")
+                .build();
     }
 }

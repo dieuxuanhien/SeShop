@@ -97,7 +97,7 @@ export function InstagramConnection() {
           <Card className="border border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Permissions</h2>
             <ul className="mt-4 grid gap-2 text-sm text-ink/70">
-              {['instagram_basic', 'pages_show_list', 'instagram_content_publish'].map((scope) => (
+              {['instagram_basic', 'pages_show_list', 'instagram_content_publish', 'business_management'].map((scope) => (
                 <li key={scope} className="flex items-center justify-between rounded-md border border-primary/15 bg-ink/5 p-2">
                   <span>{scope}</span>
                   <Badge variant={status === 'CONNECTED' ? 'success' : 'warning'}>{status === 'CONNECTED' ? 'Ready' : 'Pending'}</Badge>

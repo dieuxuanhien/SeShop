@@ -79,8 +79,8 @@ public class InstagramController {
     }
 
     @PostMapping("/drafts/{draftId}/publish")
-    public ApiResponse<InstagramPublishResultDto> publishDraft(@PathVariable long draftId) {
+    public ApiResponse<InstagramPublishResultDto> publishDraft(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable long draftId) {
         permissionValidator.require(SOCIAL_COMPOSE);
-        return ApiResponse.success(instagramService.publishDraft(draftId));
+        return ApiResponse.success(instagramService.publishDraft(user.userId(), draftId));
     }
 }

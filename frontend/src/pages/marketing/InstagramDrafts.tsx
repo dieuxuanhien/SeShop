@@ -14,6 +14,7 @@ import {
   updateInstagramDraft,
   type InstagramDraft,
 } from '@/features/marketing/api/marketingApi';
+import { getProductById, uploadProductImage } from '@/features/catalog/api/catalogApi';
 
 export function InstagramDrafts() {
   const [drafts, setDrafts] = useState<InstagramDraft[]>([]);
@@ -26,6 +27,65 @@ export function InstagramDrafts() {
   const [mediaOrder, setMediaOrder] = useState('');
   const [message, setMessage] = useState('');
   const [selectedDraftStatus, setSelectedDraftStatus] = useState<string>('DRAFT');
+
+  useEffect(() => {
+    if (!selectedDraftId && productId > 0) {
+      getProductById(productId)
+        .then((product) => {
+          if (product) {
+            setCaption(`${product.name}\n\n${product.description || ''}`);
+            setHashtags(`#${(product.brand || 'SeShop').replace(/\s+/g, '')} #fashion`);
+            if (product.images && product.images.length > 0) {
+              const urls = product.images.map((img) => img.url).join(', ');
+              setMediaOrder(urls);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [productId, selectedDraftId]);
+
+  async function loadProductDetails() {
+    if (!productId) return;
+    try {
+      const product = await getProductById(productId);
+      if (product) {
+        setCaption(`${product.name}\n\n${product.description || ''}`);
+        setHashtags(`#${(product.brand || 'SeShop').replace(/\s+/g, '')} #fashion`);
+        if (product.images && product.images.length > 0) {
+          const urls = product.images.map((img) => img.url).join(', ');
+          setMediaOrder(urls);
+        }
+        setMessage('Product details loaded.');
+      }
+    } catch {
+      setMessage('Could not load product details.');
+    }
+  }
+
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file || !productId) return;
+    setIsSaving(true);
+    setMessage('');
+    try {
+      const product = await uploadProductImage(productId, file);
+      const newImageUrl = product.images?.[product.images.length - 1]?.url;
+      if (newImageUrl) {
+        const currentMedia = mediaOrder ? mediaOrder.split(',').map(m => m.trim()).filter(Boolean) : [];
+        currentMedia.push(newImageUrl);
+        setMediaOrder(currentMedia.join(', '));
+        setMessage('Image uploaded and URL added successfully.');
+      } else {
+        setMessage('Image uploaded but URL could not be retrieved.');
+      }
+    } catch {
+      setMessage('Image could not be uploaded.');
+    } finally {
+      setIsSaving(false);
+      event.target.value = '';
+    }
+  }
 
   function loadDrafts() {
     setIsLoading(true);
@@ -210,7 +270,14 @@ export function InstagramDrafts() {
           <Card className="border border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">{selectedDraftId ? `Edit Draft ${selectedDraftId}` : 'Compose Draft'}</h2>
             <form onSubmit={handleSaveDraft} className="mt-4 grid gap-4">
-              <Input label="Product ID" type="number" min={1} value={productId || ''} onChange={(event) => setProductId(Number(event.target.value))} required />
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Input label="Product ID" type="number" min={1} value={productId || ''} onChange={(event) => setProductId(Number(event.target.value))} required />
+                </div>
+                <Button type="button" variant="secondary" onClick={loadProductDetails} disabled={!productId}>
+                  Load Details
+                </Button>
+              </div>
               <div className="grid gap-2">
                 <label className="text-xs font-semibold uppercase tracking-wide text-ink/50">Caption</label>
                 <textarea
@@ -222,11 +289,24 @@ export function InstagramDrafts() {
               </div>
               <Input label="Hashtags" placeholder="#seshop #newarrival" value={hashtags} onChange={(event) => setHashtags(event.target.value)} />
               <Input label="Media URLs" placeholder="https://image-1, https://image-2" value={mediaOrder} onChange={(event) => setMediaOrder(event.target.value)} />
+              <div className="grid gap-2">
+                <label className="text-xs font-semibold uppercase tracking-wide text-ink/50">Upload Local Image</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={!productId}
+                    className="block w-full text-sm text-ink/70 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  {!productId && <span className="text-xs text-ink/40">Enter a Product ID first to enable upload</span>}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" variant="secondary" isLoading={isSaving}>Save Draft</Button>
                 <Button type="button" variant="secondary" onClick={handleSubmitReview} disabled={!selectedDraftId} isLoading={isSaving}>Submit Review</Button>
                 <Button type="button" variant="secondary" onClick={handleApprove} disabled={!selectedDraftId} isLoading={isSaving}>Approve</Button>
-                <Button type="button" onClick={handlePublish} disabled={!selectedDraftId || selectedDraftStatus !== 'APPROVED'} isLoading={isSaving}>Publish to Instagram</Button>
+                <Button type="button" onClick={handlePublish} disabled={!selectedDraftId} isLoading={isSaving}>Publish to Instagram</Button>
               </div>
             </form>
             {message ? <p className="mt-4 text-sm text-ink/65">{message}</p> : null}
