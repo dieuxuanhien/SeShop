@@ -3,7 +3,10 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { Badge } from '@/shared/ui/Badge';
 import { getStaffOrders, allocateOrder, packOrder, shipOrder, type StaffOrder } from '@/features/staff/api/staffOrdersApi';
+import { getInventoryBalances, type InventoryBalance } from '@/features/staff/api/staffInventoryApi';
 import { Spinner } from '@/shared/ui/Spinner';
+import { Input } from '@/shared/ui/Input';
+import { Select } from '@/shared/ui/Select';
 
 export function OrdersManagement() {
   const [orders, setOrders] = useState<StaffOrder[]>([]);
@@ -11,6 +14,14 @@ export function OrdersManagement() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [paymentFilter, setPaymentFilter] = useState('ALL');
+  const [locations, setLocations] = useState<InventoryBalance[]>([]);
+  
+  // Dialog states
+  const [shipDialog, setShipDialog] = useState<number | null>(null);
+  const [trackingInput, setTrackingInput] = useState('');
+  
+  const [allocateDialog, setAllocateDialog] = useState<number | null>(null);
+  const [locationInput, setLocationInput] = useState('1');
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -26,6 +37,7 @@ export function OrdersManagement() {
 
   useEffect(() => {
     fetchOrders();
+    getInventoryBalances(1, 100).then(res => setLocations(res.items)).catch(console.error);
   }, []);
 
   const filteredOrders = orders.filter((order) => {
@@ -37,17 +49,50 @@ export function OrdersManagement() {
   const handleAction = async (orderId: number, action: 'allocate' | 'pack' | 'ship') => {
     setActionLoading(orderId);
     try {
-      if (action === 'allocate') await allocateOrder(orderId);
-      if (action === 'pack') await packOrder(orderId);
-      if (action === 'ship') {
-        const order = orders.find((item) => item.id === orderId);
-        await shipOrder(orderId, getRecipient(order));
+      if (action === 'allocate') {
+        setAllocateDialog(orderId);
       }
+      if (action === 'pack') {
+        await packOrder(orderId);
+        await fetchOrders();
+      }
+      if (action === 'ship') {
+        setShipDialog(orderId);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const confirmAllocate = async () => {
+    if (!allocateDialog) return;
+    setActionLoading(allocateDialog);
+    try {
+      await allocateOrder(allocateDialog);
       await fetchOrders();
     } catch (e) {
       console.error(e);
     } finally {
       setActionLoading(null);
+      setAllocateDialog(null);
+    }
+  };
+
+  const confirmShip = async () => {
+    if (!shipDialog) return;
+    setActionLoading(shipDialog);
+    try {
+      const order = orders.find((item) => item.id === shipDialog);
+      await shipOrder(shipDialog, { ...getRecipient(order), trackingNumber: trackingInput || undefined });
+      await fetchOrders();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setActionLoading(null);
+      setShipDialog(null);
+      setTrackingInput('');
     }
   };
 
@@ -172,6 +217,50 @@ export function OrdersManagement() {
           </table>
         </div>
       </Card>
+
+      {/* Allocate Dialog */}
+      {allocateDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-md border border-primary/20 bg-surface p-6 shadow-xl">
+            <h2 className="text-xl font-bold text-ink mb-4">Allocate Order</h2>
+            <p className="text-sm text-ink/70 mb-4">Select the inventory location to fulfill this order from.</p>
+            <Select
+              label="Location"
+              value={locationInput}
+              onChange={(e) => setLocationInput(e.target.value)}
+              options={
+                locations.length > 0
+                  ? Array.from(new Set(locations.map(l => l.locationId))).map(id => ({ label: `Location ${id}`, value: String(id) }))
+                  : [{ label: 'Location 1', value: '1' }]
+              }
+            />
+            <div className="mt-6 flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setAllocateDialog(null)}>Cancel</Button>
+              <Button onClick={confirmAllocate} isLoading={actionLoading === allocateDialog}>Confirm Allocation</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ship Dialog */}
+      {shipDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-md border border-primary/20 bg-surface p-6 shadow-xl">
+            <h2 className="text-xl font-bold text-ink mb-4">Ship Order</h2>
+            <p className="text-sm text-ink/70 mb-4">Enter the tracking number for the shipment.</p>
+            <Input
+              label="Tracking Number"
+              placeholder="e.g. GHN123456789"
+              value={trackingInput}
+              onChange={(e) => setTrackingInput(e.target.value)}
+            />
+            <div className="mt-6 flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setShipDialog(null)}>Cancel</Button>
+              <Button onClick={confirmShip} isLoading={actionLoading === shipDialog}>Confirm Shipment</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

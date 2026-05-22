@@ -95,4 +95,11 @@ public class PublicCatalogController {
         response.put("data", catalogService.getCategories());
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/brands")
+    public ResponseEntity<Map<String, Object>> getBrands() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", catalogService.getBrands());
+        return ResponseEntity.ok(response);
+    }
 }

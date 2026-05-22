@@ -118,6 +118,11 @@ export async function getCategories(): Promise<Category[]> {
   return response.data.data;
 }
 
+export async function getBrands(): Promise<string[]> {
+  const response = await apiClient.get<ApiResponse<string[]>>('/brands');
+  return response.data.data;
+}
+
 export type ProductMutationRequest = {
   name: string;
   brand?: string;

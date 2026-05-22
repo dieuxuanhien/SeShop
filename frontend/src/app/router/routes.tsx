@@ -32,6 +32,8 @@ import { SalesReport } from '@/pages/staff/SalesReport';
 import { ShiftClose } from '@/pages/staff/ShiftClose';
 import { StaffDashboard } from '@/pages/staff/Dashboard';
 import { StockTransfer } from '@/pages/staff/StockTransfer';
+import { CycleCount } from '@/pages/staff/CycleCount';
+import { TaxInvoice } from '@/pages/staff/TaxInvoice';
 import {
   ADMIN_DASHBOARD_PERMISSIONS,
   ADMIN_SETTINGS_PERMISSIONS,
@@ -104,8 +106,16 @@ export function AppRoutes() {
           <Route path="staff/pos/shift-close" element={<ShiftClose />} />
         </Route>
 
+        <Route element={<ProtectedRoute permission="inventory.adjust" />}>
+          <Route path="staff/cycle-counts" element={<CycleCount />} />
+        </Route>
+
         <Route element={<ProtectedRoute permission="inventory.transfer" />}>
           <Route path="staff/purchase-orders" element={<PurchaseOrders />} />
+        </Route>
+
+        <Route element={<ProtectedRoute permission="invoice.manage" />}>
+          <Route path="staff/invoices" element={<TaxInvoice />} />
         </Route>
 
         <Route element={<ProtectedRoute permission="report.read" />}>

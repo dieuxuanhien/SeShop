@@ -11,6 +11,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
 
+    @Query("SELECT DISTINCT p.brand FROM ProductEntity p WHERE p.brand IS NOT NULL AND p.brand != '' ORDER BY p.brand")
+    java.util.List<String> findDistinctBrands();
+
     @Query("SELECT p FROM ProductEntity p WHERE " +
            "(:keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (:brand = '' OR LOWER(p.brand) = LOWER(:brand))")

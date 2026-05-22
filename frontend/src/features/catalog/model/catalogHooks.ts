@@ -4,6 +4,7 @@ import {
   getProductById,
   getProductAvailability,
   getCategories,
+  getBrands,
   type ProductListParams,
 } from '../api/catalogApi';
 
@@ -34,6 +35,14 @@ export function useCategories() {
   return useQuery({
     queryKey: ['categories'],
     queryFn: () => getCategories(),
+    staleTime: 5 * 60 * 1000, // 5 min
+  });
+}
+
+export function useBrands() {
+  return useQuery({
+    queryKey: ['brands'],
+    queryFn: () => getBrands(),
     staleTime: 5 * 60 * 1000, // 5 min
   });
 }

@@ -48,3 +48,11 @@ export async function createGoodsReceipt(request: GoodsReceiptRequest): Promise<
   const response = await apiClient.post<ApiResponse<GoodsReceiptResponse>>('/staff/goods-receipts', request);
   return response.data.data;
 }
+
+export async function getPurchaseOrders(page = 1, size = 20): Promise<{ items: PurchaseOrderResponse[], totalPages: number, page: number }> {
+  const response = await apiClient.get<ApiResponse<{ items: PurchaseOrderResponse[], totalPages: number, page: number }>>('/staff/purchase-orders', {
+    params: { page: page - 1, size }
+  });
+  const data = response.data.data;
+  return { ...data, page: data.page + 1 };
+}

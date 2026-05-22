@@ -138,7 +138,41 @@ export function ReturnsManagement() {
                 required
               />
             </label>
-            <Button type="submit" isLoading={isSaving}>
+            <div className="flex items-center gap-2 mt-2 border-t border-primary/10 pt-4">
+              <input 
+                type="checkbox" 
+                id="isExchange" 
+                className="rounded border-primary/30 text-primary focus:ring-primary"
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setReason(prev => prev ? `[EXCHANGE] ${prev}` : '[EXCHANGE] ');
+                  } else {
+                    setReason(prev => prev.replace(/\[EXCHANGE\]\s*/g, ''));
+                  }
+                }}
+                checked={reason.includes('[EXCHANGE]')}
+              />
+              <label htmlFor="isExchange" className="text-sm font-medium text-ink">
+                Process as Exchange
+              </label>
+            </div>
+            {reason.includes('[EXCHANGE]') && (
+              <Input 
+                label="Replacement Item SKU (Optional)" 
+                placeholder="e.g. SKU-12345" 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const prefixMatch = reason.match(/\[EXCHANGE.*?\]/);
+                  const prefix = val ? `[EXCHANGE for ${val}]` : '[EXCHANGE]';
+                  if (prefixMatch) {
+                    setReason(reason.replace(prefixMatch[0], prefix));
+                  } else {
+                    setReason(`${prefix} ${reason}`);
+                  }
+                }}
+              />
+            )}
+            <Button type="submit" isLoading={isSaving} className="mt-2">
               Create Return
             </Button>
           </form>

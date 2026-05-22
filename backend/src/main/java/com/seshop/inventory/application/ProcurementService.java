@@ -130,6 +130,12 @@ public class ProcurementService {
                 .orElseThrow(() -> new ResourceNotFoundException("INV_404", "Purchase order not found"));
     }
 
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<PurchaseOrderResponse> listPurchaseOrders(int page, int size) {
+        return purchaseOrderRepository.findAll(org.springframework.data.domain.PageRequest.of(page, size))
+                .map(this::mapToResponse);
+    }
+
     private PurchaseOrderResponse mapToResponse(PurchaseOrderEntity entity) {
         PurchaseOrderResponse response = new PurchaseOrderResponse();
         response.setId(entity.getId());

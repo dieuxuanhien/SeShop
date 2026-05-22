@@ -47,3 +47,25 @@ h3,
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(196, 160, 83, 0.1);
 }
+
+/* POS receipt print styles — replaces dangerouslySetInnerHTML in POS.tsx */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #pos-receipt-print,
+  #pos-receipt-print * {
+    visibility: visible !important;
+  }
+  #pos-receipt-print {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 10px !important;
+    display: block !important;
+    background-color: white !important;
+    color: black !important;
+  }
+}

@@ -53,4 +53,20 @@ public class StaffProcurementController {
         locationAccessService.requireLocationAccess(user, destinationLocationId);
         return ApiResponse.success(procurementService.createGoodsReceipt(request, user.userId()));
     }
+
+    @GetMapping("/purchase-orders")
+    public ApiResponse<java.util.Map<String, Object>> listPurchaseOrders(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        permissionValidator.require(INVENTORY_TRANSFER);
+        var orders = procurementService.listPurchaseOrders(page, size);
+        return ApiResponse.success(java.util.Map.of(
+                "items", orders.getContent(),
+                "page", orders.getNumber(),
+                "size", orders.getSize(),
+                "totalElements", orders.getTotalElements(),
+                "totalPages", orders.getTotalPages()
+        ));
+    }
 }

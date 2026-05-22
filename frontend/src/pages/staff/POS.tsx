@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { CheckCircle2, X, Clock, Calendar, CreditCard, User, Store, Printer, Eye } from 'lucide-react';
+import { PrintableReceipt } from '@/features/staff/ui/PrintableReceipt';
+import { PosHistory } from '@/features/staff/ui/PosHistory';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { processPosSale, lookupProductBySku, getReceiptHistory, type PosItem, type ProcessPosSaleResponse, type ReceiptDto } from '@/features/staff/api/staffPosApi';
@@ -18,11 +20,6 @@ export function POS() {
   const [printReceipt, setPrintReceipt] = useState<ReceiptDto | null>(null);
 
   const [view, setView] = useState<'pos' | 'history'>('pos');
-  const [historyList, setHistoryList] = useState<ReceiptDto[]>([]);
-  const [selectedHistoryReceipt, setSelectedHistoryReceipt] = useState<ReceiptDto | null>(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyPage, setHistoryPage] = useState(0);
-  const [historyTotalPages, setHistoryTotalPages] = useState(0);
 
   const fetchRecentSales = async () => {
     setRecentSalesLoading(true);
@@ -40,10 +37,53 @@ export function POS() {
     fetchRecentSales();
   }, []);
 
+  // Barcode scanner support (GAP-20)
+  useEffect(() => {
+    let barcodeBuffer = '';
+    let barcodeTimeout: ReturnType<typeof setTimeout>;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input other than our main barcode input
+      if (
+        e.target instanceof HTMLInputElement &&
+        e.target !== barcodeInputRef.current &&
+        e.target.type !== 'radio' &&
+        e.target.type !== 'checkbox'
+      ) {
+        return;
+      }
+
+      if (e.key === 'Enter' && barcodeBuffer.length > 3) {
+        e.preventDefault();
+        setSkuInput(barcodeBuffer);
+        // Simulate form submission
+        setTimeout(() => {
+          if (barcodeInputRef.current?.form) {
+            barcodeInputRef.current.form.requestSubmit();
+          }
+        }, 10);
+        barcodeBuffer = '';
+        return;
+      }
+
+      if (e.key.length === 1) {
+        barcodeBuffer += e.key;
+        clearTimeout(barcodeTimeout);
+        barcodeTimeout = setTimeout(() => {
+          barcodeBuffer = '';
+        }, 50); // Scanner types very fast, usually < 30ms between strokes
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(barcodeTimeout);
+    };
+  }, []);
+
   const handleViewRecentReceipt = (receipt: ReceiptDto) => {
     setView('history');
-    setSelectedHistoryReceipt(receipt);
-    fetchHistory();
   };
 
   const handleReprintRecentReceipt = (receipt: ReceiptDto) => {
@@ -52,25 +92,6 @@ export function POS() {
       window.print();
       setTimeout(() => setPrintReceipt(null), 500);
     }, 150);
-  };
-
-  const fetchHistory = async (page = 0) => {
-    setHistoryLoading(true);
-    try {
-      const data = await getReceiptHistory(page, 10);
-      setHistoryList(data.items || []);
-      setHistoryPage(data.page);
-      setHistoryTotalPages(data.totalPages);
-      if (data.items && data.items.length > 0) {
-        setSelectedHistoryReceipt(data.items[0]);
-      } else {
-        setSelectedHistoryReceipt(null);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setHistoryLoading(false);
-    }
   };
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -138,95 +159,9 @@ export function POS() {
   if (receipt) {
     return (
       <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center p-4">
-        {/* Printable Receipt Container (Hidden on screen, visible only during print) */}
-        <div id="pos-receipt-print" className="hidden print:block text-black bg-white p-4 font-mono text-[11px] w-[80mm] mx-auto">
-          <div className="text-center mb-4">
-            <h2 className="text-base font-bold uppercase tracking-wider">SESHOP</h2>
-            <p className="text-[10px]">{receipt.locationName}</p>
-            <p className="text-[10px]">Date: {new Date(receipt.createdAt).toLocaleString()}</p>
-            <p className="text-[10px]">Receipt: {receipt.receiptNumber}</p>
-            <p className="text-[10px]">Cashier: {receipt.operatorName}</p>
-          </div>
-          
-          <div className="border-t border-b border-dashed border-black py-2 my-2">
-            <table className="w-full text-left text-[11px] border-collapse">
-              <thead>
-                <tr className="border-b border-dashed border-black">
-                  <th className="pb-1">Item Details</th>
-                  <th className="text-right pb-1">Price x Qty</th>
-                  <th className="text-right pb-1">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {receipt.items?.map((item) => (
-                  <tr key={item.id} className="align-top border-b border-black/5 last:border-0">
-                    <td className="py-1">
-                      <div className="font-bold">{item.name}</div>
-                      <div className="text-[9px] text-black/75">
-                        ID: {item.id} | SKU: {item.skuCode}
-                      </div>
-                    </td>
-                    <td className="text-right py-1">
-                      {item.unitPrice.toLocaleString()} x{item.qty}
-                    </td>
-                    <td className="text-right py-1 font-bold">
-                      {item.totalPrice.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="text-right space-y-1 text-[11px] font-mono">
-            <div className="flex justify-between">
-              <span>Total Amount:</span>
-              <span className="font-bold">{receipt.totalAmount.toLocaleString()} VND</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Payment Method:</span>
-              <span>{receipt.paymentMethod}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Amount Paid:</span>
-              <span>{receipt.amountPaid.toLocaleString()} VND</span>
-            </div>
-            <div className="flex justify-between border-t border-dashed border-black pt-1 mt-1 font-bold">
-              <span>Change Due:</span>
-              <span>{receipt.changeDue.toLocaleString()} VND</span>
-            </div>
-          </div>
-
-          <div className="text-center mt-6 pt-4 border-t border-dashed border-black text-[9px]">
-            <p className="font-bold">THANK YOU FOR YOUR PURCHASE!</p>
-            <p>Please keep this receipt for refund or return.</p>
-            <p className="mt-1">Powered by SeShop POS</p>
-          </div>
-        </div>
-
-        {/* Beautiful Screen Preview (Visible on screen, hidden on print) */}
+        <PrintableReceipt receipt={receipt} printOnly={true} />
+        {/* Beautiful Screen Preview */}
         <div className="w-full max-w-lg rounded-md border border-primary/20 bg-surface p-6 shadow-soft print:hidden">
-          <style dangerouslySetInnerHTML={{__html: `
-            @media print {
-              body * {
-                visibility: hidden !important;
-              }
-              #pos-receipt-print, #pos-receipt-print * {
-                visibility: visible !important;
-              }
-              #pos-receipt-print {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 80mm !important;
-                margin: 0 auto !important;
-                padding: 10px !important;
-                display: block !important;
-                background-color: white !important;
-                color: black !important;
-              }
-            }
-          `}} />
           <div className="text-center mb-6">
             <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-success/10 text-success">
               <CheckCircle2 size={28} />
@@ -234,54 +169,7 @@ export function POS() {
             <h2 className="text-xl font-bold text-ink">Sale Complete</h2>
             <p className="text-sm text-ink/55">Transaction processed successfully</p>
           </div>
-
-          {/* Premium Digital Receipt Card */}
-          <div className="mb-6 overflow-hidden rounded-md border border-primary/10 bg-ink/[0.02] p-5 text-ink/80 shadow-inner">
-            <div className="flex justify-between border-b border-primary/10 pb-3 mb-4 text-sm font-semibold">
-              <span className="text-primary font-bold">SESHOP RECEIPT</span>
-              <span className="text-ink/60">{receipt.receiptNumber}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-y-2 text-xs border-b border-primary/10 pb-4 mb-4">
-              <div><span className="text-ink/40">Location:</span> <p className="font-medium text-ink">{receipt.locationName}</p></div>
-              <div><span className="text-ink/40">Date:</span> <p className="font-medium text-ink">{new Date(receipt.createdAt).toLocaleString()}</p></div>
-              <div><span className="text-ink/40">Cashier:</span> <p className="font-medium text-ink">{receipt.operatorName}</p></div>
-              <div><span className="text-ink/40">Payment:</span> <p className="font-medium text-ink">{receipt.paymentMethod}</p></div>
-            </div>
-
-            {/* List of Purchased items */}
-            <div className="space-y-3 max-h-48 overflow-y-auto mb-4 pr-1">
-              {receipt.items?.map((item) => (
-                <div key={item.id} className="flex justify-between items-start text-xs border-b border-primary/5 pb-2 last:border-0 last:pb-0">
-                  <div>
-                    <p className="font-bold text-ink">{item.name}</p>
-                    <p className="text-[10px] text-ink/45">Item ID: {item.id} | SKU: {item.skuCode}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-ink/60">{item.unitPrice.toLocaleString()} x {item.qty}</p>
-                    <p className="font-bold text-ink">{item.totalPrice.toLocaleString()} VND</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Receipt Summary */}
-            <div className="border-t border-primary/10 pt-3 space-y-2 text-sm font-medium">
-              <div className="flex justify-between text-ink/60">
-                <span>Total Amount:</span>
-                <span className="font-semibold text-ink">{receipt.totalAmount.toLocaleString()} VND</span>
-              </div>
-              <div className="flex justify-between text-ink/60">
-                <span>Amount Tendered:</span>
-                <span className="text-ink">{receipt.amountPaid.toLocaleString()} VND</span>
-              </div>
-              <div className="flex justify-between border-t border-primary/10 pt-2 text-base font-bold text-ink">
-                <span>Change Due:</span>
-                <span className="text-success">{receipt.changeDue.toLocaleString()} VND</span>
-              </div>
-            </div>
-          </div>
-
+          <PrintableReceipt receipt={receipt} className="mb-6" />
           <div className="flex gap-4">
             <Button className="flex-1" variant="secondary" onClick={() => window.print()}>Print Receipt</Button>
             <Button className="flex-1" onClick={handleNewSale}>New Sale</Button>
@@ -306,7 +194,6 @@ export function POS() {
             <button
               onClick={() => {
                 setView('history');
-                fetchHistory();
               }}
               className={`px-3 py-1 text-xs font-semibold rounded-full border transition-all ${view === 'history' ? 'bg-primary text-ink border-primary' : 'bg-surface hover:bg-primary/10 border-primary/20 text-ink/75'}`}
             >
@@ -318,218 +205,7 @@ export function POS() {
       </div>
 
       {view === 'history' ? (
-        <div className="flex flex-1 overflow-hidden bg-surfaceMuted/20 print:block">
-          {/* History List Side */}
-          <div className="flex flex-1 flex-col border-r border-primary/15 bg-surface print:hidden">
-            <div className="border-b border-primary/15 p-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <Clock size={20} className="text-primary" /> Past Receipts
-              </h2>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={historyPage === 0 || historyLoading}
-                  onClick={() => fetchHistory(historyPage - 1)}
-                >
-                  Prev
-                </Button>
-                <span className="text-xs text-ink/60 font-semibold">
-                  Page {historyPage + 1} of {Math.max(1, historyTotalPages)}
-                </span>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={historyPage >= historyTotalPages - 1 || historyLoading}
-                  onClick={() => fetchHistory(historyPage + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {historyLoading ? (
-                <div className="flex h-full items-center justify-center text-ink/40">
-                  <span className="animate-pulse">Loading history...</span>
-                </div>
-              ) : historyList.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-ink/40">
-                  No receipt history found for this store.
-                </div>
-              ) : (
-                historyList.map((hist) => (
-                  <div
-                    key={hist.id}
-                    onClick={() => setSelectedHistoryReceipt(hist)}
-                    className={`p-4 rounded-md border cursor-pointer transition-all duration-200 ${
-                      selectedHistoryReceipt?.id === hist.id
-                        ? 'border-primary bg-primary/5 shadow-sm'
-                        : 'border-primary/10 bg-surface hover:border-primary/30 hover:bg-ink/[0.01]'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-bold text-ink">{hist.receiptNumber}</span>
-                      <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
-                        {hist.paymentMethod}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xs text-ink/65">
-                      <span>{new Date(hist.issuedAt).toLocaleString()}</span>
-                      <span className="font-bold text-ink">
-                        {hist.totalAmount?.toLocaleString() || '0'} VND
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Receipt Details and Action Side */}
-          <div className="flex w-[480px] flex-col bg-surfaceMuted/30 overflow-y-auto print:w-full print:bg-white print:p-0">
-            {selectedHistoryReceipt ? (
-              <div className="p-6 space-y-6 print:p-0">
-                {/* Hidden print container for selected history receipt */}
-                <div id="pos-receipt-print" className="hidden print:block text-black bg-white p-4 font-mono text-[11px] w-[80mm] mx-auto">
-                  <div className="text-center mb-4">
-                    <h2 className="text-base font-bold uppercase tracking-wider">SESHOP</h2>
-                    <p className="text-[10px]">{selectedHistoryReceipt.locationName}</p>
-                    <p className="text-[10px]">Date: {new Date(selectedHistoryReceipt.issuedAt).toLocaleString()}</p>
-                    <p className="text-[10px]">Receipt: {selectedHistoryReceipt.receiptNumber}</p>
-                    <p className="text-[10px]">Cashier: {selectedHistoryReceipt.operatorName}</p>
-                  </div>
-                  
-                  <div className="border-t border-b border-dashed border-black py-2 my-2">
-                    <table className="w-full text-left text-[11px] border-collapse">
-                      <thead>
-                        <tr className="border-b border-dashed border-black">
-                          <th className="pb-1">Item Details</th>
-                          <th className="text-right pb-1">Price x Qty</th>
-                          <th className="text-right pb-1">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedHistoryReceipt.items?.map((item) => (
-                          <tr key={item.id} className="align-top border-b border-black/5 last:border-0">
-                            <td className="py-1">
-                              <div className="font-bold">{item.name}</div>
-                              <div className="text-[9px] text-black/75">
-                                ID: {item.id} | SKU: {item.skuCode}
-                              </div>
-                            </td>
-                            <td className="text-right py-1">
-                              {item.unitPrice.toLocaleString()} x{item.qty}
-                            </td>
-                            <td className="text-right py-1 font-bold">
-                              {item.totalPrice.toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="text-right space-y-1 text-[11px] font-mono">
-                    <div className="flex justify-between">
-                      <span>Total Amount:</span>
-                      <span className="font-bold">{selectedHistoryReceipt.totalAmount.toLocaleString()} VND</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Payment Method:</span>
-                      <span>{selectedHistoryReceipt.paymentMethod}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Amount Paid:</span>
-                      <span>{selectedHistoryReceipt.amountPaid.toLocaleString()} VND</span>
-                    </div>
-                    <div className="flex justify-between border-t border-dashed border-black pt-1 mt-1 font-bold">
-                      <span>Change Due:</span>
-                      <span>0 VND</span>
-                    </div>
-                  </div>
-
-                  <div className="text-center mt-6 pt-4 border-t border-dashed border-black text-[9px]">
-                    <p className="font-bold">THANK YOU FOR YOUR PURCHASE!</p>
-                    <p>Please keep this receipt for refund or return.</p>
-                    <p className="mt-1">Powered by SeShop POS</p>
-                  </div>
-                </div>
-
-                <div className="rounded-md border border-primary/20 bg-surface p-6 shadow-soft print:hidden">
-                  <style dangerouslySetInnerHTML={{__html: `
-                    @media print {
-                      body * {
-                        visibility: hidden !important;
-                      }
-                      #pos-receipt-print, #pos-receipt-print * {
-                        visibility: visible !important;
-                      }
-                      #pos-receipt-print {
-                        position: absolute !important;
-                        left: 0 !important;
-                        top: 0 !important;
-                        width: 80mm !important;
-                        margin: 0 auto !important;
-                        padding: 10px !important;
-                        display: block !important;
-                        background-color: white !important;
-                        color: black !important;
-                      }
-                    }
-                  `}} />
-                  
-                  {/* Premium History Digital Receipt Card */}
-                  <div className="overflow-hidden rounded-md border border-primary/10 bg-ink/[0.02] p-5 text-ink/80 shadow-inner mb-6">
-                    <div className="flex justify-between border-b border-primary/10 pb-3 mb-4 text-sm font-semibold">
-                      <span className="text-primary font-bold">SESHOP HISTORIC RECEIPT</span>
-                      <span className="text-ink/60">{selectedHistoryReceipt.receiptNumber}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-y-2 text-xs border-b border-primary/10 pb-4 mb-4">
-                      <div><span className="text-ink/40">Location:</span> <p className="font-medium text-ink">{selectedHistoryReceipt.locationName}</p></div>
-                      <div><span className="text-ink/40">Date:</span> <p className="font-medium text-ink">{new Date(selectedHistoryReceipt.issuedAt).toLocaleString()}</p></div>
-                      <div><span className="text-ink/40">Cashier:</span> <p className="font-medium text-ink">{selectedHistoryReceipt.operatorName}</p></div>
-                      <div><span className="text-ink/40">Payment:</span> <p className="font-medium text-ink">{selectedHistoryReceipt.paymentMethod}</p></div>
-                    </div>
-
-                    {/* List of Purchased items */}
-                    <div className="space-y-3 max-h-60 overflow-y-auto mb-4 pr-1">
-                      {selectedHistoryReceipt.items?.map((item) => (
-                        <div key={item.id} className="flex justify-between items-start text-xs border-b border-primary/5 pb-2 last:border-0 last:pb-0">
-                          <div>
-                            <p className="font-bold text-ink">{item.name}</p>
-                            <p className="text-[10px] text-ink/45">Item ID: {item.id} | SKU: {item.skuCode}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-ink/60">{item.unitPrice.toLocaleString()} x {item.qty}</p>
-                            <p className="font-bold text-ink">{item.totalPrice.toLocaleString()} VND</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Receipt Summary */}
-                    <div className="border-t border-primary/10 pt-3 space-y-2 text-sm font-medium">
-                      <div className="flex justify-between border-b border-primary/5 pb-2 text-base font-bold text-ink">
-                        <span>Total Paid:</span>
-                        <span className="text-success">{selectedHistoryReceipt.totalAmount.toLocaleString()} VND</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button className="w-full h-12 text-sm" onClick={() => window.print()}>
-                    Reprint Receipt
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex h-full items-center justify-center text-ink/40 p-6 text-center">
-                Select a receipt from the history list to view details and print.
-              </div>
-            )}
-          </div>
-        </div>
+        <PosHistory />
       ) : (
         <div className="flex flex-1 overflow-hidden">
           {/* Left Side: Cart */}
@@ -718,70 +394,7 @@ export function POS() {
       )}
 
       {printReceipt && (
-        <div id="pos-receipt-print" className="hidden print:block text-black bg-white p-4 font-mono text-[11px] w-[80mm] mx-auto">
-          <div className="text-center mb-4">
-            <h2 className="text-base font-bold uppercase tracking-wider">SESHOP</h2>
-            <p className="text-[10px]">{printReceipt.locationName}</p>
-            <p className="text-[10px]">Date: {new Date(printReceipt.issuedAt).toLocaleString()}</p>
-            <p className="text-[10px]">Receipt: {printReceipt.receiptNumber}</p>
-            <p className="text-[10px]">Cashier: {printReceipt.operatorName}</p>
-          </div>
-          
-          <div className="border-t border-b border-dashed border-black py-2 my-2">
-            <table className="w-full text-left text-[11px] border-collapse">
-              <thead>
-                <tr className="border-b border-dashed border-black">
-                  <th className="pb-1">Item Details</th>
-                  <th className="text-right pb-1">Price x Qty</th>
-                  <th className="text-right pb-1">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {printReceipt.items?.map((item) => (
-                  <tr key={item.id} className="align-top border-b border-black/5 last:border-0">
-                    <td className="py-1">
-                      <div className="font-bold">{item.name}</div>
-                      <div className="text-[9px] text-black/75">
-                        ID: {item.id} | SKU: {item.skuCode}
-                      </div>
-                    </td>
-                    <td className="text-right py-1">
-                      {item.unitPrice.toLocaleString()} x{item.qty}
-                    </td>
-                    <td className="text-right py-1 font-bold">
-                      {item.totalPrice.toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="text-right space-y-1 text-[11px] font-mono">
-            <div className="flex justify-between">
-              <span>Total Amount:</span>
-              <span className="font-bold">{printReceipt.totalAmount.toLocaleString()} VND</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Payment Method:</span>
-              <span>{printReceipt.paymentMethod}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Amount Paid:</span>
-              <span>{printReceipt.amountPaid.toLocaleString()} VND</span>
-            </div>
-            <div className="flex justify-between border-t border-dashed border-black pt-1 mt-1 font-bold">
-              <span>Change Due:</span>
-              <span>0 VND</span>
-            </div>
-          </div>
-
-          <div className="text-center mt-6 pt-4 border-t border-dashed border-black text-[9px]">
-            <p className="font-bold">THANK YOU FOR YOUR PURCHASE!</p>
-            <p>Please keep this receipt for refund or return.</p>
-            <p className="mt-1">Powered by SeShop POS</p>
-          </div>
-        </div>
+        <PrintableReceipt receipt={printReceipt} printOnly={true} />
       )}
     </div>
   );

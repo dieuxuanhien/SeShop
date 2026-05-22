@@ -23,6 +23,9 @@ import { loadStripe } from '@stripe/stripe-js/pure';
 import { Elements } from '@stripe/react-stripe-js';
 import { env } from '@/shared/config/env';
 import { StripePaymentForm } from '@/features/commerce/ui/StripePaymentForm';
+import { CheckoutOrderSummary } from '@/features/commerce/ui/CheckoutOrderSummary';
+import { CheckoutAddressForm } from '@/features/commerce/ui/CheckoutAddressForm';
+import { CheckoutPaymentSelector } from '@/features/commerce/ui/CheckoutPaymentSelector';
 
 export function Checkout() {
   const navigate = useNavigate();
@@ -246,105 +249,19 @@ export function Checkout() {
             {/* Step 1: Shipping */}
             <section className={`transition-opacity ${step === 2 ? 'opacity-50 pointer-events-none' : ''}`}>
               <h2 className="mb-4 text-xl font-medium text-surface">1. Shipping Address</h2>
-              <div className="grid grid-cols-1 gap-4 rounded-md border border-primary/20 bg-surface p-5 md:grid-cols-2">
-                <Input
-                  label="Full Name"
-                  value={address.fullName}
-                  onChange={(e) => setAddress({ ...address, fullName: e.target.value })}
-                  required
-                />
-                <Input
-                  label="Phone Number"
-                  value={address.phoneNumber}
-                  onChange={(e) => setAddress({ ...address, phoneNumber: e.target.value })}
-                  required
-                />
-                <div className="md:col-span-2">
-                  <Input
-                    label="Address Line 1 (Street, House Number)"
-                    value={address.line1}
-                    onChange={(e) => setAddress({ ...address, line1: e.target.value })}
-                    required
-                  />
-                </div>
-
-                {provinces.length === 0 ? (
-                  <>
-                    <Input
-                      label="Province / City"
-                      value={address.city}
-                      onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                      required
-                    />
-                    <Input
-                      label="District"
-                      value={address.district}
-                      onChange={(e) => setAddress({ ...address, district: e.target.value })}
-                      required
-                    />
-                    <div className="md:col-span-2">
-                      <Input
-                        label="Ward / Commune"
-                        value={address.ward}
-                        onChange={(e) => setAddress({ ...address, ward: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-col gap-1">
-                      <label htmlFor="checkout-province" className="text-xs font-medium text-surface">Province / City</label>
-                      <select
-                        id="checkout-province"
-                        value={selectedProvinceId ?? ''}
-                        onChange={(e) => setSelectedProvinceId(Number(e.target.value))}
-                        className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none"
-                        required
-                      >
-                        <option value="">Select Province / City</option>
-                        {provinces.map((p) => (
-                          <option key={p.ProvinceID} value={p.ProvinceID}>{p.ProvinceName}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label htmlFor="checkout-district" className="text-xs font-medium text-surface">District</label>
-                      <select
-                        id="checkout-district"
-                        value={selectedDistrictId ?? ''}
-                        onChange={(e) => setSelectedDistrictId(Number(e.target.value))}
-                        disabled={!selectedProvinceId}
-                        className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none disabled:opacity-50"
-                        required
-                      >
-                        <option value="">Select District</option>
-                        {districts.map((d) => (
-                          <option key={d.DistrictID} value={d.DistrictID}>{d.DistrictName}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex flex-col gap-1 md:col-span-2">
-                      <label htmlFor="checkout-ward" className="text-xs font-medium text-surface">Ward / Commune</label>
-                      <select
-                        id="checkout-ward"
-                        value={selectedWardCode}
-                        onChange={(e) => handleWardChange(e.target.value)}
-                        disabled={!selectedDistrictId}
-                        className="w-full rounded-md border border-primary/20 bg-surface p-2.5 text-sm text-ink focus:border-primary focus:outline-none disabled:opacity-50"
-                        required
-                      >
-                        <option value="">Select Ward / Commune</option>
-                        {wards.map((w) => (
-                          <option key={w.WardCode} value={w.WardCode}>{w.WardName}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
-                )}
-              </div>
+              <CheckoutAddressForm
+                address={address}
+                setAddress={setAddress}
+                provinces={provinces}
+                districts={districts}
+                wards={wards}
+                selectedProvinceId={selectedProvinceId}
+                setSelectedProvinceId={setSelectedProvinceId}
+                selectedDistrictId={selectedDistrictId}
+                setSelectedDistrictId={setSelectedDistrictId}
+                selectedWardCode={selectedWardCode}
+                handleWardChange={handleWardChange}
+              />
               {step === 1 && (
                 <div className="mt-6 flex justify-end">
                   <Button
@@ -362,26 +279,10 @@ export function Checkout() {
             {step === 2 && (
               <section className="animate-fade-in">
                 <h2 className="mb-4 text-xl font-medium text-surface">2. Payment Method</h2>
-                <div className="space-y-4">
-                  <label className="flex cursor-pointer items-center space-x-3 rounded-md border border-primary/20 bg-surface p-4 text-ink hover:bg-surfaceMuted">
-                    <input
-                      type="radio"
-                      checked={paymentMethod === 'STRIPE'}
-                      onChange={() => setPaymentMethod('STRIPE')}
-                      className="h-4 w-4 accent-primary"
-                    />
-                    <span>Credit Card (Stripe)</span>
-                  </label>
-                  <label className="flex cursor-pointer items-center space-x-3 rounded-md border border-primary/20 bg-surface p-4 text-ink hover:bg-surfaceMuted">
-                    <input
-                      type="radio"
-                      checked={paymentMethod === 'COD'}
-                      onChange={() => setPaymentMethod('COD')}
-                      className="h-4 w-4 accent-primary"
-                    />
-                    <span>Cash on Delivery</span>
-                  </label>
-                </div>
+                <CheckoutPaymentSelector
+                  paymentMethod={paymentMethod}
+                  setPaymentMethod={setPaymentMethod}
+                />
 
                 {showStripeForm && orderResponse?.clientSecret ? (
                   <div className="mt-8 rounded-md border border-primary/20 bg-surface/50 p-6 animate-slide-up">
@@ -415,72 +316,20 @@ export function Checkout() {
 
           {/* Order Summary Sidebar */}
           <div className="w-full lg:w-96">
-            <div className="sticky top-24 rounded-md border border-primary/20 bg-surface p-6 text-ink">
-              <h2 className="mb-4 text-lg font-medium">Order Summary</h2>
-
-              <div className="space-y-4 mb-6">
-                {cartItems.length > 0 ? cartItems.map((item) => (
-                  <div key={item.variantId} className="flex gap-4 items-center">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="h-16 w-16 rounded-md object-cover border border-primary/20" />
-                    ) : (
-                      <div className="h-16 w-16 rounded-md bg-ink/10 flex items-center justify-center text-xs text-ink/40">No img</div>
-                    )}
-                    <div>
-                      <h3 className="text-sm font-medium">{item.name}</h3>
-                      <p className="text-xs text-ink/55">
-                        {item.skuCode} {item.color ? `| ${item.color}` : ''} {item.size ? `| ${item.size}` : ''} | Qty: {item.qty}
-                      </p>
-                      <p className="text-sm mt-1 font-semibold">{item.unitPrice.toLocaleString()} VND</p>
-                    </div>
-                  </div>
-                )) : (
-                  <p className="text-sm text-ink/55">Your cart is empty.</p>
-                )}
-              </div>
-
-              <div className="space-y-2 border-t border-primary/15 pt-4 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>{subtotal.toLocaleString()} VND</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Shipping (GHN)</span>
-                  <span>{step === 1 ? 'Calculated at next step' : `${shippingFee.toLocaleString()} VND`}</span>
-                </div>
-                {paymentMethod === 'STRIPE' && (
-                  <div className="flex justify-between text-ink/80">
-                    <span>Stripe Processing Fee</span>
-                    <span>{stripeFee > 0 ? `${stripeFee.toLocaleString()} VND` : '0 VND'}</span>
-                  </div>
-                )}
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-success">
-                    <span>Discount</span>
-                    <span>-{discountAmount.toLocaleString()} VND</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t border-primary/15 pt-2 text-lg font-medium">
-                  <span>Total</span>
-                  <span>{total.toLocaleString()} VND</span>
-                </div>
-              </div>
-
-              {/* Discount Code Form */}
-              <div className="mt-6 border-t border-primary/15 pt-6">
-                <div className="flex gap-2">
-                  <Input
-                    label="Discount Code"
-                    placeholder="Enter code (e.g. SUMMER10)"
-                    value={discountCode}
-                    onChange={(e) => setDiscountCode(e.target.value)}
-                  />
-                  <Button variant="secondary" onClick={handleApplyDiscount} isLoading={isLoading}>
-                    Apply
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <CheckoutOrderSummary
+              cartItems={cartItems}
+              subtotal={subtotal}
+              shippingFee={shippingFee}
+              stripeFee={stripeFee}
+              discountAmount={discountAmount}
+              total={total}
+              step={step}
+              paymentMethod={paymentMethod}
+              discountCode={discountCode}
+              setDiscountCode={setDiscountCode}
+              handleApplyDiscount={handleApplyDiscount}
+              isLoading={isLoading}
+            />
           </div>
         </div>
       </div>

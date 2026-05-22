@@ -203,6 +203,11 @@ public class CatalogService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<String> getBrands() {
+        return productRepository.findDistinctBrands();
+    }
+
     private ProductDto mapToDto(ProductEntity entity) {
         ProductDto dto = new ProductDto();
         dto.setId(entity.getId());

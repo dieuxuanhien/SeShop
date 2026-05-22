@@ -12,18 +12,21 @@ import {
 } from '@/shared/lib/access';
 import { hasAnyPermission, hasPermission } from '@/shared/lib/permissions';
 import { Button } from '@/shared/ui/Button';
-
 const navGroups = [
   {
     label: 'Staff',
     links: [
       { to: '/staff/dashboard', label: 'Dashboard', permissions: STAFF_OPERATION_PERMISSIONS },
       { to: '/staff/catalog', label: 'Catalog', permission: 'catalog.write' },
+      { to: '/staff/purchase-orders', label: 'Purchase Orders', permission: 'inventory.transfer' },
       { to: '/staff/inventory', label: 'Inventory', permission: 'inventory.adjust' },
+      { to: '/staff/cycle-counts', label: 'Cycle Count', permission: 'inventory.adjust' },
       { to: '/staff/transfers', label: 'Transfers', permission: 'inventory.transfer' },
       { to: '/staff/orders', label: 'Orders', permission: 'order.read' },
       { to: '/staff/returns', label: 'Returns', permission: 'refund.process' },
+      { to: '/staff/invoices', label: 'Tax Invoices', permission: 'invoice.manage' },
       { to: '/staff/discounts', label: 'Discounts', permission: 'promo.manage' },
+      { to: '/staff/sales-report', label: 'Sales Report', permission: 'report.read' },
       { to: '/staff/pos', label: 'POS', permission: 'pos.sell' },
       { to: '/staff/pos/shift-close', label: 'Shift Close', permission: 'pos.shift.manage' },
       { to: '/staff/marketing/instagram', label: 'Instagram Account', permission: 'social.connect' },

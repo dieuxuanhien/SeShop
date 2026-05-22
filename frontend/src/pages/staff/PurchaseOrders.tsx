@@ -4,6 +4,7 @@ import { getInventoryBalances, type InventoryBalance } from '@/features/staff/ap
 import {
   createGoodsReceipt,
   createPurchaseOrder,
+  getPurchaseOrders,
   type GoodsReceiptResponse,
   type PurchaseOrderResponse,
 } from '@/features/staff/api/staffProcurementApi';
@@ -14,6 +15,7 @@ import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
 import { PageScaffold } from '@/shared/ui/PageScaffold';
 import { Select } from '@/shared/ui/Select';
+import { Pagination } from '@/shared/ui/Pagination';
 
 export function PurchaseOrders() {
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
@@ -28,12 +30,26 @@ export function PurchaseOrders() {
   const [damagedQty, setDamagedQty] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [history, setHistory] = useState<PurchaseOrderResponse[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const loadHistory = (p: number) => {
+    getPurchaseOrders(p, 5).then((res) => {
+      setHistory(res.items);
+      setTotalPages(res.totalPages);
+      setPage(res.page);
+    }).catch(() => {
+      setHistory([]);
+    });
+  };
 
   useEffect(() => {
+    loadHistory(1);
     getInventoryBalances(1, 100)
-      .then((page) => {
-        setBalances(page.items);
-        const first = page.items[0];
+      .then((pageData) => {
+        setBalances(pageData.items);
+        const first = pageData.items[0];
         if (first) {
           setDestinationLocationId(first.locationId);
           setVariantId(first.variantId);
@@ -67,6 +83,7 @@ export function PurchaseOrders() {
       setPurchaseOrder(created);
       setReceivedQty(orderedQty);
       setMessage(`${created.poNumber} created.`);
+      loadHistory(1);
     } catch {
       setMessage('Purchase order could not be created.');
     } finally {
@@ -87,6 +104,7 @@ export function PurchaseOrders() {
       });
       setReceipt(created);
       setMessage(`Goods receipt ${created.id} recorded.`);
+      loadHistory(page);
     } catch {
       setMessage('Goods receipt could not be recorded.');
     } finally {
@@ -236,6 +254,48 @@ export function PurchaseOrders() {
             ) : null}
           </Card>
         </div>
+      </div>
+
+      <div className="mt-8">
+        <Card className="border-primary/20 bg-surface/95 p-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70 mb-4">Purchase Order History</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-ink/70">
+              <thead className="bg-primary/5 text-ink/90">
+                <tr>
+                  <th className="px-4 py-3 font-medium">PO Number</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Date Created</th>
+                  <th className="px-4 py-3 font-medium">Destination</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-primary/10">
+                {history.map((po) => (
+                  <tr key={po.id} className="hover:bg-primary/5 cursor-pointer transition-colors" onClick={() => setPurchaseOrder(po)}>
+                    <td className="px-4 py-3 font-medium text-ink">{po.poNumber}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={po.status === 'RECEIVED' ? 'success' : 'info'}>{po.status}</Badge>
+                    </td>
+                    <td className="px-4 py-3">{new Date(po.createdAt).toLocaleString()}</td>
+                    <td className="px-4 py-3">LOC-{po.destinationLocationId}</td>
+                  </tr>
+                ))}
+                {history.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-ink/50">
+                      No purchase orders found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          {totalPages > 1 && (
+            <div className="mt-4 flex justify-end">
+              <Pagination currentPage={page} totalPages={totalPages} onPageChange={loadHistory} />
+            </div>
+          )}
+        </Card>
       </div>
     </PageScaffold>
   );
