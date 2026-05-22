@@ -119,3 +119,55 @@ export async function processPosReturn(request: PosReturnRequest): Promise<{
   }>>('/pos/returns', request);
   return response.data.data;
 }
+
+export type ReceiptItemDto = {
+  id: number;
+  variantId: number;
+  skuCode: string;
+  name: string;
+  qty: number;
+  unitPrice: number;
+  totalPrice: number;
+};
+
+export type ReceiptDto = {
+  id: number;
+  transactionId?: number;
+  receiptNumber: string;
+  receiptContent: string;
+  issuedAt: string;
+  
+  totalAmount: number;
+  paymentMethod: string;
+  amountPaid: number;
+  locationName: string;
+  operatorName: string;
+  items: ReceiptItemDto[];
+};
+
+export type PageResponse<T> = {
+  items: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export async function getReceiptHistory(page = 0, size = 20): Promise<PageResponse<ReceiptDto>> {
+  const response = await apiClient.get<ApiResponse<any>>('/pos/receipts', {
+    params: { page, size }
+  });
+  const data = response.data.data;
+  return {
+    items: data.items || [],
+    page: data.page ?? 0,
+    size: data.size ?? 20,
+    totalElements: data.totalElements ?? 0,
+    totalPages: data.totalPages ?? 0,
+  };
+}
+
+export async function getReceiptDetails(receiptId: number): Promise<ReceiptDto> {
+  const response = await apiClient.get<ApiResponse<ReceiptDto>>(`/pos/receipts/${receiptId}`);
+  return response.data.data;
+}

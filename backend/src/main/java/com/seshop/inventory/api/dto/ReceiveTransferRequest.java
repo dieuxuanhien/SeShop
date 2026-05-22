@@ -7,7 +7,6 @@ import java.util.List;
 
 public class ReceiveTransferRequest {
 
-    @NotEmpty(message = "Received items list cannot be empty")
     private List<ReceivedItemDto> receivedItems;
 
     public static class ReceivedItemDto {

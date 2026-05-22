@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Clock } from 'lucide-react';
 import { Card } from '@/shared/ui/Card';
 import { getInventoryBalances, getStockTransfers } from '@/features/staff/api/staffInventoryApi';
 import { getStaffOrders } from '@/features/staff/api/staffOrdersApi';
+import { getReceiptHistory, type ReceiptDto } from '@/features/staff/api/staffPosApi';
 
 export function StaffDashboard() {
   const [stats, setStats] = useState([
@@ -12,14 +13,16 @@ export function StaffDashboard() {
     { label: 'Active Transfers', value: '0', link: '/staff/transfers' },
     { label: 'Today\'s Sales', value: '0 VND', link: '/staff/sales-report' },
   ]);
+  const [recentReceipts, setRecentReceipts] = useState<ReceiptDto[]>([]);
 
   useEffect(() => {
     Promise.all([
       getStaffOrders(1, 100),
       getInventoryBalances(1, 100),
       getStockTransfers(1, 100),
+      getReceiptHistory(0, 5).catch(() => ({ items: [] })),
     ])
-      .then(([orders, balances, transfers]) => {
+      .then(([orders, balances, transfers, historyData]) => {
         const pendingOrders = orders.items.filter((order) => !['SHIPPED', 'DELIVERED', 'CANCELLED'].includes(order.status)).length;
         const lowStockAlerts = balances.items.filter((balance) => balance.availableQty < 5).length;
         const activeTransfers = transfers.items.filter((transfer) => !['COMPLETED', 'CANCELLED'].includes(transfer.status)).length;
@@ -30,6 +33,7 @@ export function StaffDashboard() {
           { label: 'Active Transfers', value: activeTransfers.toString(), link: '/staff/transfers' },
           { label: 'Today\'s Sales', value: `${todaySales.toLocaleString()} VND`, link: '/staff/sales-report' },
         ]);
+        setRecentReceipts(historyData.items || []);
       })
       .catch(() => {
         setStats((current) => current);
@@ -67,7 +71,7 @@ export function StaffDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Quick Actions */}
         <Card>
           <div className="border-b border-primary/15 px-4 py-5 sm:px-6">
@@ -88,6 +92,54 @@ export function StaffDashboard() {
                 <span className="block text-sm font-medium text-ink">Process Returns</span>
               </Link>
             </div>
+          </div>
+        </Card>
+
+        {/* Recent POS Receipts */}
+        <Card>
+          <div className="border-b border-primary/15 px-4 py-5 sm:px-6 flex justify-between items-center">
+            <h3 className="text-lg font-medium leading-6 text-ink">Recent POS Receipts</h3>
+            <Link to="/staff/pos" className="text-xs text-primaryStrong hover:text-ink font-semibold">
+              Open POS
+            </Link>
+          </div>
+          <div className="px-4 py-5 sm:p-6">
+            {recentReceipts.length === 0 ? (
+              <div className="text-sm text-ink/40 text-center py-6">
+                No recent POS receipts found.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-primary/10 text-left text-xs">
+                  <thead>
+                    <tr>
+                      <th className="pb-2 font-semibold text-ink/55">Receipt No</th>
+                      <th className="pb-2 font-semibold text-ink/55">Method</th>
+                      <th className="pb-2 text-right font-semibold text-ink/55">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-primary/5">
+                    {recentReceipts.map((receipt) => (
+                      <tr key={receipt.id}>
+                        <td className="py-2 font-medium text-ink">
+                          <Link to="/staff/pos" className="hover:underline text-primary">
+                            {receipt.receiptNumber}
+                          </Link>
+                        </td>
+                        <td className="py-2">
+                          <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-full text-[10px] font-semibold">
+                            {receipt.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="py-2 text-right font-bold text-ink">
+                          {receipt.totalAmount.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </Card>
 

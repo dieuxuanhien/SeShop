@@ -239,6 +239,39 @@ public class ReceiptService {
         dto.setReceiptNumber(formatReceiptNumber(entity.getId()));
         dto.setReceiptContent("Receipt total: " + entity.getTotalAmount() + " (" + entity.getPaymentMethod() + ")");
         dto.setIssuedAt(entity.getCreatedAt());
+        
+        dto.setTotalAmount(entity.getTotalAmount());
+        dto.setPaymentMethod(entity.getPaymentMethod());
+        dto.setAmountPaid(entity.getTotalAmount());
+
+        if (entity.getShift() != null) {
+            LocationEntity location = locationRepository.findById(entity.getShift().getLocationId()).orElse(null);
+            dto.setLocationName(location != null ? location.getDisplayName() : "Unknown Store");
+
+            UserEntity staffUser = userRepository.findById(entity.getShift().getStaffId()).orElse(null);
+            dto.setOperatorName(staffUser != null ? staffUser.getUsername() : "Staff");
+        } else {
+            dto.setLocationName("Unknown Store");
+            dto.setOperatorName("Staff");
+        }
+
+        List<ReceiptDto.ItemDto> itemsList = new ArrayList<>();
+        if (entity.getItems() != null) {
+            for (PosReceiptItemEntity itemEntity : entity.getItems()) {
+                ProductVariantEntity variant = productVariantRepository.findById(itemEntity.getVariantId()).orElse(null);
+                
+                ReceiptDto.ItemDto itemDto = new ReceiptDto.ItemDto();
+                itemDto.setId(itemEntity.getId());
+                itemDto.setVariantId(itemEntity.getVariantId());
+                itemDto.setSkuCode(variant != null ? variant.getSkuCode() : "N/A");
+                itemDto.setName(variant != null && variant.getProduct() != null ? variant.getProduct().getName() : "Unknown Variant");
+                itemDto.setQty(itemEntity.getQty());
+                itemDto.setUnitPrice(itemEntity.getUnitPrice());
+                itemDto.setTotalPrice(itemEntity.getUnitPrice().multiply(BigDecimal.valueOf(itemEntity.getQty())));
+                itemsList.add(itemDto);
+            }
+        }
+        dto.setItems(itemsList);
         return dto;
     }
 

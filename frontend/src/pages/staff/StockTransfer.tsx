@@ -99,7 +99,7 @@ export function StockTransfer() {
       }
       if (transfer.status === 'IN_TRANSIT') {
         await receiveStockTransfer(transfer.id, {
-          receivedItems: [{ variantId, receivedQty: qty, damagedQty: 0 }],
+          receivedItems: [],
         });
         setMessage(`Transfer ${transfer.id} received.`);
       }

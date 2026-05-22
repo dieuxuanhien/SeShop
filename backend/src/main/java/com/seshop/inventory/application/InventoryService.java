@@ -365,8 +365,19 @@ public class InventoryService {
             throw new BusinessException("INV_002", "Transfer must be in IN_TRANSIT state to receive");
         }
 
+        List<ReceiveTransferRequest.ReceivedItemDto> receivedItemsList = request.getReceivedItems();
+        if (receivedItemsList == null || receivedItemsList.isEmpty()) {
+            receivedItemsList = transfer.getItems().stream().map(item -> {
+                ReceiveTransferRequest.ReceivedItemDto dto = new ReceiveTransferRequest.ReceivedItemDto();
+                dto.setVariantId(item.getVariantId());
+                dto.setReceivedQty(item.getQty());
+                dto.setDamagedQty(0);
+                return dto;
+            }).collect(Collectors.toList());
+        }
+
         Map<Long, ReceiveTransferRequest.ReceivedItemDto> receivedItemsByVariant = new LinkedHashMap<>();
-        for (ReceiveTransferRequest.ReceivedItemDto receivedItem : request.getReceivedItems()) {
+        for (ReceiveTransferRequest.ReceivedItemDto receivedItem : receivedItemsList) {
             if (receivedItemsByVariant.putIfAbsent(receivedItem.getVariantId(), receivedItem) != null) {
                 throw new BusinessException("INV_002", "Transfer receipt cannot contain duplicate variants");
             }
