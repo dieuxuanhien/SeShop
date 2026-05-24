@@ -29,6 +29,7 @@ import com.seshop.commerce.infrastructure.persistence.OrderItemEntity;
 import com.seshop.commerce.infrastructure.persistence.OrderRepository;
 import com.seshop.commerce.infrastructure.persistence.PaymentEntity;
 import com.seshop.commerce.infrastructure.persistence.PaymentRepository;
+import com.seshop.commerce.infrastructure.persistence.PickTaskRepository;
 import com.seshop.inventory.infrastructure.persistence.InventoryBalanceEntity;
 import com.seshop.inventory.infrastructure.persistence.InventoryBalanceRepository;
 import com.seshop.inventory.infrastructure.persistence.LocationEntity;
@@ -82,6 +83,9 @@ class OrderServiceTest {
     private OrderAllocationRepository allocationRepository;
 
     @Mock
+    private PickTaskRepository pickTaskRepository;
+
+    @Mock
     private DiscountService discountService;
 
     @Mock
@@ -101,7 +105,8 @@ class OrderServiceTest {
                 productVariantRepository,
                 balanceRepository,
                 allocationRepository,
-                null, discountService,
+                pickTaskRepository,
+                discountService,
                 auditService
         );
     }

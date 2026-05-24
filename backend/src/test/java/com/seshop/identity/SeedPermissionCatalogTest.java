@@ -99,6 +99,99 @@ class SeedPermissionCatalogTest {
         );
     }
 
+    @Test
+    void enhancedDemoSeedRefreshesManagedRolePermissionAssignments() throws IOException {
+        String seed = readResource("db/migration/V12__enhance_demo_seed_catalog.sql");
+
+        assertThat(seed).contains("DELETE FROM role_permissions");
+        assertThat(seed).contains("SELECT 'SUPER_ADMIN', p.code");
+        assertThat(seed).contains(
+                "('INVENTORY_MANAGER', 'Owns multi-location stock, transfers, receiving, adjustments, and cycle counts.', 'ACTIVE')",
+                "('CASHIER', 'Runs point-of-sale receipts and shift operations at assigned stores.', 'ACTIVE')",
+                "('FULFILLMENT_STAFF', 'Picks, packs, ships, and transfers customer orders across assigned locations.', 'ACTIVE')",
+                "('MARKETING_MANAGER', 'Manages promotions, catalog presentation, reviews, and social commerce drafts.', 'ACTIVE')",
+                "('CUSTOMER_SUPPORT', 'Handles customer profiles, order questions, reviews, returns, and refunds.', 'ACTIVE')",
+                "('FINANCE_MANAGER', 'Manages tax invoices, refund review, audit checks, and reporting.', 'ACTIVE')",
+                "('INVENTORY_AUDITOR', 'Runs stock counts and reads inventory reports without override privileges.', 'ACTIVE')",
+                "('LOCATION_SUPERVISOR', 'Assigns staff to locations and monitors inventory coverage across sites.', 'ACTIVE')");
+
+        assertThat(extractRolePermissionCodes(seed, "STORE_MANAGER")).containsExactly(
+                "role.create",
+                "role.update",
+                "role.delete",
+                "role.permission.assign",
+                "staff.role.assign",
+                "staff.user.read",
+                "staff.user.create",
+                "staff.user.update",
+                "staff.user.delete",
+                "staff.location.assign",
+                "location.scope.all",
+                "audit.read",
+                "catalog.write",
+                "inventory.adjust",
+                "inventory.adjust.override",
+                "inventory.transfer",
+                "inventory.cycle_count",
+                "order.read",
+                "order.ship",
+                "refund.process",
+                "promo.manage",
+                "pos.sell",
+                "pos.shift.manage",
+                "invoice.manage",
+                "social.compose",
+                "social.connect",
+                "customer.read",
+                "customer.write",
+                "report.read",
+                "review.moderate"
+        );
+        assertThat(extractRolePermissionCodes(seed, "STAFF")).containsExactly(
+                "catalog.write",
+                "inventory.adjust",
+                "inventory.transfer",
+                "inventory.cycle_count",
+                "order.read",
+                "order.ship",
+                "refund.process",
+                "pos.sell",
+                "pos.shift.manage"
+        );
+        assertThat(extractRolePermissionCodes(seed, "CUSTOMER")).isEmpty();
+    }
+
+    @Test
+    void enhancedDemoSeedAddsAccessoryCatalogAndLocations() throws IOException {
+        String seed = readResource("db/migration/V12__enhance_demo_seed_catalog.sql");
+
+        assertThat(seed).contains(
+                "ACC-BELT-001",
+                "ACC-BAG-001",
+                "ACC-SCARF-001",
+                "ACC-CAP-001",
+                "ACC-WATCH-001",
+                "ACC-WALLET-001",
+                "ACC-TOTE-001",
+                "ACC-NECKLACE-001");
+        assertThat(seed).contains(
+                "https://commons.wikimedia.org/wiki/Special:FilePath/Leather_belt.jpg?width=1200",
+                "https://commons.wikimedia.org/wiki/Special:FilePath/Kate_Spade_handbag.jpg?width=1200",
+                "https://commons.wikimedia.org/wiki/Special:FilePath/Scarf,_late_19th_century_(CH_18466163).jpg?width=1200",
+                "https://commons.wikimedia.org/wiki/Special:FilePath/Baseball_cap_(15930546668).jpg?width=1200",
+                "https://commons.wikimedia.org/wiki/Special:FilePath/Fossil_wristwatch_with_white_background.jpg?width=1200",
+                "https://commons.wikimedia.org/wiki/Special:FilePath/A_men%27s_wallet.jpg?width=1200",
+                "https://commons.wikimedia.org/wiki/Special:FilePath/QWSTION-FLAP-TOTE-MEDIUM-ALL-BLACK-FRONT.jpg?width=1200",
+                "https://commons.wikimedia.org/wiki/Special:FilePath/Necklace_-_Meta_Overbeck_(27770427469).jpg?width=1200");
+        assertThat(seed).contains(
+                "('ONLINE-HN', 'Online Fulfillment - Hanoi', 'STORAGE', 'ACTIVE')",
+                "('STORE-D3', 'District 3 Curated Accessories Studio', 'STORE', 'ACTIVE')",
+                "('STORE-THAO-DIEN', 'Thao Dien Designer Vintage Store', 'STORE', 'ACTIVE')",
+                "('STORE-HN-OLD', 'Hanoi Old Quarter Vintage Store', 'STORE', 'ACTIVE')",
+                "('STORAGE-BT', 'Binh Thanh Returns and Repair Hub', 'STORAGE', 'ACTIVE')",
+                "('STORAGE-DN', 'Da Nang Regional Stockroom', 'STORAGE', 'ACTIVE')");
+    }
+
     private String readResource(String resourcePath) throws IOException {
         try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
             assertThat(inputStream).as("Resource %s should exist", resourcePath).isNotNull();
@@ -108,6 +201,14 @@ class SeedPermissionCatalogTest {
 
     private List<String> extractPermissionCodes(String seed) {
         return Pattern.compile("\\('([^']+)'\\s*,\\s*'[^']*'\\)")
+                .matcher(seed)
+                .results()
+                .map(matchResult -> matchResult.group(1))
+                .toList();
+    }
+
+    private List<String> extractRolePermissionCodes(String seed, String roleName) {
+        return Pattern.compile("\\('" + Pattern.quote(roleName) + "'\\s*,\\s*'([a-z]+(?:\\.[a-z_]+)+)'\\)")
                 .matcher(seed)
                 .results()
                 .map(matchResult -> matchResult.group(1))
