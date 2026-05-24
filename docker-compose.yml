@@ -63,7 +63,7 @@ services:
       # S3 / object storage (LocalStack) - defaults for local development
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
-      S3_ENDPOINT: ${S3_ENDPOINT:-http://localstack:4566}
+      S3_ENDPOINT: ${BACKEND_S3_ENDPOINT:-http://localstack:4566}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-seshop-media}
     ports:
@@ -88,6 +88,8 @@ services:
     environment:
       - SERVICES=s3
       - DEFAULT_REGION=${S3_REGION:-us-east-1}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_BUCKET=${S3_BUCKET:-seshop-media}
       - DATA_DIR=/var/lib/localstack
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-test}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-test}

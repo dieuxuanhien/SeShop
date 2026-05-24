@@ -34,6 +34,7 @@ import { StaffDashboard } from '@/pages/staff/Dashboard';
 import { StockTransfer } from '@/pages/staff/StockTransfer';
 import { CycleCount } from '@/pages/staff/CycleCount';
 import { TaxInvoice } from '@/pages/staff/TaxInvoice';
+import { StaffAdminProfile } from '@/pages/shared/StaffAdminProfile';
 import {
   ADMIN_DASHBOARD_PERMISSIONS,
   ADMIN_SETTINGS_PERMISSIONS,
@@ -106,7 +107,7 @@ export function AppRoutes() {
           <Route path="staff/pos/shift-close" element={<ShiftClose />} />
         </Route>
 
-        <Route element={<ProtectedRoute permission="inventory.adjust" />}>
+        <Route element={<ProtectedRoute permission="inventory.cycle_count" />}>
           <Route path="staff/cycle-counts" element={<CycleCount />} />
         </Route>
 
@@ -136,6 +137,11 @@ export function AppRoutes() {
           
         <Route element={<ProtectedRoute permissions={IDENTITY_ADMIN_PERMISSIONS} />}>
           <Route path="admin/users-roles" element={<UserRoleManagement />} />
+        </Route>
+
+        <Route element={<ProtectedRoute />}>
+          <Route path="admin/profile" element={<StaffAdminProfile />} />
+          <Route path="staff/profile" element={<StaffAdminProfile />} />
         </Route>
 
         <Route element={<ProtectedRoute permissions={LOCATION_VIEW_PERMISSIONS} />}>

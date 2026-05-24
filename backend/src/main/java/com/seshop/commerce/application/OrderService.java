@@ -75,6 +75,7 @@ public class OrderService {
     private final ProductVariantRepository productVariantRepository;
     private final InventoryBalanceRepository balanceRepository;
     private final OrderAllocationRepository allocationRepository;
+    private final PickTaskRepository pickTaskRepository;
     private final DiscountService discountService;
     private final AuditService auditService;
 
@@ -87,6 +88,7 @@ public class OrderService {
                         ProductVariantRepository productVariantRepository,
                         InventoryBalanceRepository balanceRepository,
                         OrderAllocationRepository allocationRepository,
+                        PickTaskRepository pickTaskRepository,
                         DiscountService discountService,
                         AuditService auditService) {
         this.orderRepository = orderRepository;
@@ -98,6 +100,7 @@ public class OrderService {
         this.productVariantRepository = productVariantRepository;
         this.balanceRepository = balanceRepository;
         this.allocationRepository = allocationRepository;
+        this.pickTaskRepository = pickTaskRepository;
         this.discountService = discountService;
         this.auditService = auditService;
     }
@@ -480,7 +483,14 @@ public class OrderService {
             allocation.setLocation(balance.getLocation());
             allocation.setAllocatedQty(allocationQty);
             allocation.setStatus(STATUS_ALLOCATED);
-            allocations.add(allocationRepository.save(allocation));
+            OrderAllocationEntity savedAllocation = allocationRepository.save(allocation);
+            allocations.add(savedAllocation);
+            
+            PickTaskEntity pickTask = new PickTaskEntity();
+            pickTask.setAllocation(savedAllocation);
+            pickTask.setStatus("PENDING");
+            pickTaskRepository.save(pickTask);
+            
             remainingQty -= allocationQty;
         }
         return allocations;

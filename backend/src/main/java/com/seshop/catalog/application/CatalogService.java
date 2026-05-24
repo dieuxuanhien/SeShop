@@ -121,6 +121,28 @@ public class CatalogService {
         return mapToDto(saved);
     }
 
+    public ProductDto deleteVariant(Long productId, Long variantId) {
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        ProductVariantEntity variant = product.getVariants().stream()
+                .filter(candidate -> candidate.getId().equals(variantId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Variant not found"));
+
+        variant.setStatus("INACTIVE");
+        ProductEntity saved = productRepository.save(product);
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("productId", productId);
+        metadata.put("variantId", variantId);
+        metadata.put("skuCode", variant.getSkuCode());
+        metadata.put("status", variant.getStatus());
+        auditService.write(AuditAction.PRODUCT_UPDATED, "ProductVariant", variantId.toString(), metadata);
+
+        return mapToDto(saved);
+    }
+
     public ProductDto registerImage(Long productId, RegisterProductImageRequest request) {
         ProductEntity product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));

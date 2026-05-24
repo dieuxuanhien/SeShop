@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -189,5 +190,21 @@ class CatalogControllerContractTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.id").value(20))
                 .andExpect(jsonPath("$.data.name").value("New Shirt"));
+    }
+
+    @Test
+    void deleteVariantWithValidAuthReturnsUpdatedProduct() throws Exception {
+        ProductDto updated = new ProductDto();
+        updated.setId(20L);
+        updated.setName("New Shirt");
+        updated.setStatus("DRAFT");
+
+        given(catalogService.deleteVariant(20L, 31L)).willReturn(updated);
+
+        mockMvc.perform(delete("/api/v1/staff/products/20/variants/31")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + STAFF_TOKEN)
+                        .header(TraceIdFilter.TRACE_HEADER, "trace-delete-variant"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(20));
     }
 }

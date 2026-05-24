@@ -18,7 +18,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/staff/cycle-counts")
 public class StaffCycleCountController {
 
-    private static final String INVENTORY_ADJUST = "inventory.adjust";
+    private static final String INVENTORY_CYCLE_COUNT = "inventory.cycle_count";
 
     private final CycleCountService cycleCountService;
     private final PermissionValidator permissionValidator;
@@ -32,7 +32,7 @@ public class StaffCycleCountController {
     public ResponseEntity<Map<String, Object>> createCycleCount(
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody CreateCycleCountRequest request) {
-        permissionValidator.require(INVENTORY_ADJUST);
+        permissionValidator.require(INVENTORY_CYCLE_COUNT);
         Long cycleCountId = cycleCountService.createCycleCount(request, user.userId());
 
         Map<String, Object> data = new HashMap<>();
@@ -48,7 +48,7 @@ public class StaffCycleCountController {
     public ResponseEntity<Void> submitItems(
             @PathVariable Long cycleCountId,
             @Valid @RequestBody CycleCountItemsRequest request) {
-        permissionValidator.require(INVENTORY_ADJUST);
+        permissionValidator.require(INVENTORY_CYCLE_COUNT);
         cycleCountService.submitItems(cycleCountId, request);
         return ResponseEntity.ok().build();
     }
@@ -57,7 +57,7 @@ public class StaffCycleCountController {
     public ResponseEntity<Void> approveCycleCount(
             @AuthenticationPrincipal AuthenticatedUser user,
             @PathVariable Long cycleCountId) {
-        permissionValidator.require(INVENTORY_ADJUST);
+        permissionValidator.require(INVENTORY_CYCLE_COUNT);
         cycleCountService.approveCycleCount(cycleCountId, user.userId());
         return ResponseEntity.ok().build();
     }

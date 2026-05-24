@@ -153,6 +153,27 @@ class CatalogServiceTest {
                 .hasMessageContaining("already in use");
     }
 
+    @Test
+    void deleteVariantArchivesVariantWithoutRemovingProductHistory() {
+        ProductEntity existing = productEntity(10L, "Shirt", "Brand", "DRAFT");
+        ProductVariantEntity variant = new ProductVariantEntity();
+        variant.setId(22L);
+        variant.setProduct(existing);
+        variant.setSkuCode("SKU-SHIRT-M");
+        variant.setPrice(new BigDecimal("590000"));
+        variant.setStatus("ACTIVE");
+        existing.getVariants().add(variant);
+
+        given(productRepository.findById(10L)).willReturn(Optional.of(existing));
+        given(productRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        ProductDto result = service.deleteVariant(10L, 22L);
+
+        assertThat(result.getVariants()).hasSize(1);
+        assertThat(result.getVariants().get(0).getStatus()).isEqualTo("INACTIVE");
+        assertThat(variant.getStatus()).isEqualTo("INACTIVE");
+    }
+
     // ── getPublishedProducts ────────────────────────────────────────────────
 
     @Test

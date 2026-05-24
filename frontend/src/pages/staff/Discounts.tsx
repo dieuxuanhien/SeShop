@@ -208,7 +208,7 @@ export function Discounts() {
               onChange={(event) => setForm((current) => ({ ...current, code: event.target.value.toUpperCase() }))}
               required
             />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-1">
               <Select
                 label="Type"
                 value={form.discountType}

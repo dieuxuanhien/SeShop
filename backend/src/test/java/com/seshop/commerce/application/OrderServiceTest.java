@@ -101,7 +101,7 @@ class OrderServiceTest {
                 productVariantRepository,
                 balanceRepository,
                 allocationRepository,
-                discountService,
+                null, discountService,
                 auditService
         );
     }

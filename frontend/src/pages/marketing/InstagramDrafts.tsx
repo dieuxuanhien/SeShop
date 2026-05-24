@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Images } from 'lucide-react';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -16,6 +17,33 @@ import {
 } from '@/features/marketing/api/marketingApi';
 import { getProductById, getProducts, uploadProductImage } from '@/features/catalog/api/catalogApi';
 import type { Product } from '@/entities/product/types';
+import { env } from '@/shared/config/env';
+
+function resolveMarketingMediaUrl(url?: string) {
+  if (!url) return undefined;
+  if (/^(https?:|data:|blob:)/i.test(url)) return url;
+  if (!url.startsWith('/uploads/')) return url;
+
+  try {
+    return `${new URL(env.apiBaseUrl, window.location.origin).origin}${url}`;
+  } catch {
+    return url;
+  }
+}
+
+function splitMediaOrder(value: string) {
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function productMediaLinks(product: Product) {
+  return [...(product.images ?? [])]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((image) => resolveMarketingMediaUrl(image.url))
+    .filter((url): url is string => Boolean(url));
+}
 
 export function InstagramDrafts() {
   const [drafts, setDrafts] = useState<InstagramDraft[]>([]);
@@ -31,6 +59,25 @@ export function InstagramDrafts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [isProductSearchLoading, setIsProductSearchLoading] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  const previewMedia = useMemo(
+    () => splitMediaOrder(mediaOrder).map(resolveMarketingMediaUrl).filter((url): url is string => Boolean(url)),
+    [mediaOrder],
+  );
+
+  function applyProductDefaults(product: Product, overwriteText = true) {
+    setProductSearch(product.name);
+    if (overwriteText) {
+      setCaption(`${product.name}\n\n${product.description || ''}`);
+      setHashtags(`#${(product.brand || 'SeShop').replace(/\s+/g, '')} #fashion`);
+    }
+    const links = productMediaLinks(product);
+    if (links.length > 0) {
+      setMediaOrder(links.join(', '));
+      setPreviewIndex(0);
+    }
+  }
 
   useEffect(() => {
     let isCurrent = true;
@@ -65,31 +112,33 @@ export function InstagramDrafts() {
       getProductById(productId)
         .then((product) => {
           if (product) {
-            setProductSearch(product.name);
-            setCaption(`${product.name}\n\n${product.description || ''}`);
-            setHashtags(`#${(product.brand || 'SeShop').replace(/\s+/g, '')} #fashion`);
-            if (product.images && product.images.length > 0) {
-              const urls = product.images.map((img) => img.url).join(', ');
-              setMediaOrder(urls);
-            }
+            applyProductDefaults(product);
           }
         })
         .catch(() => {});
     }
   }, [productId, selectedDraftId]);
 
+  useEffect(() => {
+    if (previewIndex >= previewMedia.length) {
+      setPreviewIndex(0);
+    }
+  }, [previewIndex, previewMedia.length]);
+
+  useEffect(() => {
+    if (previewMedia.length <= 1) return undefined;
+    const timer = window.setInterval(() => {
+      setPreviewIndex((index) => (index + 1) % previewMedia.length);
+    }, 3500);
+    return () => window.clearInterval(timer);
+  }, [previewMedia.length]);
+
   async function loadProductDetails() {
     if (!productId) return;
     try {
       const product = await getProductById(productId);
       if (product) {
-        setProductSearch(product.name);
-        setCaption(`${product.name}\n\n${product.description || ''}`);
-        setHashtags(`#${(product.brand || 'SeShop').replace(/\s+/g, '')} #fashion`);
-        if (product.images && product.images.length > 0) {
-          const urls = product.images.map((img) => img.url).join(', ');
-          setMediaOrder(urls);
-        }
+        applyProductDefaults(product);
         setMessage('Product details loaded.');
       }
     } catch {
@@ -105,9 +154,10 @@ export function InstagramDrafts() {
     try {
       const product = await uploadProductImage(productId, file);
       const newImageUrl = product.images?.[product.images.length - 1]?.url;
-      if (newImageUrl) {
-        const currentMedia = mediaOrder ? mediaOrder.split(',').map(m => m.trim()).filter(Boolean) : [];
-        currentMedia.push(newImageUrl);
+      const resolvedUrl = resolveMarketingMediaUrl(newImageUrl);
+      if (resolvedUrl) {
+        const currentMedia = splitMediaOrder(mediaOrder);
+        currentMedia.push(resolvedUrl);
         setMediaOrder(currentMedia.join(', '));
         setMessage('Image uploaded and URL added successfully.');
       } else {
@@ -137,12 +187,19 @@ export function InstagramDrafts() {
     setSelectedDraftId(draft.id);
     setSelectedDraftStatus(draft.status);
     setProductId(draft.productId);
+    const draftMedia = draft.mediaOrder ?? [];
     getProductById(draft.productId)
-      .then((product) => setProductSearch(product?.name ?? ''))
+      .then((product) => {
+        setProductSearch(product?.name ?? '');
+        if (product && draftMedia.length === 0) {
+          applyProductDefaults(product, false);
+        }
+      })
       .catch(() => setProductSearch(''));
     setCaption(draft.caption ?? '');
     setHashtags(draft.hashtags ?? '');
-    setMediaOrder((draft.mediaOrder ?? []).join(', '));
+    setMediaOrder(draftMedia.map(resolveMarketingMediaUrl).filter(Boolean).join(', '));
+    setPreviewIndex(0);
     setMessage('');
   }
 
@@ -154,6 +211,7 @@ export function InstagramDrafts() {
     setCaption('');
     setHashtags('');
     setMediaOrder('');
+    setPreviewIndex(0);
     setMessage('');
   }
 
@@ -165,7 +223,7 @@ export function InstagramDrafts() {
       productId,
       caption,
       hashtags,
-      mediaOrder: mediaOrder.split(',').map((item) => item.trim()).filter(Boolean),
+      mediaOrder: splitMediaOrder(mediaOrder),
       status: 'DRAFT',
     };
     try {
@@ -288,7 +346,7 @@ export function InstagramDrafts() {
                 </div>
                 <div className="mt-3 h-24 rounded-md border border-dashed border-primary/30 bg-surface overflow-hidden">
                   {draft.mediaOrder && draft.mediaOrder.length > 0 ? (
-                    <img src={draft.mediaOrder[0]} alt="Draft media" className="h-full w-full object-cover" />
+                    <img src={resolveMarketingMediaUrl(draft.mediaOrder[0])} alt="Draft media" className="h-full w-full object-cover" />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center text-xs text-ink/40">No Media</span>
                   )}
@@ -369,7 +427,55 @@ export function InstagramDrafts() {
           <Card className="border border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Preview</h2>
             <div className="mt-4 rounded-md border border-dashed border-primary/30 bg-ink/5 p-4">
-              <div className="mx-auto h-56 w-40 rounded-xl border border-primary/20 bg-surface" />
+              <div className="relative mx-auto aspect-[4/5] w-full max-w-64 overflow-hidden rounded-xl border border-primary/20 bg-surface">
+                {previewMedia.length > 0 ? (
+                  <img
+                    src={previewMedia[previewIndex]}
+                    alt={`Instagram preview ${previewIndex + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-ink/40">
+                    <Images size={28} />
+                  </div>
+                )}
+                {previewMedia.length > 1 ? (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Previous media"
+                      className="absolute left-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-ink/70 text-surface"
+                      onClick={() => setPreviewIndex((index) => (index - 1 + previewMedia.length) % previewMedia.length)}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Next media"
+                      className="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full bg-ink/70 text-surface"
+                      onClick={() => setPreviewIndex((index) => (index + 1) % previewMedia.length)}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                      {previewMedia.map((url, index) => (
+                        <button
+                          key={`${url}-${index}`}
+                          type="button"
+                          aria-label={`Preview media ${index + 1}`}
+                          className={`size-2 rounded-full ${index === previewIndex ? 'bg-primary' : 'bg-surface/70'}`}
+                          onClick={() => setPreviewIndex(index)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+              {previewMedia.length > 0 ? (
+                <p className="mt-2 text-center text-xs text-ink/45">
+                  {previewIndex + 1} / {previewMedia.length}
+                </p>
+              ) : null}
               <p className="mt-3 text-sm text-ink/70">{caption || 'Caption preview appears here.'}</p>
               <p className="mt-1 text-xs text-primary">{hashtags}</p>
             </div>

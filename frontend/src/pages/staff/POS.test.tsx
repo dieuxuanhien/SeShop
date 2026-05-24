@@ -7,6 +7,7 @@ import { lookupProductBySku, processPosSale } from '@/features/staff/api/staffPo
 vi.mock('@/features/staff/api/staffPosApi', () => ({
   closeShift: vi.fn(),
   getCurrentShift: vi.fn(),
+  getReceiptHistory: vi.fn().mockResolvedValue({ items: [], page: 0, size: 5, totalElements: 0, totalPages: 0 }),
   lookupProductBySku: vi.fn(),
   processPosSale: vi.fn(),
 }));
@@ -29,7 +30,25 @@ describe('POS', () => {
     });
     mockedProcessPosSale.mockResolvedValue({
       receiptId: 501,
+      receiptNumber: '501',
       changeDue: 50000,
+      totalAmount: 250000,
+      paymentMethod: 'CASH',
+      amountPaid: 300000,
+      createdAt: '2026-05-24T08:00:00Z',
+      locationName: 'Main Store',
+      operatorName: 'Staff User',
+      items: [
+        {
+          id: 1,
+          variantId: 7001,
+          skuCode: 'SKU-LINEN-001',
+          name: 'Linen Shirt',
+          qty: 1,
+          unitPrice: 250000,
+          totalPrice: 250000,
+        },
+      ],
     });
 
     render(<POS />);
@@ -61,7 +80,8 @@ describe('POS', () => {
     });
 
     expect(await screen.findByRole('heading', { name: /sale complete/i })).toBeInTheDocument();
-    expect(screen.getByText(/Receipt #501/)).toBeInTheDocument();
-    expect(screen.getByText('50,000 VND')).toBeInTheDocument();
+    expect(screen.getByText('SESHOP RECEIPT')).toBeInTheDocument();
+    expect(screen.getAllByText('501').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('50,000 VND').length).toBeGreaterThan(0);
   });
 });

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
@@ -6,6 +7,8 @@ import { Select } from '@/shared/ui/Select';
 import { Modal } from '@/shared/ui/Modal';
 import { Spinner } from '@/shared/ui/Spinner';
 import { getInventoryBalances, adjustInventory, type InventoryBalance } from '@/features/staff/api/staffInventoryApi';
+
+const inventoryPageSize = 20;
 
 export function InventoryAdjustment() {
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
@@ -15,6 +18,13 @@ export function InventoryAdjustment() {
   
   const [locationFilter, setLocationFilter] = useState('ALL');
   const [skuFilter, setSkuFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInfo, setPageInfo] = useState({
+    page: 1,
+    size: inventoryPageSize,
+    totalElements: 0,
+    totalPages: 1,
+  });
 
   // Form state
   const [deltaQty, setDeltaQty] = useState(0);
@@ -22,29 +32,40 @@ export function InventoryAdjustment() {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchBalances = async () => {
+  const fetchBalances = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await getInventoryBalances();
+      const res = await getInventoryBalances({
+        page: currentPage,
+        size: inventoryPageSize,
+        skuCode: skuFilter.trim() || undefined,
+        locationId: locationFilter === 'ALL' ? undefined : Number(locationFilter),
+      });
       setBalances(res.items);
+      setPageInfo({
+        page: res.page,
+        size: res.size,
+        totalElements: res.totalElements,
+        totalPages: Math.max(res.totalPages, 1),
+      });
     } catch (e) {
       console.error(e);
+      setBalances([]);
+      setPageInfo((current) => ({ ...current, totalElements: 0, totalPages: 1 }));
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, locationFilter, skuFilter]);
 
   useEffect(() => {
     fetchBalances();
-  }, []);
+  }, [fetchBalances]);
 
-  const filteredBalances = balances.filter((b) => {
-    const locMatch = locationFilter === 'ALL' || b.locationName === locationFilter;
-    const skuMatch = !skuFilter || b.skuCode.toLowerCase().includes(skuFilter.toLowerCase());
-    return locMatch && skuMatch;
-  });
-
-  const uniqueLocations = Array.from(new Set(balances.map(b => b.locationName)));
+  const uniqueLocations = useMemo(() => {
+    const byId = new Map<number, string>();
+    balances.forEach((balance) => byId.set(balance.locationId, balance.locationName));
+    return [...byId.entries()];
+  }, [balances]);
 
   const handleAdjustClick = (balance: InventoryBalance) => {
     setSelectedBalance(balance);
@@ -93,11 +114,14 @@ export function InventoryAdjustment() {
             <select 
               className="w-full rounded-md border border-ink/20 bg-surface px-3 py-2 text-sm"
               value={locationFilter} 
-              onChange={(e) => setLocationFilter(e.target.value)}
+              onChange={(e) => {
+                setLocationFilter(e.target.value);
+                setCurrentPage(1);
+              }}
             >
               <option value="ALL">All Locations</option>
-              {uniqueLocations.map(loc => (
-                <option key={loc} value={loc}>{loc}</option>
+              {uniqueLocations.map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
               ))}
             </select>
           </div>
@@ -106,7 +130,10 @@ export function InventoryAdjustment() {
             <Input 
               placeholder="Filter by SKU..." 
               value={skuFilter} 
-              onChange={(e) => setSkuFilter(e.target.value)}
+              onChange={(e) => {
+                setSkuFilter(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
         </div>
@@ -127,7 +154,7 @@ export function InventoryAdjustment() {
               </tr>
             </thead>
             <tbody className="divide-y divide-primary/10 bg-surface">
-              {filteredBalances.map((balance) => (
+              {balances.map((balance) => (
                 <tr key={balance.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">{balance.locationName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">{balance.skuCode}</td>
@@ -142,7 +169,7 @@ export function InventoryAdjustment() {
                   </td>
                 </tr>
               ))}
-              {filteredBalances.length === 0 && (
+              {balances.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-4 text-center text-sm text-ink/55">
                     No balances found.
@@ -151,6 +178,33 @@ export function InventoryAdjustment() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-primary/10 px-6 py-4 text-sm text-ink/60">
+          <span>
+            Page {pageInfo.page} of {pageInfo.totalPages} · {pageInfo.totalElements} balances
+          </span>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon={<ChevronLeft size={14} />}
+              disabled={isLoading || pageInfo.page <= 1}
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            >
+              Prev
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon={<ChevronRight size={14} />}
+              disabled={isLoading || pageInfo.page >= pageInfo.totalPages}
+              onClick={() => setCurrentPage((page) => Math.min(pageInfo.totalPages, page + 1))}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </Card>
 

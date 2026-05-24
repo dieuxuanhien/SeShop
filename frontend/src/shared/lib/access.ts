@@ -18,41 +18,45 @@ export const STAFF_OPERATION_PERMISSIONS = [
   'inventory.adjust',
   'inventory.transfer',
   'order.read',
+  'order.ship',
   'refund.process',
   'promo.manage',
   'pos.sell',
   'pos.shift.manage',
+  'invoice.manage',
   'report.read',
   'social.compose',
   'social.connect',
+  'inventory.cycle_count',
 ] as const;
 
 export const ADMIN_DASHBOARD_PERMISSIONS = [
-  ...IDENTITY_ADMIN_PERMISSIONS,
   'audit.read',
-  'report.read',
-  'inventory.adjust',
-  'order.read',
+  'location.scope.all',
 ] as const;
 
 export const LOCATION_VIEW_PERMISSIONS = [
-  'inventory.adjust',
-  'inventory.transfer',
-  'report.read',
+  'staff.location.assign',
+  'location.scope.all',
 ] as const;
 
 export const ADMIN_SETTINGS_PERMISSIONS = [
-  'social.connect',
-  'invoice.manage',
   'audit.read',
+  'location.scope.all',
 ] as const;
 
 export function dashboardPathFor(user: AuthUser | null) {
-  if (hasAnyPermission(user, ADMIN_DASHBOARD_PERMISSIONS)) {
+  if (user?.userType === 'STAFF' && hasAnyPermission(user, STAFF_OPERATION_PERMISSIONS)) {
+    return '/staff/dashboard';
+  }
+  if (user?.userType === 'ADMIN' && hasAnyPermission(user, ADMIN_DASHBOARD_PERMISSIONS)) {
     return '/admin/dashboard';
   }
   if (hasAnyPermission(user, STAFF_OPERATION_PERMISSIONS)) {
     return '/staff/dashboard';
+  }
+  if (hasAnyPermission(user, ADMIN_DASHBOARD_PERMISSIONS)) {
+    return '/admin/dashboard';
   }
   return '/';
 }

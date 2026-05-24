@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AuthUser } from '@/entities/user/types';
+import { dashboardPathFor } from './access';
 import { hasAnyPermission, hasPermission, hasRole } from './permissions';
 
 describe('permissions helpers', () => {
@@ -41,5 +42,15 @@ describe('permissions helpers', () => {
     expect(hasRole(customer, 'STORE_MANAGER')).toBe(false);
     expect(hasRole(null, 'STORE_MANAGER')).toBe(false);
     expect(hasRole(customer, undefined)).toBe(true);
+  });
+
+  it('routes staff dashboard links to staff space even when staff has broad permissions', () => {
+    const staffWithAdminLikePermissions: AuthUser = {
+      ...staff,
+      permissions: ['catalog.write', 'order.read', 'audit.read', 'location.scope.all'],
+    };
+
+    expect(dashboardPathFor(staffWithAdminLikePermissions)).toBe('/staff/dashboard');
+    expect(dashboardPathFor(admin)).toBe('/admin/dashboard');
   });
 });

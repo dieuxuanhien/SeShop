@@ -64,6 +64,9 @@ class ReviewControllerContractTest {
     @MockBean
     private com.seshop.shared.security.PermissionValidator permissionValidator;
 
+    @MockBean
+    private com.seshop.shared.util.FileStorageService fileStorageService;
+
     @BeforeEach
     void setUpJwt() {
         List<String> permissions = List.of();

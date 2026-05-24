@@ -14,16 +14,18 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
     @Query("SELECT DISTINCT p.brand FROM ProductEntity p WHERE p.brand IS NOT NULL AND p.brand != '' ORDER BY p.brand")
     java.util.List<String> findDistinctBrands();
 
-    @Query("SELECT p FROM ProductEntity p WHERE " +
-           "(:keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+    @Query("SELECT DISTINCT p FROM ProductEntity p LEFT JOIN p.variants v WHERE " +
+           "(:keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(v.skuCode) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (:brand = '' OR LOWER(p.brand) = LOWER(:brand))")
     Page<ProductEntity> findByFilters(
             @Param("keyword") String keyword,
             @Param("brand") String brand,
             Pageable pageable);
 
-    @Query("SELECT p FROM ProductEntity p WHERE p.status = 'PUBLISHED' " +
-           "AND (:keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+    @Query("SELECT DISTINCT p FROM ProductEntity p LEFT JOIN p.variants v WHERE p.status = 'PUBLISHED' " +
+           "AND (:keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(v.skuCode) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (:brand = '' OR LOWER(p.brand) = LOWER(:brand))")
     Page<ProductEntity> findPublishedProducts(
             @Param("keyword") String keyword,
@@ -38,7 +40,8 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
            "LEFT JOIN p.variants v " +
            "LEFT JOIN ProductCategoryEntity pc ON pc.productId = p.id " +
            "WHERE p.status = 'PUBLISHED' " +
-           "AND (:keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:keyword = '' OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(v.skuCode) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (:brand = '' OR LOWER(p.brand) = LOWER(:brand)) " +
            "AND (:categoryId IS NULL OR pc.categoryId = :categoryId) " +
            "AND (:size = '' OR LOWER(v.size) = LOWER(:size)) " +

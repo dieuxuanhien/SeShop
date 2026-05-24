@@ -27,10 +27,12 @@ public class ReviewController {
 
     private final ReviewService reviewService;
     private final PermissionValidator permissionValidator;
+    private final com.seshop.shared.util.FileStorageService fileStorageService;
 
-    public ReviewController(ReviewService reviewService, PermissionValidator permissionValidator) {
+    public ReviewController(ReviewService reviewService, PermissionValidator permissionValidator, com.seshop.shared.util.FileStorageService fileStorageService) {
         this.reviewService = reviewService;
         this.permissionValidator = permissionValidator;
+        this.fileStorageService = fileStorageService;
     }
 
     @PostMapping
@@ -46,6 +48,14 @@ public class ReviewController {
     public ResponseEntity<Map<String, Object>> listByProduct(@PathVariable Long productId) {
         List<ReviewDto> items = reviewService.getReviewsByProduct(productId);
         return ResponseEntity.ok(Map.of("data", items));
+    }
+
+    @PostMapping("/upload-image")
+    public ResponseEntity<Map<String, Object>> uploadImage(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @org.springframework.web.bind.annotation.RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        String url = fileStorageService.store(file);
+        return ResponseEntity.ok(Map.of("data", Map.of("imageUrl", url)));
     }
 
     // ── Staff Moderation ────────────────────────────────────────────────────

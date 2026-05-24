@@ -42,9 +42,27 @@ export type ReceiveTransferRequest = {
   }>;
 };
 
-export async function getInventoryBalances(page = 1, size = 20): Promise<PageResponse<InventoryBalance>> {
+export type InventoryBalanceListParams = {
+  page?: number;
+  size?: number;
+  variantId?: number;
+  locationId?: number;
+  skuCode?: string;
+};
+
+export async function getInventoryBalances(
+  pageOrParams: number | InventoryBalanceListParams = 1,
+  size = 20,
+): Promise<PageResponse<InventoryBalance>> {
+  const params = typeof pageOrParams === 'number' ? { page: pageOrParams, size } : pageOrParams;
   const response = await apiClient.get<ApiResponse<PageResponse<InventoryBalance>>>('/staff/inventory/balances', {
-    params: { page: page - 1, size },
+    params: {
+      page: Math.max(0, (params.page ?? 1) - 1),
+      size: params.size ?? size,
+      variantId: params.variantId,
+      locationId: params.locationId,
+      skuCode: params.skuCode || undefined,
+    },
   });
   const data = response.data.data;
   return { ...data, page: data.page + 1 };

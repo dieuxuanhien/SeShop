@@ -18,9 +18,6 @@ public class AdminLocationController {
 
     private static final String STAFF_LOCATION_ASSIGN = "staff.location.assign";
     private static final String LOCATION_SCOPE_ALL = "location.scope.all";
-    private static final String INVENTORY_ADJUST = "inventory.adjust";
-    private static final String INVENTORY_TRANSFER = "inventory.transfer";
-    private static final String REPORT_READ = "report.read";
 
     private final LocationRepository locationRepository;
     private final PermissionValidator permissionValidator;
@@ -34,10 +31,7 @@ public class AdminLocationController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> listLocations() {
         permissionValidator.requireAny(
                 STAFF_LOCATION_ASSIGN,
-                LOCATION_SCOPE_ALL,
-                INVENTORY_ADJUST,
-                INVENTORY_TRANSFER,
-                REPORT_READ);
+                LOCATION_SCOPE_ALL);
         return ResponseEntity.ok(ApiResponse.success(Map.of(
                 "items",
                 locationRepository.findAll(Sort.by("displayName")).stream()

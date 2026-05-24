@@ -149,11 +149,11 @@ export function Products() {
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-6 lg:px-12 py-8">
-        <div className={`grid gap-8 ${filtersOpen ? 'lg:grid-cols-[220px_1fr]' : ''}`}>
+        <div className={`grid gap-8 items-start transition-[grid-template-columns] duration-500 ease-in-out ${filtersOpen ? 'lg:grid-cols-[220px_1fr]' : 'lg:grid-cols-1'}`}>
 
           {/* Filter Sidebar */}
           {filtersOpen && (
-            <aside className="space-y-8 animate-fade-in">
+            <aside className="space-y-8 sticky top-36 animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-500 ease-out">
               {/* Categories */}
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-surface/60 mb-4">Category</h3>

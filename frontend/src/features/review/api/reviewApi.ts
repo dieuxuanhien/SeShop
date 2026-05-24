@@ -27,3 +27,12 @@ export async function createReview(request: ReviewRequest): Promise<Review> {
   const response = await apiClient.post<ApiResponse<Review>>('/reviews', request);
   return response.data.data;
 }
+
+export async function uploadReviewImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post<ApiResponse<{ imageUrl: string }>>('/reviews/upload-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data.data.imageUrl;
+}

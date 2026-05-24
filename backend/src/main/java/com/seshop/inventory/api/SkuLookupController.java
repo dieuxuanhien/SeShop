@@ -3,6 +3,7 @@ package com.seshop.inventory.api;
 import com.seshop.inventory.api.dto.ProductVariantDto;
 import com.seshop.inventory.application.InventoryService;
 import com.seshop.shared.api.ApiResponse;
+import com.seshop.shared.security.PermissionValidator;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -17,10 +18,16 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/staff/inventory")
 public class SkuLookupController {
 
-    private final InventoryService inventoryService;
+    private static final String INVENTORY_ADJUST = "inventory.adjust";
+    private static final String INVENTORY_TRANSFER = "inventory.transfer";
+    private static final String POS_SELL = "pos.sell";
 
-    public SkuLookupController(InventoryService inventoryService) {
+    private final InventoryService inventoryService;
+    private final PermissionValidator permissionValidator;
+
+    public SkuLookupController(InventoryService inventoryService, PermissionValidator permissionValidator) {
         this.inventoryService = inventoryService;
+        this.permissionValidator = permissionValidator;
     }
 
     /**
@@ -37,6 +44,7 @@ public class SkuLookupController {
      */
     @GetMapping("/balances/sku/{skuCode}")
     public ApiResponse<ProductVariantDto> lookupProductBySku(@PathVariable String skuCode) {
+        permissionValidator.requireAny(POS_SELL, INVENTORY_ADJUST, INVENTORY_TRANSFER);
         ProductVariantDto variant = inventoryService.getProductVariantBySku(skuCode);
         return ApiResponse.success(variant);
     }

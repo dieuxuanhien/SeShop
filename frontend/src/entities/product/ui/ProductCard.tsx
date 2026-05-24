@@ -1,8 +1,9 @@
-import { NavLink } from 'react-router-dom';
-import { Star } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Star, ShoppingCart } from 'lucide-react';
 import type { Product } from '@/entities/product/types';
 import { formatCurrency } from '@/shared/lib/formatters';
 import { Badge } from '@/shared/ui/Badge';
+import { useCartStore } from '@/features/cart/model/cartStore';
 
 type ProductCardProps = {
   product: Product;
@@ -14,6 +15,28 @@ export function ProductCard({ product, index }: ProductCardProps) {
   const compareAt = product.variants[0]?.compareAtPrice;
   const hasDiscount = compareAt && compareAt > minPrice;
   const rating = product.reviewSummary;
+  const addItem = useCartStore((s) => s.addItem);
+  const navigate = useNavigate();
+
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (product.variants.length === 1) {
+      const variant = product.variants[0];
+      addItem({
+        variantId: variant.id,
+        skuCode: variant.skuCode,
+        name: product.name,
+        color: variant.color,
+        size: variant.size,
+        imageUrl: product.thumbnailUrl,
+        qty: 1,
+        unitPrice: variant.price,
+      });
+    } else {
+      navigate(`/products/${product.id}`);
+    }
+  };
 
   return (
     <NavLink
@@ -35,10 +58,19 @@ export function ProductCard({ product, index }: ProductCardProps) {
           </div>
         )}
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/20 transition-colors duration-300 flex items-end justify-center pb-6 opacity-0 group-hover:opacity-100">
-          <span className="bg-surface text-ink text-xs font-semibold uppercase tracking-widest px-6 py-2.5 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-            View Details
-          </span>
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-ink/0 transition-opacity duration-500 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100">
+          <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500 ease-out flex gap-2">
+            <button
+              onClick={handleQuickAdd}
+              className="flex-1 flex items-center justify-center gap-1.5 text-center bg-primary text-ink text-xs font-semibold uppercase tracking-widest px-4 py-3 rounded-sm shadow-xl hover:bg-highlight transition-colors duration-300"
+            >
+              <ShoppingCart size={14} />
+              {product.variants.length === 1 ? 'Quick Add' : 'Options'}
+            </button>
+            <span className="flex-1 text-center bg-surface/90 backdrop-blur-md text-ink text-xs font-semibold uppercase tracking-widest px-4 py-3 rounded-sm shadow-xl hover:bg-surface transition-colors duration-300">
+              Details
+            </span>
+          </div>
         </div>
         {/* Sale badge */}
         {hasDiscount && (

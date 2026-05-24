@@ -58,6 +58,13 @@ seshop:
       issuer: ${JWT_ISSUER:seshop}
       secret: ${JWT_SECRET:change-this-development-secret-change-this-development-secret}
       expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}
+  storage:
+    s3:
+      endpoint: ${S3_ENDPOINT:}
+      region: ${S3_REGION:us-east-1}
+      bucket: ${S3_BUCKET:seshop-media}
+      access-key: ${AWS_ACCESS_KEY_ID:}
+      secret-key: ${AWS_SECRET_ACCESS_KEY:}
   integrations:
     stripe:
       enabled: ${STRIPE_ENABLED:false}

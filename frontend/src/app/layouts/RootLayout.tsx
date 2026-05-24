@@ -17,26 +17,26 @@ const navGroups = [
     label: 'Staff',
     links: [
       { to: '/staff/dashboard', label: 'Dashboard', permissions: STAFF_OPERATION_PERMISSIONS },
-      { to: '/staff/catalog', label: 'Catalog', permission: 'catalog.write' },
       { to: '/staff/purchase-orders', label: 'Purchase Orders', permission: 'inventory.transfer' },
       { to: '/staff/inventory', label: 'Inventory', permission: 'inventory.adjust' },
-      { to: '/staff/cycle-counts', label: 'Cycle Count', permission: 'inventory.adjust' },
+      { to: '/staff/cycle-counts', label: 'Cycle Count', permission: 'inventory.cycle_count' },
       { to: '/staff/transfers', label: 'Transfers', permission: 'inventory.transfer' },
       { to: '/staff/orders', label: 'Orders', permission: 'order.read' },
       { to: '/staff/returns', label: 'Returns', permission: 'refund.process' },
       { to: '/staff/invoices', label: 'Tax Invoices', permission: 'invoice.manage' },
-      { to: '/staff/discounts', label: 'Discounts', permission: 'promo.manage' },
-      { to: '/staff/sales-report', label: 'Sales Report', permission: 'report.read' },
       { to: '/staff/pos', label: 'POS', permission: 'pos.sell' },
       { to: '/staff/pos/shift-close', label: 'Shift Close', permission: 'pos.shift.manage' },
-      { to: '/staff/marketing/instagram', label: 'Instagram Account', permission: 'social.connect' },
-      { to: '/staff/marketing/drafts', label: 'Instagram Drafts', permission: 'social.compose' },
     ],
   },
   {
     label: 'Admin',
     links: [
       { to: '/admin/dashboard', label: 'Dashboard', permissions: ADMIN_DASHBOARD_PERMISSIONS },
+      { to: '/staff/catalog', label: 'Catalog', permission: 'catalog.write' },
+      { to: '/staff/discounts', label: 'Discounts', permission: 'promo.manage' },
+      { to: '/staff/sales-report', label: 'Sales Report', permission: 'report.read' },
+      { to: '/staff/marketing/instagram', label: 'Instagram Account', permission: 'social.connect' },
+      { to: '/staff/marketing/drafts', label: 'Instagram Drafts', permission: 'social.compose' },
       { to: '/admin/users-roles', label: 'Users & Roles', permissions: IDENTITY_ADMIN_PERMISSIONS },
       { to: '/admin/locations', label: 'Locations', permissions: LOCATION_VIEW_PERMISSIONS },
       { to: '/admin/audit-logs', label: 'Audit Logs', permission: 'audit.read' },
@@ -85,7 +85,12 @@ export function RootLayout() {
             </NavLink>
             {token ? (
               <>
-                <span className="hidden text-sm text-surface/70 sm:inline">{user?.username ?? 'Signed in'}</span>
+                <NavLink 
+                  to={user?.userType === 'ADMIN' ? '/admin/profile' : user?.userType === 'STAFF' ? '/staff/profile' : '/profile'} 
+                  className="hidden text-sm font-medium text-highlight hover:underline sm:inline"
+                >
+                  {user?.username ?? 'Signed in'}
+                </NavLink>
                 <Button variant="secondary" icon={<LogOut size={16} />} onClick={handleLogout}>
                   Logout
                 </Button>

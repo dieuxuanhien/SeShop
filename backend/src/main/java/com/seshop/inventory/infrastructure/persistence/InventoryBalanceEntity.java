@@ -29,6 +29,10 @@ public class InventoryBalanceEntity {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @PrePersist
     @PreUpdate
     protected void onUpdate() {

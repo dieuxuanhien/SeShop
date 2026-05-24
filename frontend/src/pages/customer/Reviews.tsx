@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Star } from 'lucide-react';
-import { createReview, getProductReviews, type Review } from '@/features/review/api/reviewApi';
+import { createReview, getProductReviews, uploadReviewImage, type Review } from '@/features/review/api/reviewApi';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -19,7 +19,22 @@ export function Reviews() {
   const [imageUrl, setImageUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState('');
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const url = await uploadReviewImage(file);
+      setImageUrl(url);
+    } catch {
+      setMessage('Failed to upload image.');
+    } finally {
+      setIsUploading(false);
+    }
+  }
 
   async function loadReviews() {
     if (!id) return;
@@ -117,8 +132,18 @@ export function Reviews() {
                 required
               />
             </label>
-            <Input label="Image URL" value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} />
-            <Button type="submit" isLoading={isSaving}>Submit Review</Button>
+            <label className="grid gap-1 text-sm font-medium text-ink">
+              <span>Image (Optional)</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={isUploading}
+                className="file:mr-4 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/20 text-sm text-ink/75"
+              />
+              {imageUrl && <p className="text-xs text-success mt-1">Image uploaded successfully</p>}
+            </label>
+            <Button type="submit" isLoading={isSaving} disabled={isUploading}>Submit Review</Button>
           </form>
           {message ? <p className="mt-4 text-sm text-ink/65">{message}</p> : null}
         </Card>

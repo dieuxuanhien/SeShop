@@ -159,11 +159,16 @@ export async function createProductVariants(productId: number, variants: Variant
   return toFrontendProduct(response.data.data);
 }
 
+export async function deleteProductVariant(productId: number, variantId: number): Promise<Product> {
+  const response = await apiClient.delete<ApiResponse<BackendProduct>>(`/staff/products/${productId}/variants/${variantId}`);
+  return toFrontendProduct(response.data.data);
+}
+
 export async function getStaffProducts(params: ProductListParams = {}): Promise<PageResponse<Product>> {
   const response = await apiClient.get<ApiResponse<BackendPage<BackendProduct>>>('/staff/products', {
     params: {
       page: Math.max(0, (params.page ?? 1) - 1),
-      size: params.size ?? 100,
+      size: params.size ?? 20,
       keyword: params.search || undefined,
       brand: params.brand || undefined,
     },
@@ -180,11 +185,7 @@ export async function getStaffProducts(params: ProductListParams = {}): Promise<
 export async function uploadProductImage(productId: number, file: File): Promise<Product> {
   const formData = new FormData();
   formData.append('file', file);
-  const response = await apiClient.post<ApiResponse<BackendProduct>>(`/staff/products/${productId}/images/upload`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const response = await apiClient.post<ApiResponse<BackendProduct>>(`/staff/products/${productId}/images/upload`, formData);
   return toFrontendProduct(response.data.data);
 }
 

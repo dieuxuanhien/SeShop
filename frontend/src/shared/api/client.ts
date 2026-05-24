@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, AxiosHeaders } from 'axios';
 import { env } from '@/shared/config/env';
 import type { ApiError } from '@/shared/types/api';
 
@@ -13,6 +13,13 @@ apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('seshop.accessToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    if (config.headers instanceof AxiosHeaders) {
+      config.headers.delete('Content-Type');
+    } else if (config.headers) {
+      delete (config.headers as Record<string, unknown>)['Content-Type'];
+    }
   }
   return config;
 });

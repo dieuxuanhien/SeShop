@@ -55,6 +55,19 @@ public class StaffCatalogController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @DeleteMapping("/{productId}/variants/{variantId}")
+    public ResponseEntity<Map<String, Object>> deleteVariant(
+            @PathVariable Long productId,
+            @PathVariable Long variantId) {
+        permissionValidator.require(CATALOG_WRITE);
+        ProductDto product = catalogService.deleteVariant(productId, variantId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("data", product);
+
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{productId}")
     public ResponseEntity<Map<String, Object>> updateProduct(
             @PathVariable Long productId,

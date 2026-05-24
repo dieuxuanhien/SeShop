@@ -34,3 +34,18 @@ export async function register(payload: RegisterPayload) {
   const response = await apiClient.post<ApiResponse<RegisterResponse>>('/auth/register', payload);
   return response.data.data;
 }
+
+export async function getMe() {
+  const response = await apiClient.get<ApiResponse<AuthUser>>('/auth/me');
+  return response.data.data;
+}
+
+export async function updateProfile(payload: { username: string; email: string; phoneNumber: string }) {
+  const response = await apiClient.put<ApiResponse<AuthUser>>('/auth/me', payload);
+  return response.data.data;
+}
+
+export async function updatePassword(payload: { currentPassword: string; newPassword: string }) {
+  const response = await apiClient.put<ApiResponse<void>>('/auth/me/password', payload);
+  return response.data.data;
+}
