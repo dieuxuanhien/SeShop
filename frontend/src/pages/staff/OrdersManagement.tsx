@@ -188,7 +188,7 @@ export function OrdersManagement() {
                     </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {order.status === 'PENDING' && (
+                    {(order.status === 'PAID' || order.status === 'CONFIRMED') && (
                       <Button size="sm" onClick={() => handleAction(order.id, 'allocate')} isLoading={actionLoading === order.id}>
                         Allocate
                       </Button>
@@ -223,17 +223,7 @@ export function OrdersManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-md border border-primary/20 bg-surface p-6 shadow-xl">
             <h2 className="text-xl font-bold text-ink mb-4">Allocate Order</h2>
-            <p className="text-sm text-ink/70 mb-4">Select the inventory location to fulfill this order from.</p>
-            <Select
-              label="Location"
-              value={locationInput}
-              onChange={(e) => setLocationInput(e.target.value)}
-              options={
-                locations.length > 0
-                  ? Array.from(new Set(locations.map(l => l.locationId))).map(id => ({ label: `Location ${id}`, value: String(id) }))
-                  : [{ label: 'Location 1', value: '1' }]
-              }
-            />
+            <p className="text-sm text-ink/70 mb-4">Are you sure you want to allocate inventory for this order? The system will automatically reserve stock from the nearest available fulfillment centers.</p>
             <div className="mt-6 flex justify-end gap-3">
               <Button variant="secondary" onClick={() => setAllocateDialog(null)}>Cancel</Button>
               <Button onClick={confirmAllocate} isLoading={actionLoading === allocateDialog}>Confirm Allocation</Button>

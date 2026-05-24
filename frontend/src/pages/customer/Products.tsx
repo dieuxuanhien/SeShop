@@ -30,6 +30,10 @@ export function Products() {
       search: searchParams.get('q') ?? undefined,
       categoryId: searchParams.get('cat') ? Number(searchParams.get('cat')) : undefined,
       brand: searchParams.get('brand') ?? undefined,
+      minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined,
+      maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined,
+      productSize: searchParams.get('size') ?? undefined,
+      color: searchParams.get('color') ?? undefined,
     }),
     [searchParams],
   );
@@ -126,7 +130,7 @@ export function Products() {
       </div>
 
       {/* Active Filters */}
-      {(params.search || params.categoryId || params.brand) && (
+      {(params.search || params.categoryId || params.brand || params.minPrice || params.maxPrice || params.productSize || params.color) && (
         <div className="mx-auto max-w-7xl px-6 lg:px-12 py-3 flex items-center gap-2 flex-wrap">
           <span className="text-xs text-surface/40">Active:</span>
           {params.search && (
@@ -144,6 +148,35 @@ export function Products() {
               {params.brand} <X size={12} />
             </button>
           )}
+          {params.minPrice && (
+            <button onClick={() => updateParam('minPrice', null)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 px-3 py-1 text-xs text-surface/80 hover:border-danger/40 hover:text-danger transition">
+              Min ${params.minPrice} <X size={12} />
+            </button>
+          )}
+          {params.maxPrice && (
+            <button onClick={() => updateParam('maxPrice', null)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 px-3 py-1 text-xs text-surface/80 hover:border-danger/40 hover:text-danger transition">
+              Max ${params.maxPrice} <X size={12} />
+            </button>
+          )}
+          {params.productSize && (
+            <button onClick={() => updateParam('size', null)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 px-3 py-1 text-xs text-surface/80 hover:border-danger/40 hover:text-danger transition">
+              Size: {params.productSize} <X size={12} />
+            </button>
+          )}
+          {params.color && (
+            <button onClick={() => updateParam('color', null)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 px-3 py-1 text-xs text-surface/80 hover:border-danger/40 hover:text-danger transition">
+              Color: {params.color} <X size={12} />
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setSearchInput('');
+              setSearchParams(new URLSearchParams());
+            }}
+            className="text-xs text-danger/70 hover:text-danger ml-2 transition underline underline-offset-2"
+          >
+            Clear All
+          </button>
         </div>
       )}
 
@@ -193,6 +226,75 @@ export function Products() {
                   {brands.length === 0 && (
                     <p className="text-sm text-surface/50 px-2">No brands available</p>
                   )}
+                </div>
+              </div>
+              {/* Price Range */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-surface/60 mb-4">Price Range</h3>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface/40 text-xs">$</span>
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      defaultValue={params.minPrice || ''}
+                      onBlur={(e) => updateParam('minPrice', e.target.value ? String(Math.max(0, Number(e.target.value))) : null)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      className="w-full rounded border border-primary/20 bg-transparent py-1.5 pl-6 pr-2 text-sm text-surface outline-none focus:border-primary transition"
+                    />
+                  </div>
+                  <span className="text-surface/40">-</span>
+                  <div className="relative flex-1">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface/40 text-xs">$</span>
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      defaultValue={params.maxPrice || ''}
+                      onBlur={(e) => updateParam('maxPrice', e.target.value ? String(Math.max(0, Number(e.target.value))) : null)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      className="w-full rounded border border-primary/20 bg-transparent py-1.5 pl-6 pr-2 text-sm text-surface outline-none focus:border-primary transition"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Size */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-surface/60 mb-4">Size</h3>
+                <div className="flex flex-wrap gap-2">
+                  {['S', 'M', 'L', 'XL', 'OS'].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => updateParam('size', params.productSize === size ? null : size)}
+                      className={`min-w-[2.5rem] rounded border px-2 py-1 text-xs transition ${params.productSize === size ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-primary/20 text-surface/70 hover:border-primary/40'}`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color */}
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-surface/60 mb-4">Color</h3>
+                <div className="flex flex-wrap gap-2">
+                  {['Black', 'White', 'Beige', 'Navy', 'Grey'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => updateParam('color', params.color === color ? null : color)}
+                      className={`rounded-full border px-3 py-1 text-xs transition ${params.color === color ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-primary/20 text-surface/70 hover:border-primary/40'}`}
+                    >
+                      {color}
+                    </button>
+                  ))}
                 </div>
               </div>
             </aside>

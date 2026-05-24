@@ -423,6 +423,11 @@ export function UserRoleManagement() {
       purpose="Manage users, roles, permissions, and assignments by backend permission tags."
     >
       <div className="grid gap-6">
+        {message ? (
+          <div className="rounded-md border border-primary/30 bg-primary/10 p-3">
+            <p className="text-sm font-medium text-primary">{message}</p>
+          </div>
+        ) : null}
         <Card className="border border-primary/20 bg-surface/95 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -525,10 +530,16 @@ export function UserRoleManagement() {
                 value={roleForm.status}
                 onChange={(event) => setRoleForm((current) => ({ ...current, status: event.target.value as RoleForm['status'] }))}
                 options={roleStatusOptions}
+                disabled={!selectedRoleId}
               />
+              {!selectedRoleId && (
+                <p className="text-xs text-ink/50">New roles are initially inactive until permissions are assigned.</p>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" isLoading={isSaving} disabled={selectedRoleId ? !canUpdateRole : !canCreateRole}>Save Role</Button>
-                <Button type="button" variant="secondary" onClick={handleDeleteRole} disabled={!selectedRoleId || !canDeleteRole || isSaving}>Delete</Button>
+                {selectedRoleId && (
+                  <Button type="button" variant="secondary" onClick={handleDeleteRole} disabled={!canDeleteRole || isSaving}>Delete</Button>
+                )}
               </div>
             </form>
           </Card>
@@ -696,8 +707,6 @@ export function UserRoleManagement() {
             </form>
           </Card>
         </div>
-
-        {message ? <p className="text-sm text-surface/75">{message}</p> : null}
       </div>
     </PageScaffold>
   );

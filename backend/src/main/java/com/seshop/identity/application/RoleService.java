@@ -359,6 +359,7 @@ public class RoleService {
         auditService.write(AuditAction.USER_DELETED, "User", userId.toString(), metadata);
     }
 
+    @Transactional(readOnly = true)
     public AdminRoleDto toRoleDto(RoleEntity role) {
         List<String> permissionCodes = rolePermissionRepository.findByRoleId(role.getId()).stream()
                 .map(rolePermission -> rolePermission.getPermission().getCode())

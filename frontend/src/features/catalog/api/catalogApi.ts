@@ -5,13 +5,15 @@ import type { StockAvailability } from '@/entities/inventory/types';
 
 export type ProductListParams = {
   page?: number;
-  size?: number;
+  size?: number; // pagination size
   sort?: 'newest' | 'price_asc' | 'price_desc' | 'popular';
   search?: string;
   categoryId?: number;
   minPrice?: number;
   maxPrice?: number;
   brand?: string;
+  productSize?: string;
+  color?: string;
 };
 
 type BackendProduct = {
@@ -20,6 +22,8 @@ type BackendProduct = {
   brand?: string;
   description?: string;
   status: string;
+  averageRating?: number;
+  reviewCount?: number;
   images?: Array<{
     id: number;
     url: string;
@@ -56,6 +60,10 @@ function toFrontendProduct(product: BackendProduct): Product {
     isInstagramReady: image.instagramReady ?? image.isInstagramReady ?? false,
   }));
 
+  const reviewSummary = product.averageRating != null && product.reviewCount != null
+    ? { averageRating: product.averageRating, reviewCount: product.reviewCount }
+    : undefined;
+
   return {
     id: product.id,
     name: product.name,
@@ -64,6 +72,7 @@ function toFrontendProduct(product: BackendProduct): Product {
     status: product.status === 'PUBLISHED' ? 'PUBLISHED' : product.status === 'ARCHIVED' ? 'ARCHIVED' : 'DRAFT',
     thumbnailUrl: images[0]?.url,
     images,
+    reviewSummary,
     variants: product.variants.map((variant) => ({
       id: variant.id,
       skuCode: variant.skuCode,
@@ -89,6 +98,8 @@ export async function getProducts(params: ProductListParams = {}): Promise<PageR
       categoryId: params.categoryId || undefined,
       minPrice: params.minPrice || undefined,
       maxPrice: params.maxPrice || undefined,
+      size: params.productSize || undefined,
+      color: params.color || undefined,
       sort,
     },
   });
