@@ -50,6 +50,12 @@ public class OrderEntity {
     @Column(name = "billing_address", columnDefinition = "TEXT")
     private String billingAddress;
 
+    @Column(name = "shipping_latitude")
+    private Double shippingLatitude;
+
+    @Column(name = "shipping_longitude")
+    private Double shippingLongitude;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -127,4 +133,10 @@ public class OrderEntity {
 
     public List<OrderItemEntity> getItems() { return items; }
     public void setItems(List<OrderItemEntity> items) { this.items = items; }
+
+    public Double getShippingLatitude() { return shippingLatitude; }
+    public void setShippingLatitude(Double shippingLatitude) { this.shippingLatitude = shippingLatitude; }
+
+    public Double getShippingLongitude() { return shippingLongitude; }
+    public void setShippingLongitude(Double shippingLongitude) { this.shippingLongitude = shippingLongitude; }
 }

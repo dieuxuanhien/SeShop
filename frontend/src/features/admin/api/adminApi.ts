@@ -161,6 +161,9 @@ export type AdminLocation = {
   displayName: string;
   locationType: 'STORE' | 'STORAGE';
   status: 'ACTIVE' | 'INACTIVE';
+  latitude?: number;
+  longitude?: number;
+  addressText?: string;
 };
 
 type LocationsResponse = {
@@ -170,6 +173,26 @@ type LocationsResponse = {
 export async function getLocations(): Promise<AdminLocation[]> {
   const response = await apiClient.get<ApiResponse<LocationsResponse>>('/admin/locations');
   return response.data.data.items;
+}
+
+export type LocationMutationRequest = {
+  code: string;
+  displayName: string;
+  locationType: 'STORE' | 'STORAGE';
+  status: 'ACTIVE' | 'INACTIVE';
+  latitude?: number;
+  longitude?: number;
+  addressText?: string;
+};
+
+export async function createLocation(request: LocationMutationRequest): Promise<AdminLocation> {
+  const response = await apiClient.post<ApiResponse<AdminLocation>>('/admin/locations', request);
+  return response.data.data;
+}
+
+export async function updateLocation(locationId: number, request: LocationMutationRequest): Promise<AdminLocation> {
+  const response = await apiClient.put<ApiResponse<AdminLocation>>(`/admin/locations/${locationId}`, request);
+  return response.data.data;
 }
 
 export function locationsFromBalances(balances: InventoryBalance[]): LocationSummary[] {

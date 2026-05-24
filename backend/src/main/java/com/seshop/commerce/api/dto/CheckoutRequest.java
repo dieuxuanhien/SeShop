@@ -73,6 +73,8 @@ public class CheckoutRequest {
         private String ward;
         private String district;
         private String city;
+        private Double latitude;
+        private Double longitude;
 
         public String getFullName() { return fullName; }
         public void setFullName(String fullName) { this.fullName = fullName; }
@@ -86,6 +88,10 @@ public class CheckoutRequest {
         public void setDistrict(String district) { this.district = district; }
         public String getCity() { return city; }
         public void setCity(String city) { this.city = city; }
+        public Double getLatitude() { return latitude; }
+        public void setLatitude(Double latitude) { this.latitude = latitude; }
+        public Double getLongitude() { return longitude; }
+        public void setLongitude(Double longitude) { this.longitude = longitude; }
 
         private String toText() {
             return String.join(", ",

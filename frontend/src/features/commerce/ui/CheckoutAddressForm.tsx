@@ -1,13 +1,15 @@
 import { Input } from '@/shared/ui/Input';
 import type { Province, District, Ward } from '@/features/commerce/api/checkoutApi';
 
-type AddressState = {
+export type AddressState = {
   fullName: string;
   phoneNumber: string;
   line1: string;
   ward: string;
   district: string;
   city: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 type CheckoutAddressFormProps = {
@@ -23,6 +25,8 @@ type CheckoutAddressFormProps = {
   selectedWardCode: string;
   handleWardChange: (code: string) => void;
 };
+
+import { MapPicker } from '@/shared/ui/MapPicker';
 
 export function CheckoutAddressForm({
   address,
@@ -136,6 +140,19 @@ export function CheckoutAddressForm({
           </div>
         </>
       )}
+
+      <div className="md:col-span-2 mt-4">
+        <label className="text-sm font-medium text-surface mb-2 block">Pin Location on Map (Required for Nearest Store)</label>
+        <MapPicker
+          lat={address.latitude}
+          lng={address.longitude}
+          onChange={(lat, lng) => setAddress({ ...address, latitude: lat, longitude: lng })}
+          className="h-64 w-full rounded-md border border-primary/20"
+        />
+        {!address.latitude && (
+          <p className="text-xs text-warning mt-1">Please click on the map to pin your delivery location.</p>
+        )}
+      </div>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
 import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
 import com.seshop.inventory.infrastructure.persistence.InventoryBalanceEntity;
 import com.seshop.inventory.infrastructure.persistence.InventoryBalanceRepository;
+import com.seshop.inventory.infrastructure.persistence.LocationEntity;
 import com.seshop.marketing.api.dto.DiscountValidationResponse;
 import com.seshop.marketing.application.DiscountService;
 import com.seshop.payment.infrastructure.StripeClient;
@@ -126,6 +127,11 @@ public class OrderService {
         order.setCurrency(DEFAULT_CURRENCY);
         order.setShippingAddress(request.shippingAddressText());
         order.setBillingAddress(request.billingAddressText());
+        
+        if (request.getShippingAddress() != null) {
+            order.setShippingLatitude(request.getShippingAddress().getLatitude());
+            order.setShippingLongitude(request.getShippingAddress().getLongitude());
+        }
 
         BigDecimal subtotal = BigDecimal.ZERO;
         
@@ -424,7 +430,7 @@ public class OrderService {
         }
 
         List<OrderAllocationEntity> allocations = order.getItems().stream()
-                .flatMap(item -> reserveItemAllocations(item).stream())
+                .flatMap(item -> reserveItemAllocations(item, order).stream())
                 .toList();
         order.setStatus(STATUS_ALLOCATED);
         return allocations;
@@ -455,9 +461,16 @@ public class OrderService {
         return null;
     }
 
-    private List<OrderAllocationEntity> reserveItemAllocations(OrderItemEntity item) {
+    private List<OrderAllocationEntity> reserveItemAllocations(OrderItemEntity item, OrderEntity order) {
         List<InventoryBalanceEntity> balances =
                 balanceRepository.findForUpdateByVariantIdOrderById(item.getVariantId());
+
+        if (order.getShippingLatitude() != null && order.getShippingLongitude() != null) {
+            balances.sort(java.util.Comparator.comparingDouble(b -> {
+                LocationEntity loc = b.getLocation();
+                return calculateDistance(order.getShippingLatitude(), order.getShippingLongitude(), loc.getLatitude(), loc.getLongitude());
+            }));
+        }
         int requiredQty = item.getQty();
         int totalAvailable = balances.stream().mapToInt(this::availableQty).sum();
         if (totalAvailable < requiredQty) {
@@ -545,6 +558,18 @@ public class OrderService {
 
     private int availableQty(InventoryBalanceEntity balance) {
         return balance.getOnHandQty() - balance.getReservedQty();
+    }
+
+    private double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
+        if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return Double.MAX_VALUE;
+        final int R = 6371; // Radius of the earth in km
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 
     public String refreshShipmentStatus(Long orderId) {

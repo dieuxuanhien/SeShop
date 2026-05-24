@@ -10,6 +10,8 @@ export type CheckoutRequest = {
     ward: string;
     district: string;
     city: string;
+    latitude?: number;
+    longitude?: number;
   };
   paymentMethod: 'STRIPE' | 'COD';
   discountCode?: string;

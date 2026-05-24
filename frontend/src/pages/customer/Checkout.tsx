@@ -24,7 +24,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import { env } from '@/shared/config/env';
 import { StripePaymentForm } from '@/features/commerce/ui/StripePaymentForm';
 import { CheckoutOrderSummary } from '@/features/commerce/ui/CheckoutOrderSummary';
-import { CheckoutAddressForm } from '@/features/commerce/ui/CheckoutAddressForm';
+import { CheckoutAddressForm, type AddressState } from '@/features/commerce/ui/CheckoutAddressForm';
 import { CheckoutPaymentSelector } from '@/features/commerce/ui/CheckoutPaymentSelector';
 
 export function Checkout() {
@@ -58,13 +58,15 @@ export function Checkout() {
   const [selectedWardCode, setSelectedWardCode] = useState<string>('');
 
   // Form state
-  const [address, setAddress] = useState({
+  const [address, setAddress] = useState<AddressState>({
     fullName: '',
     phoneNumber: '',
     line1: '',
     ward: '',
     district: '',
     city: 'Ho Chi Minh City',
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
   });
   const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'COD'>('STRIPE');
   const [orderResponse, setOrderResponse] = useState<CheckoutResponse | null>(null);
@@ -267,7 +269,7 @@ export function Checkout() {
                   <Button
                     onClick={handleValidateAndContinue}
                     isLoading={isValidatingAddress}
-                    disabled={!address.fullName || !address.phoneNumber || !address.line1 || !address.district || !address.ward}
+                    disabled={!address.fullName || !address.phoneNumber || !address.line1 || !address.district || !address.ward || !address.latitude || !address.longitude}
                   >
                     Continue to Payment
                   </Button>

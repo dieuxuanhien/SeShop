@@ -3,13 +3,41 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { PageScaffold } from '@/shared/ui/PageScaffold';
-import { getLocations, locationsFromBalances, type LocationSummary } from '@/features/admin/api/adminApi';
+import { getLocations, locationsFromBalances, type LocationSummary, type AdminLocation, createLocation, updateLocation, type LocationMutationRequest } from '@/features/admin/api/adminApi';
 import { getInventoryBalances, type InventoryBalance } from '@/features/staff/api/staffInventoryApi';
+import { Modal } from '@/shared/ui/Modal';
+import { Input } from '@/shared/ui/Input';
+import { Select } from '@/shared/ui/Select';
+import { MapPicker } from '@/shared/ui/MapPicker';
 
 export function LocationsManagement() {
   const [locations, setLocations] = useState<LocationSummary[]>([]);
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [formData, setFormData] = useState<LocationMutationRequest>({
+    code: '',
+    displayName: '',
+    locationType: 'STORE',
+    status: 'ACTIVE',
+    latitude: undefined,
+    longitude: undefined,
+    addressText: '',
+  });
+
+  const resetForm = () => {
+    setFormData({
+      code: '',
+      displayName: '',
+      locationType: 'STORE',
+      status: 'ACTIVE',
+      latitude: undefined,
+      longitude: undefined,
+      addressText: '',
+    });
+    setEditingId(null);
+  };
 
   function loadLocations() {
     setIsLoading(true);
@@ -25,6 +53,9 @@ export function LocationsManagement() {
             name: location.displayName,
             type: location.locationType,
             status: location.status,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            addressText: location.addressText,
             skus: stock?.skus ?? 0,
           };
         }));
@@ -47,6 +78,36 @@ export function LocationsManagement() {
     return { ...location, available, reserved };
   });
 
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingId) {
+        await updateLocation(editingId, formData);
+      } else {
+        await createLocation(formData);
+      }
+      setIsModalOpen(false);
+      resetForm();
+      loadLocations();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleEdit = (location: any) => {
+    setEditingId(location.id);
+    setFormData({
+      code: location.code || '',
+      displayName: location.name,
+      locationType: location.type || 'STORE',
+      status: location.status || 'ACTIVE',
+      latitude: location.latitude,
+      longitude: location.longitude,
+      addressText: location.addressText || '',
+    });
+    setIsModalOpen(true);
+  };
+
   return (
     <PageScaffold
       title="Locations Management"
@@ -60,7 +121,10 @@ export function LocationsManagement() {
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Location Directory</h2>
               <p className="mt-1 text-xs text-ink/50">Monitor store and storage hubs with inventory snapshots.</p>
             </div>
-            <Button variant="secondary" onClick={loadLocations}>Refresh</Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={loadLocations}>Refresh</Button>
+              <Button onClick={() => { resetForm(); setIsModalOpen(true); }}>Add Location</Button>
+            </div>
           </div>
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -89,7 +153,7 @@ export function LocationsManagement() {
 	                    <td className="px-3 py-3">{location.type ?? 'STORE'}</td>
 	                    <td className="px-3 py-3 text-right">{location.skus} SKUs / {location.available} units</td>
                     <td className="px-3 py-3 text-right">
-                      <Badge variant={location.available < 5 ? 'warning' : 'success'}>{location.available < 5 ? 'Review' : 'Active'}</Badge>
+                      <Button variant="secondary" size="sm" onClick={() => handleEdit(location)}>Edit</Button>
                     </td>
                   </tr>
                 ))}
@@ -131,6 +195,48 @@ export function LocationsManagement() {
           </Card>
         </div>
       </div>
+
+      <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit Location' : 'New Location'}>
+        <form onSubmit={handleSave} className="p-6 grid gap-4 w-full max-w-lg min-w-[320px] md:min-w-[500px]">
+          <div className="grid grid-cols-2 gap-4">
+            <Input label="Code" value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} required />
+            <Input label="Name" value={formData.displayName} onChange={e => setFormData({...formData, displayName: e.target.value})} required />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Select 
+              label="Type" 
+              value={formData.locationType} 
+              onChange={e => setFormData({...formData, locationType: e.target.value as any})}
+              options={[
+                { value: 'STORE', label: 'Store' },
+                { value: 'STORAGE', label: 'Storage' }
+              ]}
+            />
+            <Select 
+              label="Status" 
+              value={formData.status} 
+              onChange={e => setFormData({...formData, status: e.target.value as any})}
+              options={[
+                { value: 'ACTIVE', label: 'Active' },
+                { value: 'INACTIVE', label: 'Inactive' }
+              ]}
+            />
+          </div>
+          <Input label="Address" value={formData.addressText} onChange={e => setFormData({...formData, addressText: e.target.value})} />
+          <div>
+            <label className="text-sm font-medium mb-2 block">Pin Location</label>
+            <MapPicker 
+              lat={formData.latitude} 
+              lng={formData.longitude} 
+              onChange={(lat, lng) => setFormData({...formData, latitude: lat, longitude: lng})} 
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button type="submit">Save Location</Button>
+          </div>
+        </form>
+      </Modal>
     </PageScaffold>
   );
 }
