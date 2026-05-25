@@ -17,8 +17,7 @@ public class ProductDto {
     public static class VariantDto {
         private Long id;
         private String skuCode;
-        private String size;
-        private String color;
+        private java.util.Map<String, String> attributes;
         private BigDecimal price;
         private String status;
 
@@ -27,10 +26,8 @@ public class ProductDto {
         public void setId(Long id) { this.id = id; }
         public String getSkuCode() { return skuCode; }
         public void setSkuCode(String skuCode) { this.skuCode = skuCode; }
-        public String getSize() { return size; }
-        public void setSize(String size) { this.size = size; }
-        public String getColor() { return color; }
-        public void setColor(String color) { this.color = color; }
+        public java.util.Map<String, String> getAttributes() { return attributes; }
+        public void setAttributes(java.util.Map<String, String> attributes) { this.attributes = attributes; }
         public BigDecimal getPrice() { return price; }
         public void setPrice(BigDecimal price) { this.price = price; }
         public String getStatus() { return status; }

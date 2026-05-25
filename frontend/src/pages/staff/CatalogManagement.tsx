@@ -29,10 +29,9 @@ const emptyProductForm: ProductMutationRequest = {
   status: 'PUBLISHED',
 };
 
-const emptyVariantForm: VariantMutationRequest = {
+const emptyVariantForm: VariantMutationRequest & { attributesStr?: string } = {
   skuCode: '',
-  size: '',
-  color: '',
+  attributesStr: '{}',
   price: 0,
   status: 'ACTIVE',
 };
@@ -70,7 +69,7 @@ export function CatalogManagement() {
   });
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [productForm, setProductForm] = useState<ProductMutationRequest>(emptyProductForm);
-  const [variantForm, setVariantForm] = useState<VariantMutationRequest>(emptyVariantForm);
+  const [variantForm, setVariantForm] = useState<VariantMutationRequest & { attributesStr?: string }>(emptyVariantForm);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -174,7 +173,15 @@ export function CatalogManagement() {
     setIsSaving(true);
     setMessage('');
     try {
-      const updated = await createProductVariants(selectedProductId, [{ ...variantForm, price: Number(variantForm.price) }]);
+      let attrs = {};
+      if (variantForm.attributesStr && variantForm.attributesStr.trim()) {
+        attrs = JSON.parse(variantForm.attributesStr);
+      }
+      const updated = await createProductVariants(selectedProductId, [{ 
+        ...variantForm, 
+        attributes: attrs,
+        price: Number(variantForm.price) 
+      }]);
       replaceProduct(updated);
       setVariantForm(emptyVariantForm);
       setMessage('Variant added.');
@@ -451,7 +458,9 @@ export function CatalogManagement() {
                         <tr key={variant.id}>
                           <td className="px-3 py-2 font-semibold text-ink">{variant.skuCode}</td>
                           <td className="px-3 py-2 text-ink/65">
-                            {[variant.size, variant.color].filter(Boolean).join(' / ') || 'Default'}
+                            {variant.attributes && Object.keys(variant.attributes).length > 0 
+                              ? Object.entries(variant.attributes).map(([k, v]) => `${k}: ${v}`).join(', ') 
+                              : 'Default'}
                           </td>
                           <td className="px-3 py-2">
                             <Badge variant={variant.status === 'ACTIVE' ? 'success' : 'default'}>{variant.status}</Badge>
@@ -496,16 +505,15 @@ export function CatalogManagement() {
                   onChange={(event) => setVariantForm((current) => ({ ...current, price: Number(event.target.value) }))}
                   required
                 />
-                <Input
-                  label="Size"
-                  value={variantForm.size}
-                  onChange={(event) => setVariantForm((current) => ({ ...current, size: event.target.value }))}
-                />
-                <Input
-                  label="Color"
-                  value={variantForm.color}
-                  onChange={(event) => setVariantForm((current) => ({ ...current, color: event.target.value }))}
-                />
+                <label className="grid gap-1 text-sm font-medium text-ink sm:col-span-2">
+                  <span>Attributes (JSON)</span>
+                  <textarea
+                    value={variantForm.attributesStr}
+                    onChange={(event) => setVariantForm((current) => ({ ...current, attributesStr: event.target.value }))}
+                    placeholder='{"size": "M", "color": "Red"}'
+                    className="min-h-16 rounded-md border border-primary/30 bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
+                </label>
                 <Select
                   label="Status"
                   value={variantForm.status}

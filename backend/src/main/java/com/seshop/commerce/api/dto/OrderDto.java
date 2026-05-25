@@ -12,6 +12,7 @@ public class OrderDto {
     private BigDecimal totalAmount;
     private String currency;
     private String shippingAddress;
+    private String trackingNumber;
     private List<OrderItemDto> items;
 
     public static class OrderItemDto {
@@ -19,8 +20,7 @@ public class OrderDto {
         private Long variantId;
         private String productName;
         private String skuCode;
-        private String color;
-        private String size;
+        private java.util.Map<String, String> attributes;
         private String imageUrl;
         private Integer qty;
         private BigDecimal unitPrice;
@@ -35,10 +35,8 @@ public class OrderDto {
         public void setProductName(String productName) { this.productName = productName; }
         public String getSkuCode() { return skuCode; }
         public void setSkuCode(String skuCode) { this.skuCode = skuCode; }
-        public String getColor() { return color; }
-        public void setColor(String color) { this.color = color; }
-        public String getSize() { return size; }
-        public void setSize(String size) { this.size = size; }
+        public java.util.Map<String, String> getAttributes() { return attributes; }
+        public void setAttributes(java.util.Map<String, String> attributes) { this.attributes = attributes; }
         public String getImageUrl() { return imageUrl; }
         public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
         public Integer getQty() { return qty; }
@@ -73,6 +71,9 @@ public class OrderDto {
 
     public String getShippingAddress() { return shippingAddress; }
     public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }
+
+    public String getTrackingNumber() { return trackingNumber; }
+    public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
 
     public List<OrderItemDto> getItems() { return items; }
     public void setItems(List<OrderItemDto> items) { this.items = items; }

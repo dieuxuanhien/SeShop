@@ -16,8 +16,7 @@ public class AiRecommendationResponse {
         private Long variantId;
         private String productName;
         private String skuCode;
-        private String color;
-        private String size;
+        private java.util.Map<String, String> attributes;
         private java.math.BigDecimal price;
         private String imageUrl;
         private String description;
@@ -32,10 +31,8 @@ public class AiRecommendationResponse {
         public void setProductName(String productName) { this.productName = productName; }
         public String getSkuCode() { return skuCode; }
         public void setSkuCode(String skuCode) { this.skuCode = skuCode; }
-        public String getColor() { return color; }
-        public void setColor(String color) { this.color = color; }
-        public String getSize() { return size; }
-        public void setSize(String size) { this.size = size; }
+        public java.util.Map<String, String> getAttributes() { return attributes; }
+        public void setAttributes(java.util.Map<String, String> attributes) { this.attributes = attributes; }
         public java.math.BigDecimal getPrice() { return price; }
         public void setPrice(java.math.BigDecimal price) { this.price = price; }
         public String getImageUrl() { return imageUrl; }

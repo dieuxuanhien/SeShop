@@ -12,9 +12,7 @@ export type ProductImage = {
 export type ProductVariant = {
   id: number;
   skuCode: string;
-  size?: string;
-  color?: string;
-  colorHex?: string;
+  attributes?: Record<string, string>;
   price: number;
   compareAtPrice?: number;
   status: VariantStatus;

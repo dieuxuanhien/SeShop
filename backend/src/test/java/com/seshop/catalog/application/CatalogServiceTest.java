@@ -124,8 +124,7 @@ class CatalogServiceTest {
 
         CreateVariantRequest variantRequest = new CreateVariantRequest();
         variantRequest.setSkuCode("SKU-SHIRT-M");
-        variantRequest.setSize("M");
-        variantRequest.setColor("White");
+        variantRequest.setAttributes(java.util.Map.of("size", "M", "color", "White"));
         variantRequest.setPrice(new BigDecimal("590000"));
         variantRequest.setStatus("ACTIVE");
 
@@ -143,8 +142,7 @@ class CatalogServiceTest {
 
         CreateVariantRequest variantRequest = new CreateVariantRequest();
         variantRequest.setSkuCode("SKU-DUP");
-        variantRequest.setSize("S");
-        variantRequest.setColor("Red");
+        variantRequest.setAttributes(java.util.Map.of("size", "S", "color", "Red"));
         variantRequest.setPrice(new BigDecimal("100000"));
         variantRequest.setStatus("ACTIVE");
 

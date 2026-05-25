@@ -44,8 +44,8 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
            "OR LOWER(v.skuCode) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (:brand = '' OR LOWER(p.brand) = LOWER(:brand)) " +
            "AND (:categoryId IS NULL OR pc.categoryId = :categoryId) " +
-           "AND (:size = '' OR LOWER(v.size) = LOWER(:size)) " +
-           "AND (:color = '' OR LOWER(v.color) = LOWER(:color)) " +
+           "AND (:size = '' OR LOWER(FUNCTION('jsonb_extract_path_text', v.attributes, 'size')) = LOWER(:size)) " +
+           "AND (:color = '' OR LOWER(FUNCTION('jsonb_extract_path_text', v.attributes, 'color')) = LOWER(:color)) " +
            "AND (:minPrice IS NULL OR v.price >= :minPrice) " +
            "AND (:maxPrice IS NULL OR v.price <= :maxPrice)")
     Page<ProductEntity> findPublishedProductsFiltered(

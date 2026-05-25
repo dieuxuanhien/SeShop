@@ -63,7 +63,22 @@ export function Orders() {
 
                 {order.shippingAddress && (
                   <div className="mb-4 text-xs text-ink/70 bg-ink/5 p-3 rounded border border-primary/10">
-                    <span className="font-semibold text-ink">Shipping Address:</span> {order.shippingAddress}
+                    <div className="mb-1">
+                      <span className="font-semibold text-ink">Shipping Address:</span> {order.shippingAddress}
+                    </div>
+                    {order.trackingNumber && (
+                      <div>
+                        <span className="font-semibold text-ink">Tracking:</span>{' '}
+                        <a 
+                          href={`https://tracking.ghn.dev/?order_code=${order.trackingNumber}`} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {order.trackingNumber}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -82,7 +97,7 @@ export function Orders() {
                           <div className="flex-1 min-w-0">
                             <h5 className="text-sm font-semibold text-ink truncate">{item.productName}</h5>
                             <p className="mt-0.5 text-xs text-ink/60 truncate">
-                              {item.skuCode} {item.color ? `| Color: ${item.color}` : ''} {item.size ? `| Size: ${item.size}` : ''}
+                              {item.skuCode} {item.attributes && Object.keys(item.attributes).length > 0 ? `| ${Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')}` : ''}
                             </p>
                             <div className="mt-1 flex items-center justify-between text-xs font-medium text-ink/80">
                               <span>{formatCurrency(item.unitPrice)} × {item.qty}</span>

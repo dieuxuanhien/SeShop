@@ -269,8 +269,8 @@ WHERE NOT EXISTS (
   WHERE pv.sku_code = 'THR-' || s.source_sku
 );
 
-INSERT INTO product_variants (product_id, sku_code, size, color, price, status)
-SELECT p.id, 'THR-' || s.source_sku, s.size_label, s.color, s.price_vnd, 'ACTIVE'
+INSERT INTO product_variants (product_id, sku_code, attributes, price, status)
+SELECT p.id, 'THR-' || s.source_sku, jsonb_strip_nulls(jsonb_build_object('size', s.size_label, 'color', s.color)), s.price_vnd, 'ACTIVE'
 FROM seed_extra_accessories s
 JOIN LATERAL (
   SELECT id

@@ -19,11 +19,9 @@ public class ProductVariantEntity {
     @Column(name = "sku_code", nullable = false, unique = true, length = 80)
     private String skuCode;
 
-    @Column(length = 30)
-    private String size;
-
-    @Column(length = 30)
-    private String color;
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private java.util.Map<String, String> attributes;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
@@ -58,11 +56,8 @@ public class ProductVariantEntity {
     public String getSkuCode() { return skuCode; }
     public void setSkuCode(String skuCode) { this.skuCode = skuCode; }
 
-    public String getSize() { return size; }
-    public void setSize(String size) { this.size = size; }
-
-    public String getColor() { return color; }
-    public void setColor(String color) { this.color = color; }
+    public java.util.Map<String, String> getAttributes() { return attributes; }
+    public void setAttributes(java.util.Map<String, String> attributes) { this.attributes = attributes; }
 
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }

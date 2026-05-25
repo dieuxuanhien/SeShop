@@ -305,6 +305,21 @@ public class OrderService {
         requireOrderScope(orderId, locationScope);
         OrderEntity order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new BusinessException("ORD_002", "Order not found"));
+        
+        // Auto-create GHN shipment
+        String addressText = order.getShippingAddress();
+        if (addressText != null && !addressText.isBlank()) {
+            String[] parts = addressText.split("\\s*,\\s*", 3);
+            String toName = parts.length > 0 ? parts[0] : "Customer";
+            String toPhone = parts.length > 1 ? parts[1] : "0000000000";
+            
+            try {
+                return shipOrder(orderId, "GHN", toName, toPhone, null, locationScope);
+            } catch (Exception e) {
+                throw new BusinessException("ORD_003", "Auto-create GHN order failed: " + e.getMessage());
+            }
+        }
+
         order.setStatus(STATUS_PACKED);
         return mapToDto(orderRepository.save(order));
     }
@@ -351,8 +366,20 @@ public class OrderService {
             shipment.setTrackingNumber(providedTrackingNumber);
             shipment.setStatus(SHIPMENT_STATUS_SHIPPED);
         } else if ("GHN".equals(normalizedCarrier)) {
+            List<OrderAllocationEntity> allocations = allocationRepository.findByOrderIdAndStatus(orderId, STATUS_FULFILLED);
+            String fromName = null;
+            String fromPhone = null;
+            String fromAddress = null;
+            if (!allocations.isEmpty()) {
+                LocationEntity location = allocations.get(0).getLocation();
+                fromName = location.getDisplayName();
+                fromAddress = location.getAddressText();
+            }
             GhnClient.GhnShipmentResult result = ghnClient.createShippingOrder(
                     order.getOrderNumber(),
+                    fromName,
+                    fromPhone,
+                    fromAddress,
                     toName,
                     toPhone,
                     order.getShippingAddress()
@@ -666,6 +693,9 @@ public class OrderService {
         dto.setTotalAmount(entity.getTotalAmount());
         dto.setCurrency(entity.getCurrency());
         dto.setShippingAddress(entity.getShippingAddress());
+        shipmentRepository.findByOrderId(entity.getId()).ifPresent(shipment -> {
+            dto.setTrackingNumber(shipment.getTrackingNumber());
+        });
         dto.setItems(entity.getItems().stream().map(item -> {
             OrderDto.OrderItemDto itemDto = new OrderDto.OrderItemDto();
             itemDto.setId(item.getId());
@@ -677,8 +707,7 @@ public class OrderService {
             // Enrich with variant details (sku, color, size, image)
             productVariantRepository.findById(item.getVariantId()).ifPresent(variant -> {
                 itemDto.setSkuCode(variant.getSkuCode());
-                itemDto.setColor(variant.getColor());
-                itemDto.setSize(variant.getSize());
+                itemDto.setAttributes(variant.getAttributes());
                 // Pick first product image
                 if (variant.getProduct() != null && variant.getProduct().getImages() != null) {
                     variant.getProduct().getImages().stream()

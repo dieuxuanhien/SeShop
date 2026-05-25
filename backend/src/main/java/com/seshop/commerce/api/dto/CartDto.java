@@ -13,8 +13,7 @@ public class CartDto {
         private Long variantId;
         private String skuCode;
         private String name;
-        private String color;
-        private String size;
+        private java.util.Map<String, String> attributes;
         private String imageUrl;
         private Integer qty;
         private java.math.BigDecimal unitPrice;
@@ -27,10 +26,8 @@ public class CartDto {
         public void setSkuCode(String skuCode) { this.skuCode = skuCode; }
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
-        public String getColor() { return color; }
-        public void setColor(String color) { this.color = color; }
-        public String getSize() { return size; }
-        public void setSize(String size) { this.size = size; }
+        public java.util.Map<String, String> getAttributes() { return attributes; }
+        public void setAttributes(java.util.Map<String, String> attributes) { this.attributes = attributes; }
         public String getImageUrl() { return imageUrl; }
         public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
         public Integer getQty() { return qty; }

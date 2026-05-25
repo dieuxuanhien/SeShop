@@ -72,7 +72,7 @@ export function Checkout() {
   const [orderResponse, setOrderResponse] = useState<CheckoutResponse | null>(null);
   const [showStripeForm, setShowStripeForm] = useState(false);
 
-  const total = subtotal + shippingFee + stripeFee - discountAmount;
+  const total = subtotal + stripeFee - discountAmount;
 
   useEffect(() => {
     getMyCart()
@@ -83,8 +83,7 @@ export function Checkout() {
           variantId: item.variantId,
           skuCode: item.skuCode,
           name: item.name,
-          color: item.color,
-          size: item.size,
+          attributes: item.attributes,
           imageUrl: item.imageUrl,
           qty: item.qty,
           unitPrice: Number(item.unitPrice),
@@ -132,7 +131,7 @@ export function Checkout() {
 
   // Estimate Stripe processing fee when applicable
   useEffect(() => {
-    const currentBaseTotal = subtotal + shippingFee - discountAmount;
+    const currentBaseTotal = subtotal - discountAmount;
     if (paymentMethod === 'STRIPE' && currentBaseTotal > 0) {
       estimateStripeFee(currentBaseTotal)
         .then((res) => setStripeFee(res.fee))

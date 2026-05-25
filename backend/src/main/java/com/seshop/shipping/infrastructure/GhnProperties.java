@@ -21,9 +21,9 @@ public class GhnProperties {
     private int defaultHeightCm = 12;
     private int defaultCodAmount = 0;
     private int defaultInsuranceValue = 0;
-    private int defaultToDistrictId = 1443;
-    private String defaultToWardCode = "20210";
-    private String defaultToAddress = "1 Quốc Hương";
+    private int defaultToDistrictId = 0;
+    private String defaultToWardCode = "";
+    private String defaultToAddress = "";
     private String defaultFromName = "SeShop Dev";
     private String defaultFromPhone = "0987654321";
     private String defaultFromAddress = "1 Quốc Hương";

@@ -35,8 +35,7 @@ type BackendProduct = {
   variants: Array<{
     id: number;
     skuCode: string;
-    size?: string;
-    color?: string;
+    attributes?: Record<string, string>;
     price: string | number;
     compareAtPrice?: string | number;
     status: string;
@@ -76,9 +75,7 @@ function toFrontendProduct(product: BackendProduct): Product {
     variants: product.variants.map((variant) => ({
       id: variant.id,
       skuCode: variant.skuCode,
-      size: variant.size,
-      color: variant.color,
-      colorHex: undefined,
+      attributes: variant.attributes,
       price: Number(variant.price),
       compareAtPrice: variant.compareAtPrice != null ? Number(variant.compareAtPrice) : undefined,
       status: variant.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
@@ -143,8 +140,7 @@ export type ProductMutationRequest = {
 
 export type VariantMutationRequest = {
   skuCode: string;
-  size?: string;
-  color?: string;
+  attributes?: Record<string, string>;
   price: number;
   status: 'ACTIVE' | 'INACTIVE';
 };

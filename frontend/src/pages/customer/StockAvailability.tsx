@@ -25,8 +25,7 @@ export function StockAvailability() {
       value: String(variant.id),
       label: [
         variant.skuCode,
-        variant.size ? `Size ${variant.size}` : undefined,
-        variant.color,
+        ...(variant.attributes ? Object.entries(variant.attributes).map(([k, v]) => `${k}: ${v}`) : []),
       ].filter(Boolean).join(' - '),
     })) ?? [];
   }, [product]);

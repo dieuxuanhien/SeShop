@@ -57,8 +57,7 @@ public class AiAssistantService {
                     item.setVariantId(variant.getId());
                     item.setProductName(variant.getProduct().getName());
                     item.setSkuCode(variant.getSkuCode());
-                    item.setColor(variant.getColor());
-                    item.setSize(variant.getSize());
+                    item.setAttributes(variant.getAttributes());
                     item.setPrice(variant.getPrice());
                     item.setDescription(variant.getProduct().getDescription());
                     int stock = inventoryBalanceRepository.findByVariantId(variant.getId()).stream()

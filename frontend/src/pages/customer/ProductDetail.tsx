@@ -18,8 +18,7 @@ export function ProductDetail() {
   const { data: product, isLoading } = useProduct(Number(productId));
   const setCartItems = useCartStore((s) => s.setItems);
 
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState<Tab>('description');
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -28,24 +27,42 @@ export function ProductDetail() {
   const [cartError, setCartError] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  const sizes = product ? [...new Set(product.variants.filter((v) => v.size).map((v) => v.size!))] : [];
-  const colorOptions = product ? product.variants.reduce<Record<string, string>>((acc, v) => {
-    if (v.color && v.colorHex && !acc[v.color]) acc[v.color] = v.colorHex;
+  const availableAttributes = product ? product.variants.reduce<Record<string, Set<string>>>((acc, v) => {
+    if (v.attributes) {
+      Object.entries(v.attributes).forEach(([key, val]) => {
+        if (!acc[key]) acc[key] = new Set();
+        acc[key].add(val);
+      });
+    }
     return acc;
   }, {}) : {};
-  const colorKeys = Object.keys(colorOptions);
+
+  const attributeOptions = Object.fromEntries(
+    Object.entries(availableAttributes).map(([k, v]) => [k, Array.from(v)])
+  );
 
   useEffect(() => {
-    if (!selectedSize && sizes.length > 0) setSelectedSize(sizes[0]);
-    if (!selectedColor && colorKeys.length > 0) setSelectedColor(colorKeys[0]);
-  }, [colorKeys, selectedColor, selectedSize, sizes]);
+    const newSelected = { ...selectedAttributes };
+    let changed = false;
+    Object.entries(attributeOptions).forEach(([key, values]) => {
+      if (!newSelected[key] && values.length > 0) {
+        newSelected[key] = values[0];
+        changed = true;
+      }
+    });
+    if (changed) setSelectedAttributes(newSelected);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product]);
 
   if (isLoading) return <ProductDetailSkeleton />;
   if (!product) return <div className="py-20 text-center text-surface/50">Product not found.</div>;
 
   // Find matching variant
   const matchedVariant: ProductVariant | undefined = product.variants.find(
-    (v) => (sizes.length === 0 || v.size === selectedSize) && (colorKeys.length === 0 || v.color === selectedColor),
+    (v) => {
+      if (!v.attributes) return Object.keys(selectedAttributes).length === 0;
+      return Object.entries(selectedAttributes).every(([k, val]) => v.attributes![k] === val);
+    }
   );
   const displayPrice = matchedVariant?.price ?? product.variants[0]?.price ?? 0;
   const compareAt = matchedVariant?.compareAtPrice ?? product.variants[0]?.compareAtPrice;
@@ -175,54 +192,29 @@ export function ProductDetail() {
             <div className="h-px bg-primary/10" />
 
             {/* Size Selector */}
-            {sizes.length > 0 && (
-              <div>
+            {/* Dynamic Attributes */}
+            {Object.entries(attributeOptions).map(([key, values]) => (
+              <div key={key}>
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-surface/60 mb-3">
-                  Size - <span className="text-surface/80">{selectedSize}</span>
+                  {key} - <span className="text-surface/80">{selectedAttributes[key]}</span>
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {sizes.map((size) => (
+                  {values.map((val) => (
                     <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
+                      key={val}
+                      onClick={() => setSelectedAttributes((prev) => ({ ...prev, [key]: val }))}
                       className={`min-w-[44px] rounded-md border px-4 py-2.5 text-sm font-medium transition ${
-                        selectedSize === size
+                        selectedAttributes[key] === val
                           ? 'border-primary bg-primary/10 text-primary'
                           : 'border-primary/20 text-surface/70 hover:border-primary/40'
                       }`}
                     >
-                      {size}
+                      {val}
                     </button>
                   ))}
                 </div>
               </div>
-            )}
-
-            {/* Color Selector */}
-            {colorKeys.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-widest text-surface/60 mb-3">
-                  Color - <span className="text-surface/80">{selectedColor}</span>
-                </h3>
-                <div className="flex flex-wrap gap-3">
-                  {colorKeys.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setSelectedColor(color)}
-                      className={`w-9 h-9 rounded-full border-2 transition ${
-                        selectedColor === color ? 'border-primary scale-110' : 'border-transparent hover:scale-105'
-                      }`}
-                      title={color}
-                    >
-                      <span
-                        className="block w-full h-full rounded-full"
-                        style={{ backgroundColor: colorOptions[color] }}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            ))}
 
             {/* Quantity */}
             <div>

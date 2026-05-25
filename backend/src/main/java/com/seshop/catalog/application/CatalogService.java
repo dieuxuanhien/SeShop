@@ -109,8 +109,7 @@ public class CatalogService {
             ProductVariantEntity variant = new ProductVariantEntity();
             variant.setProduct(product);
             variant.setSkuCode(request.getSkuCode());
-            variant.setSize(request.getSize());
-            variant.setColor(request.getColor());
+            variant.setAttributes(request.getAttributes());
             variant.setPrice(request.getPrice());
             variant.setStatus(request.getStatus());
 
@@ -243,8 +242,7 @@ public class CatalogService {
                 ProductDto.VariantDto vDto = new ProductDto.VariantDto();
                 vDto.setId(v.getId());
                 vDto.setSkuCode(v.getSkuCode());
-                vDto.setSize(v.getSize());
-                vDto.setColor(v.getColor());
+                vDto.setAttributes(v.getAttributes());
                 vDto.setPrice(v.getPrice());
                 vDto.setStatus(v.getStatus());
                 return vDto;

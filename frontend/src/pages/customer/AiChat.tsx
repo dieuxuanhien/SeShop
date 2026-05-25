@@ -42,8 +42,7 @@ export function AiChat() {
         variantId: item.variantId,
         skuCode: item.skuCode,
         name: item.name,
-        color: item.color,
-        size: item.size,
+        attributes: item.attributes,
         imageUrl: item.imageUrl,
         qty: item.qty,
         unitPrice: Number(item.unitPrice),
@@ -127,7 +126,7 @@ export function AiChat() {
                           </div>
                           
                           <p className="text-xs text-ink/60 font-mono">
-                            {item.skuCode || `SKU-${item.variantId}`} {item.color ? `• ${item.color}` : ''} {item.size ? `• ${item.size}` : ''}
+                            {item.skuCode || `SKU-${item.variantId}`} {item.attributes && Object.keys(item.attributes).length > 0 ? `• ${Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')}` : ''}
                           </p>
 
                           {item.description && (

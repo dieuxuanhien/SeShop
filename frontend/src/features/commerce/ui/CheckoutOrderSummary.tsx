@@ -46,7 +46,7 @@ export function CheckoutOrderSummary({
             <div>
               <h3 className="text-sm font-medium">{item.name}</h3>
               <p className="text-xs text-ink/55">
-                {item.skuCode} {item.color ? `| ${item.color}` : ''} {item.size ? `| ${item.size}` : ''} | Qty: {item.qty}
+                {item.skuCode} {item.attributes && Object.keys(item.attributes).length > 0 ? `| ${Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(', ')}` : ''} | Qty: {item.qty}
               </p>
               <p className="text-sm mt-1 font-semibold">{item.unitPrice.toLocaleString()} VND</p>
             </div>
@@ -63,7 +63,14 @@ export function CheckoutOrderSummary({
         </div>
         <div className="flex justify-between">
           <span>Shipping (GHN)</span>
-          <span>{step === 1 ? 'Calculated at next step' : `${shippingFee.toLocaleString()} VND`}</span>
+          <span>
+            {step === 1 ? 'Calculated at next step' : (
+              <>
+                <span className="line-through opacity-50 mr-2">{shippingFee.toLocaleString()} VND</span>
+                <span className="text-success font-medium">Free</span>
+              </>
+            )}
+          </span>
         </div>
         {paymentMethod === 'STRIPE' && (
           <div className="flex justify-between text-ink/80">

@@ -6,8 +6,7 @@ export type OrderItem = {
   variantId: number;
   productName: string;
   skuCode?: string;
-  color?: string;
-  size?: string;
+  attributes?: Record<string, string>;
   imageUrl?: string;
   qty: number;
   unitPrice: number;
@@ -23,6 +22,7 @@ export type CustomerOrder = {
   totalAmount: number;
   currency?: string;
   shippingAddress?: string;
+  trackingNumber?: string;
   items?: OrderItem[];
 };
 

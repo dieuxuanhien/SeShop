@@ -23,7 +23,14 @@ public class GhnClient {
         this.objectMapper = objectMapper;
     }
 
-    public GhnShipmentResult createShippingOrder(String orderNumber, String toName, String toPhone, String toAddress) {
+    public GhnShipmentResult createShippingOrder(
+            String orderNumber,
+            String fromName,
+            String fromPhone,
+            String fromAddress,
+            String toName,
+            String toPhone,
+            String toAddress) {
         if (!properties.isEnabled()) {
             throw new BusinessException("ORD_002", "GHN integration is disabled");
         }
@@ -39,7 +46,7 @@ public class GhnClient {
                     .contentType(MediaType.APPLICATION_JSON)
                     .header("Token", properties.getToken())
                     .header("ShopId", properties.getShopId())
-                    .body(buildCreateOrderBody(orderNumber, toName, toPhone, toAddress))
+                    .body(buildCreateOrderBody(orderNumber, fromName, fromPhone, fromAddress, toName, toPhone, toAddress))
                     .retrieve()
                     .body(String.class);
         } catch (RestClientResponseException exception) {
@@ -292,16 +299,32 @@ public class GhnClient {
         }
     }
 
-    private Map<String, Object> buildCreateOrderBody(String orderNumber, String toName, String toPhone, String toAddress) {
-        AddressParts address = AddressParts.from(toAddress);
+    private Map<String, Object> buildCreateOrderBody(
+            String orderNumber,
+            String fromName,
+            String fromPhone,
+            String fromAddress,
+            String toName,
+            String toPhone,
+            String toAddress) {
+        
+        AddressParts fromAddr = AddressParts.from(fromAddress);
+        String finalFromName = StringUtils.hasText(fromName) ? fromName : properties.getDefaultFromName();
+        String finalFromPhone = StringUtils.hasText(fromPhone) ? fromPhone : properties.getDefaultFromPhone();
+        String finalFromAddress = StringUtils.hasText(fromAddr.line1()) ? fromAddr.line1() : properties.getDefaultFromAddress();
+        String finalFromWard = StringUtils.hasText(fromAddr.ward()) ? fromAddr.ward() : properties.getDefaultFromWardName();
+        String finalFromDistrict = StringUtils.hasText(fromAddr.district()) ? fromAddr.district() : properties.getDefaultFromDistrictName();
+        String finalFromProvince = StringUtils.hasText(fromAddr.province()) ? fromAddr.province() : properties.getDefaultFromProvinceName();
+
+        AddressParts toAddr = AddressParts.from(toAddress);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("client_order_code", orderNumber);
-        body.put("from_name", properties.getDefaultFromName());
-        body.put("from_phone", properties.getDefaultFromPhone());
-        body.put("from_address", properties.getDefaultFromAddress());
-        body.put("from_ward_name", properties.getDefaultFromWardName());
-        body.put("from_district_name", properties.getDefaultFromDistrictName());
-        body.put("from_province_name", properties.getDefaultFromProvinceName());
+        body.put("from_name", finalFromName);
+        body.put("from_phone", finalFromPhone);
+        body.put("from_address", finalFromAddress);
+        body.put("from_ward_name", finalFromWard);
+        body.put("from_district_name", finalFromDistrict);
+        body.put("from_province_name", finalFromProvince);
         body.put("return_phone", properties.getDefaultFromPhone());
         body.put("return_address", properties.getDefaultFromAddress());
         body.put("return_ward_code", properties.getDefaultToWardCode());
@@ -310,14 +333,14 @@ public class GhnClient {
         body.put("to_phone", toPhone);
         body.put("to_address", StringUtils.hasText(properties.getDefaultToAddress())
                 ? properties.getDefaultToAddress()
-                : address.line1());
+                : toAddr.line1());
         if (StringUtils.hasText(properties.getDefaultToWardCode()) && properties.getDefaultToDistrictId() > 0) {
             body.put("to_ward_code", properties.getDefaultToWardCode());
             body.put("to_district_id", properties.getDefaultToDistrictId());
         } else {
-            body.put("to_ward_name", address.ward());
-            body.put("to_district_name", address.district());
-            body.put("to_province_name", address.province());
+            body.put("to_ward_name", toAddr.ward());
+            body.put("to_district_name", toAddr.district());
+            body.put("to_province_name", toAddr.province());
         }
         body.put("required_note", properties.getRequiredNote());
         body.put("payment_type_id", properties.getPaymentTypeId());

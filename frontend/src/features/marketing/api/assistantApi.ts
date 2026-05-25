@@ -8,8 +8,7 @@ export type AiRecommendationResponse = {
     variantId: number;
     productName?: string;
     skuCode?: string;
-    color?: string;
-    size?: string;
+    attributes?: Record<string, string>;
     price?: number;
     imageUrl?: string;
     description?: string;

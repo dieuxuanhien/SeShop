@@ -62,7 +62,21 @@ export function OrderTracking() {
                 </div>
                 <div className="flex justify-between gap-3">
                   <span>Tracking</span>
-                  <span className="font-semibold text-ink">{shipment?.trackingNumbers?.join(', ') || 'Not assigned'}</span>
+                  <span className="font-semibold text-ink">
+                    {shipment?.trackingNumbers && shipment.trackingNumbers.length > 0
+                      ? shipment.trackingNumbers.map((tn) => (
+                          <a 
+                            key={tn} 
+                            href={`https://tracking.ghn.dev/?order_code=${tn}`} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="text-primary hover:underline"
+                          >
+                            {tn}
+                          </a>
+                        )).reduce((prev, curr) => [prev, ', ', curr] as any)
+                      : 'Not assigned'}
+                  </span>
                 </div>
               </div>
             </div>
