@@ -11,20 +11,20 @@ import { PageScaffold } from '@/shared/ui/PageScaffold';
 import { Select } from '@/shared/ui/Select';
 
 export function ReturnsManagement() {
-  const [orderId, setOrderId] = useState(0);
-  const [orderItemId, setOrderItemId] = useState(0);
-  const [qty, setQty] = useState(1);
+  const [orderId, setOrderId] = useState<string>('');
+  const [orderItemId, setOrderItemId] = useState<string>('');
+  const [qty, setQty] = useState<string>('1');
   const [reason, setReason] = useState('');
   const [returnResult, setReturnResult] = useState<ReturnResponse | null>(null);
-  const [approveId, setApproveId] = useState(0);
-  const [refund, setRefund] = useState({ orderId: 0, paymentId: 0, returnRequestId: 0, amount: 0 });
+  const [approveId, setApproveId] = useState<string>('');
+  const [refund, setRefund] = useState({ orderId: '', paymentId: '', returnRequestId: '', amount: '' });
   const [refundResult, setRefundResult] = useState<RefundResponse | null>(null);
   const [posReturn, setPosReturn] = useState({
-    originalOrderId: 0,
-    variantId: 0,
-    qty: 1,
+    originalOrderId: '',
+    variantId: '',
+    qty: '1',
     disposition: 'RESTOCK' as PosReturnDisposition,
-    refundAmount: 0,
+    refundAmount: '',
     reason: '',
   });
   const [posResult, setPosResult] = useState<{ id: number; refundAmount: number; processedAt: string } | null>(null);
@@ -37,13 +37,13 @@ export function ReturnsManagement() {
     setMessage('');
     try {
       const created = await createReturn({
-        orderId,
+        orderId: Number(orderId),
         reason,
-        items: [{ orderItemId, qty }],
+        items: [{ orderItemId: Number(orderItemId), qty: Number(qty) }],
       });
       setReturnResult(created);
-      setApproveId(created.returnId);
-      setRefund((current) => ({ ...current, orderId: created.orderId, returnRequestId: created.returnId }));
+      setApproveId(String(created.returnId));
+      setRefund((current) => ({ ...current, orderId: String(created.orderId), returnRequestId: String(created.returnId) }));
       setMessage(`Return ${created.returnId} created.`);
     } catch {
       setMessage('Return request could not be created.');
@@ -57,7 +57,7 @@ export function ReturnsManagement() {
     setIsSaving(true);
     setMessage('');
     try {
-      const approved = await approveReturn(approveId);
+      const approved = await approveReturn(Number(approveId));
       setReturnResult(approved);
       setMessage(`Return ${approved.returnId} approved.`);
     } catch {
@@ -72,7 +72,12 @@ export function ReturnsManagement() {
     setIsSaving(true);
     setMessage('');
     try {
-      const created = await createRefund(refund);
+      const created = await createRefund({
+        orderId: Number(refund.orderId),
+        paymentId: Number(refund.paymentId),
+        returnRequestId: Number(refund.returnRequestId),
+        amount: Number(refund.amount)
+      });
       setRefundResult(created);
       setMessage(`Refund ${created.refundId} created.`);
     } catch {
@@ -88,13 +93,13 @@ export function ReturnsManagement() {
     setMessage('');
     try {
       const created = await processPosReturn({
-        originalOrderId: posReturn.originalOrderId,
-        refundAmount: posReturn.refundAmount,
+        originalOrderId: Number(posReturn.originalOrderId),
+        refundAmount: Number(posReturn.refundAmount),
         reason: posReturn.reason,
         items: [
           {
-            variantId: posReturn.variantId,
-            qty: posReturn.qty,
+            variantId: Number(posReturn.variantId),
+            qty: Number(posReturn.qty),
             disposition: posReturn.disposition,
           },
         ],
@@ -125,9 +130,9 @@ export function ReturnsManagement() {
           </div>
           <form onSubmit={handleCreateReturn} className="mt-5 grid gap-4">
             <div className="grid gap-4 md:grid-cols-3">
-              <Input label="Order ID" type="number" min={1} value={orderId || ''} onChange={(event) => setOrderId(Number(event.target.value))} required />
-              <Input label="Order Item ID" type="number" min={1} value={orderItemId || ''} onChange={(event) => setOrderItemId(Number(event.target.value))} required />
-              <Input label="Quantity" type="number" min={1} value={qty} onChange={(event) => setQty(Number(event.target.value))} required />
+              <Input label="Order ID (Numeric)" type="number" min={1} value={orderId} onChange={(event) => setOrderId(event.target.value)} required />
+              <Input label="Order Item ID (Numeric)" type="number" min={1} value={orderItemId} onChange={(event) => setOrderItemId(event.target.value)} required />
+              <Input label="Quantity" type="number" min={1} value={qty} onChange={(event) => setQty(event.target.value)} required />
             </div>
             <label className="grid gap-1 text-sm font-medium text-ink">
               <span>Reason</span>
@@ -192,7 +197,7 @@ export function ReturnsManagement() {
           <Card className="border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Approve Return</h2>
             <form onSubmit={handleApprove} className="mt-4 grid gap-4">
-              <Input label="Return ID" type="number" min={1} value={approveId || ''} onChange={(event) => setApproveId(Number(event.target.value))} required />
+              <Input label="Return ID (Numeric)" type="number" min={1} value={approveId} onChange={(event) => setApproveId(event.target.value)} required />
               <Button type="submit" variant="secondary" icon={<CheckCircle2 size={16} />} isLoading={isSaving}>
                 Approve
               </Button>
@@ -202,10 +207,10 @@ export function ReturnsManagement() {
           <Card className="border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Issue Refund</h2>
             <form onSubmit={handleRefund} className="mt-4 grid gap-4">
-              <Input label="Order ID" type="number" min={1} value={refund.orderId || ''} onChange={(event) => setRefund((current) => ({ ...current, orderId: Number(event.target.value) }))} required />
-              <Input label="Payment ID" type="number" min={1} value={refund.paymentId || ''} onChange={(event) => setRefund((current) => ({ ...current, paymentId: Number(event.target.value) }))} required />
-              <Input label="Return ID" type="number" min={1} value={refund.returnRequestId || ''} onChange={(event) => setRefund((current) => ({ ...current, returnRequestId: Number(event.target.value) }))} required />
-              <Input label="Amount" type="number" min={1} value={refund.amount || ''} onChange={(event) => setRefund((current) => ({ ...current, amount: Number(event.target.value) }))} required />
+              <Input label="Order ID (Numeric)" type="number" min={1} value={refund.orderId} onChange={(event) => setRefund((current) => ({ ...current, orderId: event.target.value }))} required />
+              <Input label="Payment ID (Numeric)" type="number" min={1} value={refund.paymentId} onChange={(event) => setRefund((current) => ({ ...current, paymentId: event.target.value }))} required />
+              <Input label="Return ID (Numeric)" type="number" min={1} value={refund.returnRequestId} onChange={(event) => setRefund((current) => ({ ...current, returnRequestId: event.target.value }))} required />
+              <Input label="Amount (VND)" type="number" min={1} value={refund.amount} onChange={(event) => setRefund((current) => ({ ...current, amount: event.target.value }))} required />
               <Button type="submit" variant="secondary" icon={<WalletCards size={16} />} isLoading={isSaving}>
                 Create Refund
               </Button>
@@ -224,9 +229,9 @@ export function ReturnsManagement() {
                 <p className="mt-1 text-xs text-ink/50">Use this for counter returns that refund immediately.</p>
               </div>
               <div className="grid gap-4 md:grid-cols-3">
-                <Input label="Original Receipt ID" type="number" min={1} value={posReturn.originalOrderId || ''} onChange={(event) => setPosReturn((current) => ({ ...current, originalOrderId: Number(event.target.value) }))} required />
-                <Input label="Variant ID" type="number" min={1} value={posReturn.variantId || ''} onChange={(event) => setPosReturn((current) => ({ ...current, variantId: Number(event.target.value) }))} required />
-                <Input label="Quantity" type="number" min={1} value={posReturn.qty || ''} onChange={(event) => setPosReturn((current) => ({ ...current, qty: Number(event.target.value) }))} required />
+                <Input label="Original Receipt ID (Numeric)" type="number" min={1} value={posReturn.originalOrderId} onChange={(event) => setPosReturn((current) => ({ ...current, originalOrderId: event.target.value }))} required />
+                <Input label="Variant ID (Numeric)" type="number" min={1} value={posReturn.variantId} onChange={(event) => setPosReturn((current) => ({ ...current, variantId: event.target.value }))} required />
+                <Input label="Quantity" type="number" min={1} value={posReturn.qty} onChange={(event) => setPosReturn((current) => ({ ...current, qty: event.target.value }))} required />
                 <Select
                   label="Disposition"
                   value={posReturn.disposition}
@@ -237,7 +242,7 @@ export function ReturnsManagement() {
                     { label: 'Dispose', value: 'DISPOSE' },
                   ]}
                 />
-                <Input label="Refund Amount" type="number" min={0.01} step="0.01" value={posReturn.refundAmount || ''} onChange={(event) => setPosReturn((current) => ({ ...current, refundAmount: Number(event.target.value) }))} required />
+                <Input label="Refund Amount (VND)" type="number" min={0.01} step="0.01" value={posReturn.refundAmount} onChange={(event) => setPosReturn((current) => ({ ...current, refundAmount: event.target.value }))} required />
                 <Input label="Reason" value={posReturn.reason} onChange={(event) => setPosReturn((current) => ({ ...current, reason: event.target.value }))} required />
               </div>
               <Button type="submit" isLoading={isSaving}>

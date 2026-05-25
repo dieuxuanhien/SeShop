@@ -27,7 +27,7 @@ export function InventoryAdjustment() {
   });
 
   // Form state
-  const [deltaQty, setDeltaQty] = useState(0);
+  const [deltaQty, setDeltaQty] = useState<string>('');
   const [reasonCode, setReasonCode] = useState('DAMAGE');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,7 +69,7 @@ export function InventoryAdjustment() {
 
   const handleAdjustClick = (balance: InventoryBalance) => {
     setSelectedBalance(balance);
-    setDeltaQty(0);
+    setDeltaQty('');
     setReasonCode('DAMAGE');
     setNotes('');
     setIsModalOpen(true);
@@ -80,7 +80,7 @@ export function InventoryAdjustment() {
     if (!selectedBalance) return;
     setIsSubmitting(true);
     try {
-      await adjustInventory(selectedBalance.variantId, selectedBalance.locationId, deltaQty, reasonCode, notes);
+      await adjustInventory(selectedBalance.variantId, selectedBalance.locationId, parseInt(deltaQty) || 0, reasonCode, notes);
       setIsModalOpen(false);
       await fetchBalances();
     } catch (e) {
@@ -301,7 +301,7 @@ export function InventoryAdjustment() {
                   label="Quantity Change"
                   type="number"
                   value={deltaQty}
-                  onChange={(e) => setDeltaQty(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setDeltaQty(e.target.value)}
                   required
                   className="font-mono text-lg"
                   placeholder="e.g. -2 or 5"

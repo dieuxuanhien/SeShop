@@ -11,10 +11,11 @@ import { PageScaffold } from '@/shared/ui/PageScaffold';
 
 export function TaxInvoice() {
   const { t } = useTranslation();
-  const [orderId, setOrderId] = useState<number | ''>(0);
+  const [orderId, setOrderId] = useState<string>('');
   const [invoice, setInvoice] = useState<TaxInvoiceResponse | null>(null);
+  const [invoiceIdInput, setInvoiceIdInput] = useState<string>('');
   const [adjustReason, setAdjustReason] = useState('');
-  const [adjustAmount, setAdjustAmount] = useState<number | ''>(0);
+  const [adjustAmount, setAdjustAmount] = useState<string>('');
   const [adjustment, setAdjustment] = useState<InvoiceAdjustmentResponse | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -25,16 +26,17 @@ export function TaxInvoice() {
     try {
       const res = await createTaxInvoice(Number(orderId));
       setInvoice(res);
+      setInvoiceIdInput(String(res.id));
       setMessage(`Invoice ${res.invoiceNumber} issued successfully.`);
     } catch { setMessage('Invoice could not be generated.'); }
     finally { setIsSaving(false); }
   }
 
   async function handleCreateAdjustment(e: React.FormEvent) {
-    e.preventDefault(); if (!invoice || !adjustReason) return;
+    e.preventDefault(); if (!invoiceIdInput || !adjustReason) return;
     setIsSaving(true); setMessage('');
     try {
-      const res = await createInvoiceAdjustment(invoice.id, adjustReason, Number(adjustAmount));
+      const res = await createInvoiceAdjustment(Number(invoiceIdInput), adjustReason, Number(adjustAmount));
       setAdjustment(res);
       setMessage(`Adjustment note #${res.id} created.`);
     } catch { setMessage('Adjustment note could not be created.'); }
@@ -42,7 +44,7 @@ export function TaxInvoice() {
   }
 
   function handleReset() {
-    setOrderId(0); setInvoice(null); setAdjustReason(''); setAdjustAmount(0);
+    setOrderId(''); setInvoice(null); setInvoiceIdInput(''); setAdjustReason(''); setAdjustAmount('');
     setAdjustment(null); setMessage('');
   }
 
@@ -66,11 +68,11 @@ export function TaxInvoice() {
             </div>
             <form onSubmit={handleCreateInvoice} className="grid gap-4">
               <Input
-                label="Order ID"
+                label="Order ID (Numeric)"
                 type="number"
                 min={1}
-                value={orderId || ''}
-                onChange={(e) => setOrderId(Number(e.target.value))}
+                value={orderId}
+                onChange={(e) => setOrderId(e.target.value)}
                 placeholder="Enter the order ID"
                 required
               />
@@ -91,10 +93,13 @@ export function TaxInvoice() {
             </div>
             <form onSubmit={handleCreateAdjustment} className="grid gap-4">
               <Input
-                label="Invoice ID"
-                value={invoice?.id ?? ''}
-                readOnly
-                disabled={!invoice}
+                label="Invoice ID (Numeric)"
+                type="number"
+                min={1}
+                value={invoiceIdInput}
+                onChange={(e) => setInvoiceIdInput(e.target.value)}
+                placeholder="Enter the invoice ID"
+                required
               />
               <Input
                 label="Reason"
@@ -102,18 +107,18 @@ export function TaxInvoice() {
                 onChange={(e) => setAdjustReason(e.target.value)}
                 placeholder="e.g. Price correction, returned item"
                 required
-                disabled={!invoice}
+                disabled={!invoiceIdInput}
               />
               <Input
                 label="Delta Amount (VND)"
                 type="number"
-                value={adjustAmount || ''}
-                onChange={(e) => setAdjustAmount(Number(e.target.value))}
+                value={adjustAmount}
+                onChange={(e) => setAdjustAmount(e.target.value)}
                 placeholder="Positive or negative adjustment"
                 required
-                disabled={!invoice}
+                disabled={!invoiceIdInput}
               />
-              <Button type="submit" variant="secondary" icon={<FilePlus2 size={16} />} disabled={!invoice || !adjustReason} isLoading={isSaving}>
+              <Button type="submit" variant="secondary" icon={<FilePlus2 size={16} />} disabled={!invoiceIdInput || !adjustReason} isLoading={isSaving}>
                 Create Adjustment Note
               </Button>
             </form>

@@ -29,9 +29,9 @@ const emptyProductForm: ProductMutationRequest = {
   status: 'PUBLISHED',
 };
 
-const emptyVariantForm: VariantMutationRequest & { attributesStr?: string } = {
+const emptyVariantForm: VariantMutationRequest & { attributesList: { key: string; value: string }[] } = {
   skuCode: '',
-  attributesStr: '{}',
+  attributesList: [],
   price: 0,
   status: 'ACTIVE',
 };
@@ -69,7 +69,7 @@ export function CatalogManagement() {
   });
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [productForm, setProductForm] = useState<ProductMutationRequest>(emptyProductForm);
-  const [variantForm, setVariantForm] = useState<VariantMutationRequest & { attributesStr?: string }>(emptyVariantForm);
+  const [variantForm, setVariantForm] = useState<VariantMutationRequest & { attributesList: { key: string; value: string }[] }>(emptyVariantForm);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -131,6 +131,7 @@ export function CatalogManagement() {
       description: product.description ?? '',
       status: product.status,
     });
+    setVariantForm(emptyVariantForm);
     setMessage('');
     document.getElementById('product-form')?.scrollIntoView({ behavior: 'smooth' });
   }
@@ -173,10 +174,12 @@ export function CatalogManagement() {
     setIsSaving(true);
     setMessage('');
     try {
-      let attrs = {};
-      if (variantForm.attributesStr && variantForm.attributesStr.trim()) {
-        attrs = JSON.parse(variantForm.attributesStr);
-      }
+      let attrs: Record<string, string> = {};
+      variantForm.attributesList.forEach((attr) => {
+        if (attr.key.trim() && attr.value.trim()) {
+          attrs[attr.key.trim()] = attr.value.trim();
+        }
+      });
       const updated = await createProductVariants(selectedProductId, [{ 
         ...variantForm, 
         attributes: attrs,
@@ -505,15 +508,57 @@ export function CatalogManagement() {
                   onChange={(event) => setVariantForm((current) => ({ ...current, price: Number(event.target.value) }))}
                   required
                 />
-                <label className="grid gap-1 text-sm font-medium text-ink sm:col-span-2">
-                  <span>Attributes (JSON)</span>
-                  <textarea
-                    value={variantForm.attributesStr}
-                    onChange={(event) => setVariantForm((current) => ({ ...current, attributesStr: event.target.value }))}
-                    placeholder='{"size": "M", "color": "Red"}'
-                    className="min-h-16 rounded-md border border-primary/30 bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                </label>
+                <div className="grid gap-2 sm:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-ink">Attributes</span>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setVariantForm((cur) => ({ ...cur, attributesList: [...cur.attributesList, { key: '', value: '' }] }))}
+                    >
+                      + Add Attribute
+                    </Button>
+                  </div>
+                  {variantForm.attributesList.length === 0 && (
+                    <p className="text-xs text-ink/55">No attributes added (e.g., Size, Color).</p>
+                  )}
+                  {variantForm.attributesList.map((attr, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Input
+                        label=""
+                        placeholder="Key (e.g. Size)"
+                        value={attr.key}
+                        onChange={(e) => {
+                          const newList = [...variantForm.attributesList];
+                          newList[idx].key = e.target.value;
+                          setVariantForm((cur) => ({ ...cur, attributesList: newList }));
+                        }}
+                      />
+                      <Input
+                        label=""
+                        placeholder="Value (e.g. M)"
+                        value={attr.value}
+                        onChange={(e) => {
+                          const newList = [...variantForm.attributesList];
+                          newList[idx].value = e.target.value;
+                          setVariantForm((cur) => ({ ...cur, attributesList: newList }));
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        onClick={() => {
+                          const newList = variantForm.attributesList.filter((_, i) => i !== idx);
+                          setVariantForm((cur) => ({ ...cur, attributesList: newList }));
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
                 <Select
                   label="Status"
                   value={variantForm.status}

@@ -10,7 +10,7 @@ export function POS() {
   const [items, setItems] = useState<PosItem[]>([]);
   const [skuInput, setSkuInput] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD'>('CASH');
-  const [amountPaid, setAmountPaid] = useState<number | ''>('');
+  const [amountPaid, setAmountPaid] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [receipt, setReceipt] = useState<ProcessPosSaleResponse | null>(null);
   const [skuError, setSkuError] = useState('');
@@ -372,7 +372,7 @@ export function POS() {
                     label="Amount Tendered"
                     type="number"
                     value={amountPaid}
-                    onChange={(e) => setAmountPaid(Number(e.target.value))}
+                    onChange={(e) => setAmountPaid(e.target.value)}
                     placeholder="Enter amount given"
                   />
                 </div>

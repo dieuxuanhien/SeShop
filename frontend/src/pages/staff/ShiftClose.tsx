@@ -8,11 +8,11 @@ import { closeShift, getCurrentShift, openShift, type ShiftData } from '@/featur
 export function ShiftClose() {
   const navigate = useNavigate();
   const [shift, setShift] = useState<ShiftData | null>(null);
-  const [actualCash, setActualCash] = useState<number | ''>('');
+  const [actualCash, setActualCash] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [shiftLoading, setShiftLoading] = useState(true);
-  const [locationId, setLocationId] = useState(1);
-  const [startingCash, setStartingCash] = useState(0);
+  const [locationId, setLocationId] = useState<string>('1');
+  const [startingCash, setStartingCash] = useState<string>('0');
 
   useEffect(() => {
     // Fetch current shift data to get expected cash from backend
@@ -49,14 +49,14 @@ export function ShiftClose() {
               event.preventDefault();
               setIsLoading(true);
               try {
-                setShift(await openShift(locationId, startingCash));
+                setShift(await openShift(Number(locationId), Number(startingCash)));
               } finally {
                 setIsLoading(false);
               }
             }}
           >
-            <Input label="Location ID" type="number" min={1} value={locationId} onChange={(event) => setLocationId(Number(event.target.value))} />
-            <Input label="Starting Cash" type="number" min={0} value={startingCash} onChange={(event) => setStartingCash(Number(event.target.value))} />
+            <Input label="Location ID" type="number" min={1} value={locationId} onChange={(event) => setLocationId(event.target.value)} />
+            <Input label="Starting Cash" type="number" min={0} value={startingCash} onChange={(event) => setStartingCash(event.target.value)} />
             <Button type="submit" isLoading={isLoading}>Open Shift</Button>
           </form>
         </Card>
@@ -120,7 +120,7 @@ export function ShiftClose() {
                 label="Actual Cash in Drawer"
                 type="number"
                 value={actualCash}
-                onChange={(e) => setActualCash(Number(e.target.value))}
+                onChange={(e) => setActualCash(e.target.value)}
                 placeholder="Enter counted amount"
               />
             </div>
