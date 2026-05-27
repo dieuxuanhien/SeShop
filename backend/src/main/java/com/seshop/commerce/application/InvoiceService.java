@@ -128,6 +128,22 @@ public class InvoiceService {
         return response;
     }
 
+    public Map<String, Object> getInvoiceByOrderId(Long orderId) {
+        TaxInvoiceEntity invoice = invoiceRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("INV_001", "Invoice not found"));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("id", invoice.getId());
+        response.put("invoiceNumber", invoice.getInvoiceNumber());
+        response.put("orderId", invoice.getOrderId());
+        response.put("customerUserId", invoice.getCustomerUserId());
+        response.put("subtotalAmount", invoice.getSubtotalAmount());
+        response.put("taxAmount", invoice.getTaxAmount());
+        response.put("totalAmount", invoice.getTotalAmount());
+        response.put("taxRate", invoice.getTaxRate());
+        response.put("status", "ISSUED");
+        return response;
+    }
+
     private BigDecimal taxRateFor(OrderEntity order) {
         if (order.getSubtotalAmount() == null || order.getSubtotalAmount().signum() == 0 || order.getTaxAmount() == null) {
             return DEFAULT_TAX_RATE;

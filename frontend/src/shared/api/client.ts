@@ -14,6 +14,10 @@ apiClient.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  const locationId = localStorage.getItem('seshop.activeLocationId');
+  if (locationId) {
+    config.headers['X-Location-Id'] = locationId;
+  }
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     if (config.headers instanceof AxiosHeaders) {
       config.headers.delete('Content-Type');

@@ -3,6 +3,7 @@ package com.seshop.inventory.api;
 import com.seshop.inventory.api.dto.CreateTransferRequest;
 import com.seshop.inventory.api.dto.InventoryAdjustmentRequest;
 import com.seshop.inventory.api.dto.InventoryAdjustmentResponse;
+import com.seshop.inventory.api.dto.LocationDto;
 import com.seshop.inventory.api.dto.ReceiveTransferRequest;
 import com.seshop.inventory.application.InventoryService;
 import com.seshop.shared.api.ApiResponse;
@@ -55,6 +56,11 @@ public class StaffInventoryController {
                 page,
                 size,
                 locationAccessService.scopeFor(user)));
+    }
+
+    @GetMapping("/locations")
+    public ApiResponse<?> listStaffLocations(@AuthenticationPrincipal AuthenticatedUser user) {
+        return ApiResponse.success(inventoryService.getStaffLocations(locationAccessService.scopeFor(user)));
     }
 
     @PostMapping("/adjustments")

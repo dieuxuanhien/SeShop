@@ -6,6 +6,10 @@ import { formatCurrency } from '@/shared/lib/formatters';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { useEffect } from 'react';
+import { getStaffOrders, type StaffOrder } from '@/features/staff/api/staffOrdersApi';
+import { getInvoiceByOrderId } from '@/features/staff/api/staffInvoiceApi';
+import { SearchSelect } from '@/shared/ui/SearchSelect';
 import { Input } from '@/shared/ui/Input';
 import { PageScaffold } from '@/shared/ui/PageScaffold';
 
@@ -19,6 +23,45 @@ export function TaxInvoice() {
   const [adjustment, setAdjustment] = useState<InvoiceAdjustmentResponse | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
+  
+  const [orders, setOrders] = useState<StaffOrder[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+
+  useEffect(() => {
+    async function loadOrders() {
+      setIsLoadingOrders(true);
+      try {
+        const res = await getStaffOrders(1, 100);
+        setOrders(res.items);
+      } catch (err) {
+        console.error('Failed to load orders', err);
+      } finally {
+        setIsLoadingOrders(false);
+      }
+    }
+    loadOrders();
+  }, []);
+
+  // When order changes, try to fetch existing invoice
+  useEffect(() => {
+    if (!orderId) {
+      setInvoice(null);
+      setInvoiceIdInput('');
+      return;
+    }
+    async function loadInvoice() {
+      try {
+        const res = await getInvoiceByOrderId(Number(orderId));
+        setInvoice(res);
+        setInvoiceIdInput(String(res.id));
+      } catch (err) {
+        // Invoice doesn't exist yet
+        setInvoice(null);
+        setInvoiceIdInput('');
+      }
+    }
+    loadInvoice();
+  }, [orderId]);
 
   async function handleCreateInvoice(e: React.FormEvent) {
     e.preventDefault(); if (!orderId) return;
@@ -67,17 +110,17 @@ export function TaxInvoice() {
               <FileText size={22} className="text-primary" />
             </div>
             <form onSubmit={handleCreateInvoice} className="grid gap-4">
-              <Input
-                label="Order ID (Numeric)"
-                type="number"
-                min={1}
+              <SearchSelect
+                label="Select Order"
                 value={orderId}
-                onChange={(e) => setOrderId(e.target.value)}
-                placeholder="Enter the order ID"
+                onChange={setOrderId}
+                options={orders.map(o => ({ value: String(o.id), label: `Order ${o.orderNumber}` }))}
+                placeholder="Search by order number"
+                isLoading={isLoadingOrders}
                 required
               />
-              <Button type="submit" icon={<ReceiptText size={16} />} disabled={!orderId} isLoading={isSaving}>
-                Generate Invoice
+              <Button type="submit" icon={<ReceiptText size={16} />} disabled={!orderId || !!invoice} isLoading={isSaving}>
+                {invoice ? 'Invoice Already Exists' : 'Generate Invoice'}
               </Button>
             </form>
           </Card>
@@ -93,13 +136,10 @@ export function TaxInvoice() {
             </div>
             <form onSubmit={handleCreateAdjustment} className="grid gap-4">
               <Input
-                label="Invoice ID (Numeric)"
-                type="number"
-                min={1}
+                label="Invoice ID"
                 value={invoiceIdInput}
-                onChange={(e) => setInvoiceIdInput(e.target.value)}
-                placeholder="Enter the invoice ID"
-                required
+                disabled
+                placeholder="Auto-populated when order has invoice"
               />
               <Input
                 label="Reason"

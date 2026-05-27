@@ -39,3 +39,8 @@ export async function createInvoiceAdjustment(
   );
   return response.data.data;
 }
+
+export async function getInvoiceByOrderId(orderId: number): Promise<TaxInvoiceResponse> {
+  const response = await apiClient.get<ApiResponse<TaxInvoiceResponse>>(`/invoices/order/${orderId}`);
+  return response.data.data;
+}

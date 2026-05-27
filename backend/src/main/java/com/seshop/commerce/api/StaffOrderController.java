@@ -133,4 +133,12 @@ public class StaffOrderController {
         response.put("data", order);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/{orderId}/payments")
+    public ResponseEntity<Map<String, Object>> getOrderPayments(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long orderId) {
+        permissionValidator.require(ORDER_READ);
+        return ResponseEntity.ok(Map.of("data", orderService.getPayments(orderId, locationAccessService.scopeFor(user))));
+    }
 }

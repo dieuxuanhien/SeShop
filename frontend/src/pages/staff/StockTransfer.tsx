@@ -5,6 +5,7 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
 import { Select } from '@/shared/ui/Select';
+import { SearchSelect } from '@/shared/ui/SearchSelect';
 import { Spinner } from '@/shared/ui/Spinner';
 import {
   approveStockTransfer,
@@ -14,14 +15,17 @@ import {
   getStockTransfers,
   receiveStockTransfer,
   type InventoryBalance,
-  type StockTransfer,
+  type StockTransfer as StockTransferType,
 } from '@/features/staff/api/staffInventoryApi';
+import { useStaffLocation } from '@/shared/context/LocationContext';
 
 export function StockTransfer() {
-  const [transfers, setTransfers] = useState<StockTransfer[]>([]);
+  const { locations, activeLocationId } = useStaffLocation();
+  const [transfers, setTransfers] = useState<StockTransferType[]>([]);
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  
   const [sourceLocationId, setSourceLocationId] = useState(0);
   const [destinationLocationId, setDestinationLocationId] = useState(0);
   const [variantId, setVariantId] = useState(0);
@@ -29,37 +33,42 @@ export function StockTransfer() {
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState('');
 
-  const locationOptions = useMemo(() => {
-    const locations = new Map<number, string>();
-    balances.forEach((balance) => locations.set(balance.locationId, balance.locationName));
-    return [...locations.entries()].map(([id, name]) => ({ label: name, value: String(id) }));
-  }, [balances]);
+  // Set default source location from context
+  useEffect(() => {
+    if (activeLocationId && !sourceLocationId) {
+      setSourceLocationId(activeLocationId);
+    }
+  }, [activeLocationId, sourceLocationId]);
+
+  // Load balances when source location changes
+  useEffect(() => {
+    if (sourceLocationId) {
+      getInventoryBalances({ page: 1, size: 100, locationId: sourceLocationId })
+        .then(res => {
+          setBalances(res.items);
+          if (res.items.length > 0 && !variantId) {
+            setVariantId(res.items[0].variantId);
+          }
+        })
+        .catch(() => setBalances([]));
+    }
+  }, [sourceLocationId]);
+
+  const locationOptions = locations.map((l: any) => ({ label: l.name, value: String(l.id) }));
 
   const variantOptions = useMemo(() => {
     const variants = new Map<number, string>();
-    balances.forEach((balance) => variants.set(balance.variantId, `${balance.skuCode} - ${balance.productName}`));
+    balances.forEach((balance) => variants.set(balance.variantId, `${balance.skuCode} - ${balance.productName} (Avail: ${balance.availableQty})`));
     return [...variants.entries()].map(([id, label]) => ({ label, value: String(id) }));
   }, [balances]);
 
   async function fetchTransfers() {
     setIsLoading(true);
     try {
-      const [transferPage, balancePage] = await Promise.all([
-        getStockTransfers(),
-        getInventoryBalances(1, 100),
-      ]);
+      const transferPage = await getStockTransfers(1, 50);
       setTransfers(transferPage.items);
-      setBalances(balancePage.items);
-      const first = balancePage.items[0];
-      const second = balancePage.items.find((balance) => balance.locationId !== first?.locationId);
-      if (first) {
-        setSourceLocationId(first.locationId);
-        setVariantId(first.variantId);
-      }
-      if (second) setDestinationLocationId(second.locationId);
     } catch {
       setTransfers([]);
-      setBalances([]);
     } finally {
       setIsLoading(false);
     }
@@ -71,6 +80,7 @@ export function StockTransfer() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+    if (!sourceLocationId || !destinationLocationId || !variantId) return;
     setIsSaving(true);
     setMessage('');
     try {
@@ -89,7 +99,7 @@ export function StockTransfer() {
     }
   }
 
-  async function handleAdvance(transfer: StockTransfer) {
+  async function handleAdvance(transfer: StockTransferType) {
     setIsSaving(true);
     setMessage('');
     try {
@@ -99,7 +109,7 @@ export function StockTransfer() {
       }
       if (transfer.status === 'IN_TRANSIT') {
         await receiveStockTransfer(transfer.id, {
-          receivedItems: [],
+          receivedItems: [], // Defaulting to receive all properly if API permits, or empty means receive all expected
         });
         setMessage(`Transfer ${transfer.id} received.`);
       }
@@ -111,7 +121,7 @@ export function StockTransfer() {
     }
   }
 
-  async function handleCancel(transfer: StockTransfer) {
+  async function handleCancel(transfer: StockTransferType) {
     setIsSaving(true);
     setMessage('');
     try {
@@ -129,6 +139,18 @@ export function StockTransfer() {
     return (
       <div className="flex h-64 items-center justify-center">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (!activeLocationId) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center text-center">
+        <ArrowRightLeft className="mb-4 h-12 w-12 text-ink/20" />
+        <h2 className="text-lg font-medium text-ink">No Location Selected</h2>
+        <p className="mt-2 text-sm text-ink/60">
+          Please select a location from the global header to view and manage stock transfers.
+        </p>
       </div>
     );
   }
@@ -200,11 +222,36 @@ export function StockTransfer() {
             <ArrowRightLeft size={18} className="text-primary" />
           </div>
           <form onSubmit={handleCreate} className="mt-4 grid gap-4">
-            <Select label="Source" value={String(sourceLocationId)} onChange={(event) => setSourceLocationId(Number(event.target.value))} options={locationOptions.length ? locationOptions : [{ label: 'No locations loaded', value: '0' }]} />
-            <Select label="Destination" value={String(destinationLocationId)} onChange={(event) => setDestinationLocationId(Number(event.target.value))} options={locationOptions.length ? locationOptions : [{ label: 'No locations loaded', value: '0' }]} />
-            <Select label="Variant" value={String(variantId)} onChange={(event) => setVariantId(Number(event.target.value))} options={variantOptions.length ? variantOptions : [{ label: 'No variants loaded', value: '0' }]} />
-            <Input label="Quantity" type="number" min={1} value={qty} onChange={(event) => setQty(Number(event.target.value))} />
-            <Input label="Reason" value={reason} onChange={(event) => setReason(event.target.value)} />
+            <Select 
+              label="Source Location" 
+              value={String(sourceLocationId)} 
+              onChange={(event) => setSourceLocationId(Number(event.target.value))} 
+              options={locationOptions.length ? locationOptions : [{ label: 'No locations loaded', value: '0' }]} 
+            />
+            <Select 
+              label="Destination Location" 
+              value={String(destinationLocationId)} 
+              onChange={(event) => setDestinationLocationId(Number(event.target.value))} 
+              options={locationOptions.filter((l: any) => l.value !== String(sourceLocationId))} 
+            />
+            <Select 
+              label="Variant to Transfer" 
+              value={String(variantId)} 
+              onChange={(event) => setVariantId(Number(event.target.value))} 
+              options={variantOptions.length ? variantOptions : [{ label: 'No variants loaded', value: '0' }]} 
+            />
+            <Input 
+              label="Quantity" 
+              type="number" 
+              min={1} 
+              value={qty} 
+              onChange={(event) => setQty(Number(event.target.value))} 
+            />
+            <Input 
+              label="Reason" 
+              value={reason} 
+              onChange={(event) => setReason(event.target.value)} 
+            />
             <Button type="submit" icon={<PackageCheck size={16} />} disabled={!sourceLocationId || !destinationLocationId || !variantId || sourceLocationId === destinationLocationId} isLoading={isSaving}>
               Create Transfer
             </Button>

@@ -4,6 +4,7 @@ import { PrintableReceipt } from '@/features/staff/ui/PrintableReceipt';
 import { PosHistory } from '@/features/staff/ui/PosHistory';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
+import { useStaffLocation } from '@/shared/context/LocationContext';
 import { processPosSale, lookupProductBySku, getReceiptHistory, type PosItem, type ProcessPosSaleResponse, type ReceiptDto } from '@/features/staff/api/staffPosApi';
 
 export function POS() {
@@ -20,6 +21,8 @@ export function POS() {
   const [printReceipt, setPrintReceipt] = useState<ReceiptDto | null>(null);
 
   const [view, setView] = useState<'pos' | 'history'>('pos');
+  const { activeLocationId, locations } = useStaffLocation();
+  const activeLocation = locations.find(l => l.id === activeLocationId);
 
   const fetchRecentSales = async () => {
     setRecentSalesLoading(true);
@@ -156,6 +159,17 @@ export function POS() {
     setTimeout(() => barcodeInputRef.current?.focus(), 100);
   };
 
+  if (!activeLocationId) {
+    return (
+      <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 text-ink/50">
+          <Store size={48} className="opacity-20" />
+          <p className="text-lg font-medium">Please select a location from the top navigation to use POS.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (receipt) {
     return (
       <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center p-4">
@@ -201,7 +215,7 @@ export function POS() {
             </button>
           </div>
         </div>
-        <div className="text-sm text-ink/55">Register: REG-01 | Operator: Staff User</div>
+        <div className="text-sm text-ink/55">Register: REG-01 | {activeLocation?.displayName}</div>
       </div>
 
       {view === 'history' ? (

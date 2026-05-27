@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle2, RotateCcw, WalletCards } from 'lucide-react';
-import { approveReturn, createRefund, createReturn, type RefundResponse, type ReturnResponse } from '@/features/commerce/api/returnsApi';
-import { processPosReturn, type PosReturnDisposition } from '@/features/staff/api/staffPosApi';
+import { approveReturn, createRefund, createReturn, getReturnsByOrderId, type RefundResponse, type ReturnResponse } from '@/features/commerce/api/returnsApi';
+import { processPosReturn, getReceiptHistory, getReceiptDetails, type PosReturnDisposition, type ReceiptDto } from '@/features/staff/api/staffPosApi';
+import { getStaffOrders, getStaffOrderDetails, getOrderPayments, type StaffOrder, type StaffOrderDetails, type PaymentDto } from '@/features/staff/api/staffOrdersApi';
 import { formatCurrency } from '@/shared/lib/formatters';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -9,18 +10,32 @@ import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
 import { PageScaffold } from '@/shared/ui/PageScaffold';
 import { Select } from '@/shared/ui/Select';
+import { SearchSelect } from '@/shared/ui/SearchSelect';
 
 export function ReturnsManagement() {
+  const [orders, setOrders] = useState<StaffOrder[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+
   const [orderId, setOrderId] = useState<string>('');
+  const [orderDetails, setOrderDetails] = useState<StaffOrderDetails | null>(null);
   const [orderItemId, setOrderItemId] = useState<string>('');
   const [qty, setQty] = useState<string>('1');
   const [reason, setReason] = useState('');
   const [returnResult, setReturnResult] = useState<ReturnResponse | null>(null);
+
+  const [returns, setReturns] = useState<ReturnResponse[]>([]);
+  const [payments, setPayments] = useState<PaymentDto[]>([]);
+
   const [approveId, setApproveId] = useState<string>('');
-  const [refund, setRefund] = useState({ orderId: '', paymentId: '', returnRequestId: '', amount: '' });
+  const [refund, setRefund] = useState({ paymentId: '', returnRequestId: '', amount: '' });
   const [refundResult, setRefundResult] = useState<RefundResponse | null>(null);
+
+  const [receipts, setReceipts] = useState<ReceiptDto[]>([]);
+  const [isLoadingReceipts, setIsLoadingReceipts] = useState(false);
+  const [receiptDetails, setReceiptDetails] = useState<ReceiptDto | null>(null);
+
   const [posReturn, setPosReturn] = useState({
-    originalOrderId: '',
+    originalReceiptId: '',
     variantId: '',
     qty: '1',
     disposition: 'RESTOCK' as PosReturnDisposition,
@@ -31,8 +46,86 @@ export function ReturnsManagement() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
 
+  useEffect(() => {
+    async function loadInitialData() {
+      setIsLoadingOrders(true);
+      setIsLoadingReceipts(true);
+      try {
+        const [ordersRes, receiptsRes] = await Promise.all([
+          getStaffOrders(1, 100),
+          getReceiptHistory(0, 100)
+        ]);
+        setOrders(ordersRes.items);
+        setReceipts(receiptsRes.items);
+      } catch (err) {
+        console.error('Failed to load initial data', err);
+      } finally {
+        setIsLoadingOrders(false);
+        setIsLoadingReceipts(false);
+      }
+    }
+    loadInitialData();
+  }, []);
+
+  const refreshOrderData = async (id: number) => {
+    try {
+      const [details, rets, pays] = await Promise.all([
+        getStaffOrderDetails(id),
+        getReturnsByOrderId(id),
+        getOrderPayments(id)
+      ]);
+      setOrderDetails(details);
+      setReturns(rets);
+      setPayments(pays);
+    } catch (err) {
+      console.error('Failed to load order related data', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!orderId) {
+      setOrderDetails(null);
+      setReturns([]);
+      setPayments([]);
+      setOrderItemId('');
+      setApproveId('');
+      setRefund({ paymentId: '', returnRequestId: '', amount: '' });
+      return;
+    }
+    
+    refreshOrderData(Number(orderId)).then(() => {
+      // Auto select first item if available and not selected
+      setOrderItemId(prev => prev || '');
+    });
+  }, [orderId]);
+
+  // Set default orderItemId when details load
+  useEffect(() => {
+    if (orderDetails && orderDetails.items.length > 0 && !orderItemId) {
+      setOrderItemId(String(orderDetails.items[0].id));
+    }
+  }, [orderDetails, orderItemId]);
+
+  useEffect(() => {
+    if (!posReturn.originalReceiptId) {
+      setReceiptDetails(null);
+      return;
+    }
+    async function loadReceipt() {
+      try {
+        const details = await getReceiptDetails(Number(posReturn.originalReceiptId));
+        setReceiptDetails(details);
+        if (details.items.length > 0) setPosReturn(p => ({ ...p, variantId: String(details.items[0].variantId) }));
+      } catch (err) {
+        console.error('Failed to load receipt details', err);
+      }
+    }
+    loadReceipt();
+  }, [posReturn.originalReceiptId]);
+
   async function handleCreateReturn(event: React.FormEvent) {
     event.preventDefault();
+    if (!orderId || !orderItemId) return;
     setIsSaving(true);
     setMessage('');
     try {
@@ -42,8 +135,9 @@ export function ReturnsManagement() {
         items: [{ orderItemId: Number(orderItemId), qty: Number(qty) }],
       });
       setReturnResult(created);
+      await refreshOrderData(Number(orderId));
       setApproveId(String(created.returnId));
-      setRefund((current) => ({ ...current, orderId: String(created.orderId), returnRequestId: String(created.returnId) }));
+      setRefund((current) => ({ ...current, returnRequestId: String(created.returnId) }));
       setMessage(`Return ${created.returnId} created.`);
     } catch {
       setMessage('Return request could not be created.');
@@ -54,11 +148,13 @@ export function ReturnsManagement() {
 
   async function handleApprove(event: React.FormEvent) {
     event.preventDefault();
+    if (!approveId) return;
     setIsSaving(true);
     setMessage('');
     try {
       const approved = await approveReturn(Number(approveId));
       setReturnResult(approved);
+      if (orderId) await refreshOrderData(Number(orderId));
       setMessage(`Return ${approved.returnId} approved.`);
     } catch {
       setMessage('Return could not be approved.');
@@ -69,11 +165,12 @@ export function ReturnsManagement() {
 
   async function handleRefund(event: React.FormEvent) {
     event.preventDefault();
+    if (!orderId || !refund.paymentId || !refund.returnRequestId) return;
     setIsSaving(true);
     setMessage('');
     try {
       const created = await createRefund({
-        orderId: Number(refund.orderId),
+        orderId: Number(orderId),
         paymentId: Number(refund.paymentId),
         returnRequestId: Number(refund.returnRequestId),
         amount: Number(refund.amount)
@@ -89,11 +186,12 @@ export function ReturnsManagement() {
 
   async function handlePosReturn(event: React.FormEvent) {
     event.preventDefault();
+    if (!posReturn.originalReceiptId || !posReturn.variantId) return;
     setIsSaving(true);
     setMessage('');
     try {
       const created = await processPosReturn({
-        originalOrderId: Number(posReturn.originalOrderId),
+        originalOrderId: receiptDetails?.transactionId || 0, // Using transactionId as originalOrderId since receipts map to POS transactions
         refundAmount: Number(posReturn.refundAmount),
         reason: posReturn.reason,
         items: [
@@ -129,9 +227,24 @@ export function ReturnsManagement() {
             <RotateCcw className="text-primary" size={22} />
           </div>
           <form onSubmit={handleCreateReturn} className="mt-5 grid gap-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <Input label="Order ID (Numeric)" type="number" min={1} value={orderId} onChange={(event) => setOrderId(event.target.value)} required />
-              <Input label="Order Item ID (Numeric)" type="number" min={1} value={orderItemId} onChange={(event) => setOrderItemId(event.target.value)} required />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <SearchSelect
+                label="Select Order"
+                value={orderId}
+                onChange={setOrderId}
+                options={orders.map(o => ({ value: String(o.id), label: `Order ${o.orderNumber}` }))}
+                placeholder="Search order"
+                isLoading={isLoadingOrders}
+                required
+              />
+              <Select
+                label="Select Order Item"
+                value={orderItemId}
+                onChange={(e) => setOrderItemId(e.target.value)}
+                options={orderDetails?.items.map(i => ({ value: String(i.id), label: `${i.productName} (x${i.qty})` })) || []}
+                disabled={!orderDetails || orderDetails.items.length === 0}
+                required
+              />
               <Input label="Quantity" type="number" min={1} value={qty} onChange={(event) => setQty(event.target.value)} required />
             </div>
             <label className="grid gap-1 text-sm font-medium text-ink">
@@ -177,7 +290,7 @@ export function ReturnsManagement() {
                 }}
               />
             )}
-            <Button type="submit" isLoading={isSaving} className="mt-2">
+            <Button type="submit" isLoading={isSaving} className="mt-2" disabled={!orderId || !orderItemId}>
               Create Return
             </Button>
           </form>
@@ -197,8 +310,15 @@ export function ReturnsManagement() {
           <Card className="border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Approve Return</h2>
             <form onSubmit={handleApprove} className="mt-4 grid gap-4">
-              <Input label="Return ID (Numeric)" type="number" min={1} value={approveId} onChange={(event) => setApproveId(event.target.value)} required />
-              <Button type="submit" variant="secondary" icon={<CheckCircle2 size={16} />} isLoading={isSaving}>
+              <Select
+                label="Select Pending Return"
+                value={approveId}
+                onChange={(e) => setApproveId(e.target.value)}
+                options={returns.filter(r => r.status === 'PENDING').map(r => ({ value: String(r.returnId), label: `Return #${r.returnId} - ${r.reason}` }))}
+                disabled={!orderId || returns.filter(r => r.status === 'PENDING').length === 0}
+                required
+              />
+              <Button type="submit" variant="secondary" icon={<CheckCircle2 size={16} />} isLoading={isSaving} disabled={!approveId}>
                 Approve
               </Button>
             </form>
@@ -207,11 +327,28 @@ export function ReturnsManagement() {
           <Card className="border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Issue Refund</h2>
             <form onSubmit={handleRefund} className="mt-4 grid gap-4">
-              <Input label="Order ID (Numeric)" type="number" min={1} value={refund.orderId} onChange={(event) => setRefund((current) => ({ ...current, orderId: event.target.value }))} required />
-              <Input label="Payment ID (Numeric)" type="number" min={1} value={refund.paymentId} onChange={(event) => setRefund((current) => ({ ...current, paymentId: event.target.value }))} required />
-              <Input label="Return ID (Numeric)" type="number" min={1} value={refund.returnRequestId} onChange={(event) => setRefund((current) => ({ ...current, returnRequestId: event.target.value }))} required />
-              <Input label="Amount (VND)" type="number" min={1} value={refund.amount} onChange={(event) => setRefund((current) => ({ ...current, amount: event.target.value }))} required />
-              <Button type="submit" variant="secondary" icon={<WalletCards size={16} />} isLoading={isSaving}>
+              <Input label="Order ID" value={orderId ? `Order ${orderDetails?.orderNumber || orderId}` : ''} disabled />
+              
+              <Select
+                label="Select Payment"
+                value={refund.paymentId}
+                onChange={(e) => setRefund((current) => ({ ...current, paymentId: e.target.value }))}
+                options={payments.filter(p => p.status === 'COMPLETED' || p.status === 'PAID').map(p => ({ value: String(p.id), label: `${p.provider} - ${formatCurrency(p.amount)}` }))}
+                disabled={!orderId || payments.length === 0}
+                required
+              />
+
+              <Select
+                label="Select Approved Return"
+                value={refund.returnRequestId}
+                onChange={(e) => setRefund((current) => ({ ...current, returnRequestId: e.target.value }))}
+                options={returns.filter(r => r.status === 'APPROVED').map(r => ({ value: String(r.returnId), label: `Return #${r.returnId}` }))}
+                disabled={!orderId || returns.filter(r => r.status === 'APPROVED').length === 0}
+                required
+              />
+
+              <Input label="Amount (VND)" type="number" min={1} value={refund.amount} onChange={(event) => setRefund((current) => ({ ...current, amount: event.target.value }))} disabled={!orderId} required />
+              <Button type="submit" variant="secondary" icon={<WalletCards size={16} />} isLoading={isSaving} disabled={!orderId || !refund.paymentId || !refund.returnRequestId}>
                 Create Refund
               </Button>
             </form>
@@ -228,10 +365,27 @@ export function ReturnsManagement() {
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">POS Return</h2>
                 <p className="mt-1 text-xs text-ink/50">Use this for counter returns that refund immediately.</p>
               </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <Input label="Original Receipt ID (Numeric)" type="number" min={1} value={posReturn.originalOrderId} onChange={(event) => setPosReturn((current) => ({ ...current, originalOrderId: event.target.value }))} required />
-                <Input label="Variant ID (Numeric)" type="number" min={1} value={posReturn.variantId} onChange={(event) => setPosReturn((current) => ({ ...current, variantId: event.target.value }))} required />
-                <Input label="Quantity" type="number" min={1} value={posReturn.qty} onChange={(event) => setPosReturn((current) => ({ ...current, qty: event.target.value }))} required />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <SearchSelect
+                  label="Select Receipt"
+                  value={posReturn.originalReceiptId}
+                  onChange={(val: string) => setPosReturn((current) => ({ ...current, originalReceiptId: val }))}
+                  options={receipts.map(r => ({ value: String(r.id), label: `${r.receiptNumber} - ${formatCurrency(r.amountPaid)}` }))}
+                  placeholder="Search receipt"
+                  isLoading={isLoadingReceipts}
+                  required
+                />
+                
+                <Select
+                  label="Select Variant"
+                  value={posReturn.variantId}
+                  onChange={(e) => setPosReturn((current) => ({ ...current, variantId: e.target.value }))}
+                  options={receiptDetails?.items.map(i => ({ value: String(i.variantId), label: `${i.name} (${i.skuCode})` })) || []}
+                  disabled={!receiptDetails || receiptDetails.items.length === 0}
+                  required
+                />
+                
+                <Input label="Quantity" type="number" min={1} value={posReturn.qty} onChange={(event) => setPosReturn((current) => ({ ...current, qty: event.target.value }))} disabled={!posReturn.originalReceiptId} required />
                 <Select
                   label="Disposition"
                   value={posReturn.disposition}
@@ -241,11 +395,12 @@ export function ReturnsManagement() {
                     { label: 'Refurbish', value: 'REFURBISH' },
                     { label: 'Dispose', value: 'DISPOSE' },
                   ]}
+                  disabled={!posReturn.originalReceiptId}
                 />
-                <Input label="Refund Amount (VND)" type="number" min={0.01} step="0.01" value={posReturn.refundAmount} onChange={(event) => setPosReturn((current) => ({ ...current, refundAmount: event.target.value }))} required />
-                <Input label="Reason" value={posReturn.reason} onChange={(event) => setPosReturn((current) => ({ ...current, reason: event.target.value }))} required />
+                <Input label="Refund Amount (VND)" type="number" min={0.01} step="0.01" value={posReturn.refundAmount} onChange={(event) => setPosReturn((current) => ({ ...current, refundAmount: event.target.value }))} disabled={!posReturn.originalReceiptId} required />
+                <Input label="Reason" value={posReturn.reason} onChange={(event) => setPosReturn((current) => ({ ...current, reason: event.target.value }))} disabled={!posReturn.originalReceiptId} required />
               </div>
-              <Button type="submit" isLoading={isSaving}>
+              <Button type="submit" isLoading={isSaving} disabled={!posReturn.originalReceiptId || !posReturn.variantId}>
                 Process POS Return
               </Button>
             </form>

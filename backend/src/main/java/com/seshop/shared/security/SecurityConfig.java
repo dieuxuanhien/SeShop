@@ -88,7 +88,7 @@ public class SecurityConfig {
         }
 
         private static java.util.List<String> allHeaders() {
-            return java.util.List.of("Authorization", "Content-Type", "Idempotency-Key", "X-Trace-Id");
+            return java.util.List.of("Authorization", "Content-Type", "Idempotency-Key", "X-Trace-Id", "X-Location-Id");
         }
 
         private static java.util.List<String> traceHeaders() {

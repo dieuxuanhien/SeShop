@@ -9,6 +9,7 @@ import com.seshop.inventory.api.dto.InventoryAdjustmentResponse;
 import com.seshop.inventory.api.dto.InventoryBalanceDto;
 import com.seshop.inventory.api.dto.InventoryAdjustmentRequest;
 import com.seshop.inventory.api.dto.LocationAvailabilityDto;
+import com.seshop.inventory.api.dto.LocationDto;
 import com.seshop.inventory.api.dto.ProductVariantDto;
 import com.seshop.inventory.api.dto.ReceiveTransferRequest;
 import com.seshop.inventory.api.dto.StockTransferDto;
@@ -64,6 +65,23 @@ public class InventoryService {
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<LocationDto> getStaffLocations(LocationScope locationScope) {
+        if (locationScope.isEmpty()) {
+            return List.of();
+        }
+        List<LocationEntity> locations;
+        if (locationScope.allLocations()) {
+            locations = locationRepository.findAll();
+        } else {
+            locations = locationRepository.findAllById(locationScope.locationIds());
+        }
+        return locations.stream()
+                .map(loc -> new LocationDto(loc.getId(), loc.getCode(), loc.getDisplayName(), loc.getLocationType(), loc.getStatus(), loc.getLatitude(), loc.getLongitude(), loc.getAddressText(), loc.getProvinceId(), loc.getDistrictId(), loc.getWardCode(), loc.getGhnShopId()))
+                .sorted((a, b) -> a.displayName().compareToIgnoreCase(b.displayName()))
+                .toList();
     }
 
     @Transactional(readOnly = true)

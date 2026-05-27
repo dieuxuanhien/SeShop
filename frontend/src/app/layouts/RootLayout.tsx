@@ -12,6 +12,7 @@ import {
 } from '@/shared/lib/access';
 import { hasAnyPermission, hasPermission } from '@/shared/lib/permissions';
 import { Button } from '@/shared/ui/Button';
+import { LocationProvider, useStaffLocation } from '@/shared/context/LocationContext';
 const navGroups = [
   {
     label: 'Staff',
@@ -45,11 +46,13 @@ const navGroups = [
   },
 ] as const;
 
-export function RootLayout() {
+function RootLayoutContent() {
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const itemCount = useCartStore((state) => state.items.reduce((sum, item) => sum + item.qty, 0));
+  
+  const { locations, activeLocationId, setActiveLocationId } = useStaffLocation();
 
   function handleLogout() {
     logout();
@@ -79,6 +82,17 @@ export function RootLayout() {
           </div>
 
           <div className="flex items-center gap-3">
+            {locations.length > 0 && (
+              <select
+                className="hidden sm:block rounded-md border border-primary/20 bg-surface px-3 py-1.5 text-sm text-ink shadow-sm focus:border-primary focus:outline-none"
+                value={activeLocationId ?? ''}
+                onChange={(e) => setActiveLocationId(Number(e.target.value))}
+              >
+                {locations.map(loc => (
+                  <option key={loc.id} value={loc.id}>{loc.displayName}</option>
+                ))}
+              </select>
+            )}
             <NavLink to="/cart" className="inline-flex items-center gap-2 rounded-md border border-primary/40 px-3 py-2 text-sm text-primary">
               <ShoppingCart size={16} />
               <span>{itemCount}</span>
@@ -162,5 +176,13 @@ export function RootLayout() {
         </main>
       </div>
     </div>
+  );
+}
+
+export function RootLayout() {
+  return (
+    <LocationProvider>
+      <RootLayoutContent />
+    </LocationProvider>
   );
 }

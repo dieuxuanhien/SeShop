@@ -254,6 +254,18 @@ public class OrderService {
         return getOrder(orderId);
     }
 
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getPayments(Long orderId, LocationScope locationScope) {
+        requireOrderScope(orderId, locationScope);
+        return paymentRepository.findByOrderId(orderId).stream()
+                .map(p -> Map.of(
+                        "id", (Object) p.getId(),
+                        "amount", p.getAmount(),
+                        "provider", p.getProvider(),
+                        "status", p.getStatus()
+                )).toList();
+    }
+
     public OrderDto processOrder(Long orderId, ProcessOrderRequest request) {
         return processOrder(orderId, request, LocationScope.all());
     }

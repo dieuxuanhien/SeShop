@@ -13,6 +13,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 public class AuditService {
@@ -36,14 +38,50 @@ public class AuditService {
     }
 
     private void save(AuditAction action, String targetType, String targetId, String metadataJson) {
+        String locationId = getCurrentLocationId().orElse(null);
+        String finalMetadata = metadataJson;
+        if (locationId != null) {
+            finalMetadata = appendLocationToMetadata(metadataJson, locationId);
+        }
+
         AuditLogEntity entity = new AuditLogEntity();
         entity.setActorUserId(currentActorUserId().orElse(null));
         entity.setAction(action.name());
         entity.setTargetType(targetType);
         entity.setTargetId(targetId);
-        entity.setMetadataJson(metadataJson);
+        entity.setMetadataJson(finalMetadata);
         entity.setCreatedAt(OffsetDateTime.now());
         auditLogRepository.save(entity);
+    }
+
+    private Optional<String> getCurrentLocationId() {
+        try {
+            var attributes = RequestContextHolder.getRequestAttributes();
+            if (attributes instanceof ServletRequestAttributes servletAttrs) {
+                return Optional.ofNullable(servletAttrs.getRequest().getHeader("X-Location-Id"));
+            }
+        } catch (Exception e) {
+            // Ignore if not in a request scope
+        }
+        return Optional.empty();
+    }
+
+    private String appendLocationToMetadata(String metadataJson, String locationId) {
+        try {
+            Map<String, Object> map;
+            if (metadataJson == null || metadataJson.isBlank()) {
+                map = new java.util.HashMap<>();
+            } else {
+                map = objectMapper.readValue(metadataJson, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+            }
+            if (!map.containsKey("locationId")) {
+                map.put("locationId", locationId);
+                return objectMapper.writeValueAsString(map);
+            }
+        } catch (Exception e) {
+            // Fallback to original metadata if parsing fails
+        }
+        return metadataJson;
     }
 
     private String toJson(Map<String, ?> metadata) {

@@ -204,6 +204,20 @@ public class RefundService {
         return mapToRefundDto(refund);
     }
 
+    public List<ReturnDto> getReturnsByOrderId(Long orderId, LocationScope locationScope) {
+        requireOrderScope(orderId, locationScope);
+        return returnRequestRepository.findByOrderId(orderId).stream()
+                .map(this::mapToReturnDto)
+                .toList();
+    }
+
+    public List<RefundDto> getRefundsByOrderId(Long orderId, LocationScope locationScope) {
+        requireOrderScope(orderId, locationScope);
+        return refundRepository.findByOrderId(orderId).stream()
+                .map(this::mapToRefundDto)
+                .toList();
+    }
+
     private void requireOrderScope(Long orderId, LocationScope locationScope) {
         if (locationScope.allLocations()) {
             return;

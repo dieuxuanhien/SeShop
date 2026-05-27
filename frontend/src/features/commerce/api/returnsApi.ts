@@ -54,3 +54,13 @@ export async function getRefund(refundId: number): Promise<RefundResponse> {
   const response = await apiClient.get<ApiResponse<RefundResponse>>(`/refunds/${refundId}`);
   return response.data.data;
 }
+
+export async function getReturnsByOrderId(orderId: number): Promise<ReturnResponse[]> {
+  const response = await apiClient.get<ApiResponse<ReturnResponse[]>>(`/returns/order/${orderId}`);
+  return response.data.data;
+}
+
+export async function getRefundsByOrderId(orderId: number): Promise<RefundResponse[]> {
+  const response = await apiClient.get<ApiResponse<RefundResponse[]>>(`/refunds/order/${orderId}`);
+  return response.data.data;
+}

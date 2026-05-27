@@ -74,4 +74,20 @@ public class RefundController {
         RefundDto dto = refundService.getRefund(refundId, locationAccessService.scopeFor(user));
         return ResponseEntity.ok(Map.of("data", dto));
     }
+
+    @GetMapping("/returns/order/{orderId}")
+    public ResponseEntity<Map<String, Object>> getReturnsByOrderId(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long orderId) {
+        permissionValidator.require(REFUND_PROCESS);
+        return ResponseEntity.ok(Map.of("data", refundService.getReturnsByOrderId(orderId, locationAccessService.scopeFor(user))));
+    }
+
+    @GetMapping("/refunds/order/{orderId}")
+    public ResponseEntity<Map<String, Object>> getRefundsByOrderId(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @PathVariable Long orderId) {
+        permissionValidator.require(REFUND_PROCESS);
+        return ResponseEntity.ok(Map.of("data", refundService.getRefundsByOrderId(orderId, locationAccessService.scopeFor(user))));
+    }
 }

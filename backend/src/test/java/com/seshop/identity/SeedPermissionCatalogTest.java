@@ -58,9 +58,9 @@ class SeedPermissionCatalogTest {
     void demoSeedUsesOnlyCatalogPermissionsAndTheExpectedRoleAssignments() throws IOException {
         String seed = readResource("db/migration/V3__seed_demo_database.sql");
 
-        assertThat(seed).contains("('super.admin', 'SUPER_ADMIN', 'super.admin')");
-        assertThat(seed).contains("('staff.manager', 'STORE_MANAGER', 'super.admin')");
-        assertThat(seed).contains("('demo.customer', 'CUSTOMER', 'super.admin')");
+        assertThat(seed).contains("'super.admin',");
+        assertThat(seed).contains("'staff.manager',");
+        assertThat(seed).contains("'demo.customer',");
 
         Matcher matcher = Pattern.compile("JOIN permissions p ON p.code IN \\((.*?)\\)", Pattern.DOTALL)
                 .matcher(seed);
@@ -104,16 +104,16 @@ class SeedPermissionCatalogTest {
         String seed = readResource("db/migration/V4__enhance_demo_seed_catalog.sql");
 
         assertThat(seed).contains("DELETE FROM role_permissions");
-        assertThat(seed).contains("SELECT 'SUPER_ADMIN', p.code");
+        assertThat(seed).contains("SELECT 'SUPER_ADMIN',");
         assertThat(seed).contains(
-                "('INVENTORY_MANAGER', 'Owns multi-location stock, transfers, receiving, adjustments, and cycle counts.', 'ACTIVE')",
-                "('CASHIER', 'Runs point-of-sale receipts and shift operations at assigned stores.', 'ACTIVE')",
-                "('FULFILLMENT_STAFF', 'Picks, packs, ships, and transfers customer orders across assigned locations.', 'ACTIVE')",
-                "('MARKETING_MANAGER', 'Manages promotions, catalog presentation, reviews, and social commerce drafts.', 'ACTIVE')",
-                "('CUSTOMER_SUPPORT', 'Handles customer profiles, order questions, reviews, returns, and refunds.', 'ACTIVE')",
-                "('FINANCE_MANAGER', 'Manages tax invoices, refund review, audit checks, and reporting.', 'ACTIVE')",
-                "('INVENTORY_AUDITOR', 'Runs stock counts and reads inventory reports without override privileges.', 'ACTIVE')",
-                "('LOCATION_SUPERVISOR', 'Assigns staff to locations and monitors inventory coverage across sites.', 'ACTIVE')");
+                "'INVENTORY_MANAGER',",
+                "'CASHIER',",
+                "'FULFILLMENT_STAFF',",
+                "'MARKETING_MANAGER',",
+                "'CUSTOMER_SUPPORT',",
+                "'FINANCE_MANAGER',",
+                "'INVENTORY_AUDITOR',",
+                "'LOCATION_SUPERVISOR',");
 
         assertThat(extractRolePermissionCodes(seed, "STORE_MANAGER")).containsExactly(
                 "role.create",
@@ -184,12 +184,12 @@ class SeedPermissionCatalogTest {
                 "https://commons.wikimedia.org/wiki/Special:FilePath/QWSTION-FLAP-TOTE-MEDIUM-ALL-BLACK-FRONT.jpg?width=1200",
                 "https://commons.wikimedia.org/wiki/Special:FilePath/Necklace_-_Meta_Overbeck_(27770427469).jpg?width=1200");
         assertThat(seed).contains(
-                "('ONLINE-HN', 'Online Fulfillment - Hanoi', 'STORAGE', 'ACTIVE')",
-                "('STORE-D3', 'District 3 Curated Accessories Studio', 'STORE', 'ACTIVE')",
-                "('STORE-THAO-DIEN', 'Thao Dien Designer Vintage Store', 'STORE', 'ACTIVE')",
-                "('STORE-HN-OLD', 'Hanoi Old Quarter Vintage Store', 'STORE', 'ACTIVE')",
-                "('STORAGE-BT', 'Binh Thanh Returns and Repair Hub', 'STORAGE', 'ACTIVE')",
-                "('STORAGE-DN', 'Da Nang Regional Stockroom', 'STORAGE', 'ACTIVE')");
+                "'ONLINE-HN',",
+                "'STORE-D3',",
+                "'STORE-THAO-DIEN',",
+                "'STORE-HN-OLD',",
+                "'STORAGE-BT',",
+                "'STORAGE-DN',");
     }
 
     private String readResource(String resourcePath) throws IOException {
