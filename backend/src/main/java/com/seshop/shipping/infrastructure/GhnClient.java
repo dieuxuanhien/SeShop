@@ -23,6 +23,53 @@ public class GhnClient {
         this.objectMapper = objectMapper;
     }
 
+    public Integer createStore(int districtId, String wardCode, String name, String phone, String address) {
+        if (!properties.isEnabled()) {
+            return null; // or throw, but typically we just return null if disabled
+        }
+        if (!StringUtils.hasText(properties.getToken())) {
+            throw new BusinessException("ORD_002", "GHN token is not configured");
+        }
+        
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("district_id", districtId);
+        body.put("ward_code", wardCode);
+        body.put("name", name);
+        body.put("phone", phone);
+        body.put("address", address);
+        
+        String response;
+        try {
+            response = RestClient.builder()
+                    .baseUrl(properties.getBaseUrl())
+                    .build()
+                    .post()
+                    .uri(properties.getCreateShopPath())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .header("Token", properties.getToken())
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+        } catch (RestClientResponseException exception) {
+            throw new BusinessException("ORD_002", parseGhnError(exception.getResponseBodyAsString()));
+        }
+
+        try {
+            Map<String, Object> payload = objectMapper.readValue(response, new TypeReference<>() {});
+            Map<String, Object> data = (Map<String, Object>) payload.getOrDefault("data", Map.of());
+            Object shopId = data.get("shop_id");
+            if (shopId instanceof Number n) {
+                return n.intValue();
+            }
+            if (shopId instanceof String s) {
+                return Integer.parseInt(s);
+            }
+            return null;
+        } catch (Exception exception) {
+            throw new BusinessException("ORD_002", "Cannot parse GHN response");
+        }
+    }
+
     public GhnShipmentResult createShippingOrder(
             String orderNumber,
             String fromName,
@@ -30,7 +77,12 @@ public class GhnClient {
             String fromAddress,
             String toName,
             String toPhone,
-            String toAddress) {
+            String toAddress,
+            Integer toDistrictId,
+            String toWardCode,
+            Integer shopId,
+            Integer weight,
+            Integer codAmount) {
         if (!properties.isEnabled()) {
             throw new BusinessException("ORD_002", "GHN integration is disabled");
         }
@@ -45,8 +97,8 @@ public class GhnClient {
                     .uri(properties.getCreateOrderPath())
                     .contentType(MediaType.APPLICATION_JSON)
                     .header("Token", properties.getToken())
-                    .header("ShopId", properties.getShopId())
-                    .body(buildCreateOrderBody(orderNumber, fromName, fromPhone, fromAddress, toName, toPhone, toAddress))
+                    .header("ShopId", shopId != null ? shopId.toString() : properties.getShopId())
+                    .body(buildCreateOrderBody(orderNumber, fromName, fromPhone, fromAddress, toName, toPhone, toAddress, toDistrictId, toWardCode, weight, codAmount))
                     .retrieve()
                     .body(String.class);
         } catch (RestClientResponseException exception) {
@@ -71,33 +123,34 @@ public class GhnClient {
 
     /**
      * Estimates the shipping fee for a given destination.
-     * Returns fee in VND. If GHN is disabled or API fails, returns a realistic standard shipping fee (35,000 VND).
+     * Returns fee in VND. Throws BusinessException if GHN is disabled or API fails.
      */
-    public long estimateShippingFee(String toAddress) {
+    public long estimateShippingFee(Integer toDistrictId, String toWardCode, int weightGrams) {
         if (!properties.isEnabled()) {
-            return 35000L;
+            throw new BusinessException("ORD_002", "GHN integration is disabled");
         }
         if (!StringUtils.hasText(properties.getToken()) || !StringUtils.hasText(properties.getShopId())) {
-            return 35000L;
+            throw new BusinessException("ORD_002", "GHN token or shop id is not configured");
+        }
+        if (toDistrictId == null || !StringUtils.hasText(toWardCode)) {
+            throw new BusinessException("ORD_002", "Destination district and ward are required for fee estimation");
         }
 
-        AddressParts address = AddressParts.from(toAddress);
         Map<String, Object> body = new java.util.LinkedHashMap<>();
         body.put("service_type_id", properties.getServiceTypeId());
         body.put("from_district_id", parseDistrictId(properties.getDefaultFromDistrictName()));
-        body.put("to_ward_code", StringUtils.hasText(properties.getDefaultToWardCode())
-                ? properties.getDefaultToWardCode() : "");
-        body.put("to_district_id", properties.getDefaultToDistrictId());
-        body.put("weight", properties.getDefaultWeightGrams());
+        body.put("to_ward_code", toWardCode);
+        body.put("to_district_id", toDistrictId);
+        body.put("weight", weightGrams > 0 ? weightGrams : properties.getDefaultWeightGrams());
         body.put("length", properties.getDefaultLengthCm());
         body.put("width", properties.getDefaultWidthCm());
         body.put("height", properties.getDefaultHeightCm());
         body.put("insurance_value", properties.getDefaultInsuranceValue());
-        body.put("coupon", (Object) null);
+        body.put("coupon", null);
         body.put("items", List.of(Map.of(
                 "name", properties.getDefaultContent(),
                 "quantity", 1,
-                "weight", properties.getDefaultWeightGrams()
+                "weight", weightGrams > 0 ? weightGrams : properties.getDefaultWeightGrams()
         )));
 
         try {
@@ -118,10 +171,14 @@ public class GhnClient {
             if (totalFee instanceof Number n) {
                 return n.longValue();
             }
-        } catch (Exception ignored) {
-            // Return realistic fallback on error — non-fatal
+            throw new BusinessException("ORD_002", "Invalid fee returned by GHN");
+        } catch (RestClientResponseException exception) {
+            throw new BusinessException("ORD_002", parseGhnError(exception.getResponseBodyAsString()));
+        } catch (BusinessException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new BusinessException("ORD_002", "Cannot parse GHN response");
         }
-        return 35000L;
     }
 
     /**
@@ -306,7 +363,11 @@ public class GhnClient {
             String fromAddress,
             String toName,
             String toPhone,
-            String toAddress) {
+            String toAddress,
+            Integer toDistrictId,
+            String toWardCode,
+            Integer weight,
+            Integer codAmount) {
         
         AddressParts fromAddr = AddressParts.from(fromAddress);
         String finalFromName = StringUtils.hasText(fromName) ? fromName : properties.getDefaultFromName();
@@ -334,7 +395,10 @@ public class GhnClient {
         body.put("to_address", StringUtils.hasText(properties.getDefaultToAddress())
                 ? properties.getDefaultToAddress()
                 : toAddr.line1());
-        if (StringUtils.hasText(properties.getDefaultToWardCode()) && properties.getDefaultToDistrictId() > 0) {
+        if (toDistrictId != null && toWardCode != null) {
+            body.put("to_ward_code", toWardCode);
+            body.put("to_district_id", toDistrictId);
+        } else if (StringUtils.hasText(properties.getDefaultToWardCode()) && properties.getDefaultToDistrictId() > 0) {
             body.put("to_ward_code", properties.getDefaultToWardCode());
             body.put("to_district_id", properties.getDefaultToDistrictId());
         } else {
@@ -343,13 +407,13 @@ public class GhnClient {
             body.put("to_province_name", toAddr.province());
         }
         body.put("required_note", properties.getRequiredNote());
-        body.put("payment_type_id", properties.getPaymentTypeId());
+        body.put("payment_type_id", 2); // 2: Buyer pays shipping
         body.put("service_type_id", properties.getServiceTypeId());
-        body.put("weight", properties.getDefaultWeightGrams());
+        body.put("weight", weight != null && weight > 0 ? weight : properties.getDefaultWeightGrams());
         body.put("length", properties.getDefaultLengthCm());
         body.put("width", properties.getDefaultWidthCm());
         body.put("height", properties.getDefaultHeightCm());
-        body.put("cod_amount", properties.getDefaultCodAmount());
+        body.put("cod_amount", codAmount != null ? codAmount : 0);
         body.put("insurance_value", properties.getDefaultInsuranceValue());
         body.put("content", properties.getDefaultContent() + " " + orderNumber);
         body.put("items", List.of(Map.of(
@@ -360,7 +424,7 @@ public class GhnClient {
                 "length", properties.getDefaultLengthCm(),
                 "width", properties.getDefaultWidthCm(),
                 "height", properties.getDefaultHeightCm(),
-                "weight", properties.getDefaultWeightGrams()
+                "weight", weight != null && weight > 0 ? weight : properties.getDefaultWeightGrams()
         )));
         return body;
     }

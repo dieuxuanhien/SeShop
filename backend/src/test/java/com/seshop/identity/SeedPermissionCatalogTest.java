@@ -101,7 +101,7 @@ class SeedPermissionCatalogTest {
 
     @Test
     void enhancedDemoSeedRefreshesManagedRolePermissionAssignments() throws IOException {
-        String seed = readResource("db/migration/V12__enhance_demo_seed_catalog.sql");
+        String seed = readResource("db/migration/V4__enhance_demo_seed_catalog.sql");
 
         assertThat(seed).contains("DELETE FROM role_permissions");
         assertThat(seed).contains("SELECT 'SUPER_ADMIN', p.code");
@@ -163,7 +163,7 @@ class SeedPermissionCatalogTest {
 
     @Test
     void enhancedDemoSeedAddsAccessoryCatalogAndLocations() throws IOException {
-        String seed = readResource("db/migration/V12__enhance_demo_seed_catalog.sql");
+        String seed = readResource("db/migration/V4__enhance_demo_seed_catalog.sql");
 
         assertThat(seed).contains(
                 "ACC-BELT-001",

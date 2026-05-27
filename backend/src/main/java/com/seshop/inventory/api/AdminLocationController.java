@@ -3,6 +3,7 @@ package com.seshop.inventory.api;
 import com.seshop.inventory.api.dto.LocationDto;
 import com.seshop.inventory.infrastructure.persistence.LocationEntity;
 import com.seshop.inventory.infrastructure.persistence.LocationRepository;
+import com.seshop.shipping.infrastructure.GhnClient;
 import com.seshop.shared.api.ApiResponse;
 import com.seshop.shared.security.PermissionValidator;
 import java.util.Map;
@@ -27,10 +28,12 @@ public class AdminLocationController {
 
     private final LocationRepository locationRepository;
     private final PermissionValidator permissionValidator;
+    private final GhnClient ghnClient;
 
-    public AdminLocationController(LocationRepository locationRepository, PermissionValidator permissionValidator) {
+    public AdminLocationController(LocationRepository locationRepository, PermissionValidator permissionValidator, GhnClient ghnClient) {
         this.locationRepository = locationRepository;
         this.permissionValidator = permissionValidator;
+        this.ghnClient = ghnClient;
     }
 
     @GetMapping
@@ -54,7 +57,11 @@ public class AdminLocationController {
                 location.getStatus(),
                 location.getLatitude(),
                 location.getLongitude(),
-                location.getAddressText());
+                location.getAddressText(),
+                location.getProvinceId(),
+                location.getDistrictId(),
+                location.getWardCode(),
+                location.getGhnShopId());
     }
 
     public record LocationMutationRequest(
@@ -64,7 +71,10 @@ public class AdminLocationController {
             @NotBlank String status,
             Double latitude,
             Double longitude,
-            String addressText
+            String addressText,
+            Integer provinceId,
+            Integer districtId,
+            String wardCode
     ) {}
 
     @PostMapping
@@ -78,6 +88,16 @@ public class AdminLocationController {
         entity.setLatitude(request.latitude());
         entity.setLongitude(request.longitude());
         entity.setAddressText(request.addressText());
+        entity.setProvinceId(request.provinceId());
+        entity.setDistrictId(request.districtId());
+        entity.setWardCode(request.wardCode());
+        
+        if (request.districtId() != null && request.wardCode() != null) {
+            String phone = "0909090909"; // We could add phone to Location if needed, but hardcode for now
+            Integer shopId = ghnClient.createStore(request.districtId(), request.wardCode(), request.displayName(), phone, request.addressText());
+            entity.setGhnShopId(shopId);
+        }
+
         LocationEntity saved = locationRepository.save(entity);
         return ResponseEntity.ok(ApiResponse.success(toDto(saved)));
     }
@@ -94,6 +114,16 @@ public class AdminLocationController {
         entity.setLatitude(request.latitude());
         entity.setLongitude(request.longitude());
         entity.setAddressText(request.addressText());
+        entity.setProvinceId(request.provinceId());
+        entity.setDistrictId(request.districtId());
+        entity.setWardCode(request.wardCode());
+        
+        if (entity.getGhnShopId() == null && request.districtId() != null && request.wardCode() != null) {
+            String phone = "0909090909";
+            Integer shopId = ghnClient.createStore(request.districtId(), request.wardCode(), request.displayName(), phone, request.addressText());
+            entity.setGhnShopId(shopId);
+        }
+
         LocationEntity saved = locationRepository.save(entity);
         return ResponseEntity.ok(ApiResponse.success(toDto(saved)));
     }

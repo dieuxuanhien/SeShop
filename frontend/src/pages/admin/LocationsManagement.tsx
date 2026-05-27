@@ -9,6 +9,7 @@ import { Modal } from '@/shared/ui/Modal';
 import { Input } from '@/shared/ui/Input';
 import { Select } from '@/shared/ui/Select';
 import { MapPicker } from '@/shared/ui/MapPicker';
+import { getProvinces, getDistricts, getWards, type Province, type District, type Ward } from '@/features/commerce/api/checkoutApi';
 
 export function LocationsManagement() {
   const [locations, setLocations] = useState<LocationSummary[]>([]);
@@ -24,7 +25,34 @@ export function LocationsManagement() {
     latitude: undefined,
     longitude: undefined,
     addressText: '',
+    provinceId: undefined,
+    districtId: undefined,
+    wardCode: '',
   });
+
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+
+  useEffect(() => {
+    getProvinces().then(setProvinces).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (formData.provinceId) {
+      getDistricts(formData.provinceId).then(setDistricts).catch(() => {});
+    } else {
+      setDistricts([]);
+    }
+  }, [formData.provinceId]);
+
+  useEffect(() => {
+    if (formData.districtId) {
+      getWards(formData.districtId).then(setWards).catch(() => {});
+    } else {
+      setWards([]);
+    }
+  }, [formData.districtId]);
 
   const resetForm = () => {
     setFormData({
@@ -35,6 +63,9 @@ export function LocationsManagement() {
       latitude: undefined,
       longitude: undefined,
       addressText: '',
+      provinceId: undefined,
+      districtId: undefined,
+      wardCode: '',
     });
     setEditingId(null);
   };
@@ -104,6 +135,9 @@ export function LocationsManagement() {
       latitude: location.latitude,
       longitude: location.longitude,
       addressText: location.addressText || '',
+      provinceId: location.provinceId,
+      districtId: location.districtId,
+      wardCode: location.wardCode || '',
     });
     setIsModalOpen(true);
   };
@@ -222,7 +256,40 @@ export function LocationsManagement() {
               ]}
             />
           </div>
-          <Input label="Address" value={formData.addressText} onChange={e => setFormData({...formData, addressText: e.target.value})} />
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Province / City"
+              value={formData.provinceId?.toString() || ''}
+              onChange={(e) => setFormData({ ...formData, provinceId: Number(e.target.value) || undefined, districtId: undefined, wardCode: '' })}
+              options={[
+                { value: '', label: 'Select Province' },
+                ...provinces.map((p) => ({ value: p.ProvinceID.toString(), label: p.ProvinceName }))
+              ]}
+            />
+            <Select
+              label="District"
+              value={formData.districtId?.toString() || ''}
+              onChange={(e) => setFormData({ ...formData, districtId: Number(e.target.value) || undefined, wardCode: '' })}
+              disabled={!formData.provinceId}
+              options={[
+                { value: '', label: 'Select District' },
+                ...districts.map((d) => ({ value: d.DistrictID.toString(), label: d.DistrictName }))
+              ]}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Ward"
+              value={formData.wardCode || ''}
+              onChange={(e) => setFormData({ ...formData, wardCode: e.target.value })}
+              disabled={!formData.districtId}
+              options={[
+                { value: '', label: 'Select Ward' },
+                ...wards.map((w) => ({ value: w.WardCode, label: w.WardName }))
+              ]}
+            />
+            <Input label="Address Details (Street, House No.)" value={formData.addressText} onChange={e => setFormData({...formData, addressText: e.target.value})} />
+          </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Pin Location</label>
             <MapPicker 

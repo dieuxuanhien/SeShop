@@ -131,7 +131,10 @@ public class OrderService {
         if (request.getShippingAddress() != null) {
             order.setShippingLatitude(request.getShippingAddress().getLatitude());
             order.setShippingLongitude(request.getShippingAddress().getLongitude());
+            order.setShippingDistrictId(request.getShippingAddress().getDistrictId());
+            order.setShippingWardCode(request.getShippingAddress().getWardCode());
         }
+        order.setPaymentMethod(request.getPaymentMethod());
 
         BigDecimal subtotal = BigDecimal.ZERO;
         
@@ -370,11 +373,32 @@ public class OrderService {
             String fromName = null;
             String fromPhone = null;
             String fromAddress = null;
+            Integer shopId = null;
             if (!allocations.isEmpty()) {
                 LocationEntity location = allocations.get(0).getLocation();
                 fromName = location.getDisplayName();
                 fromAddress = location.getAddressText();
+                shopId = location.getGhnShopId();
             }
+
+            int totalWeight = 0;
+            for (OrderItemEntity item : order.getItems()) {
+                ProductVariantEntity variant = productVariantRepository.findById(item.getVariantId()).orElse(null);
+                int weight = 200;
+                if (variant != null && variant.getAttributes() != null && variant.getAttributes().containsKey("weight_grams")) {
+                    try {
+                        weight = Integer.parseInt(variant.getAttributes().get("weight_grams"));
+                    } catch (NumberFormatException ignored) {}
+                }
+                totalWeight += weight * item.getQty();
+            }
+            if (totalWeight == 0) totalWeight = 200;
+
+            int codAmount = 0;
+            if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
+                codAmount = order.getTotalAmount().intValue();
+            }
+
             GhnClient.GhnShipmentResult result = ghnClient.createShippingOrder(
                     order.getOrderNumber(),
                     fromName,
@@ -382,7 +406,12 @@ public class OrderService {
                     fromAddress,
                     toName,
                     toPhone,
-                    order.getShippingAddress()
+                    order.getShippingAddress(),
+                    order.getShippingDistrictId(),
+                    order.getShippingWardCode(),
+                    shopId,
+                    totalWeight,
+                    codAmount
             );
             shipment.setTrackingNumber(ShipmentStatuses.normalizeTrackingNumber(result.trackingNumber())
                     .orElseThrow(() -> new BusinessException("ORD_002", "GHN returned invalid tracking number")));

@@ -75,6 +75,8 @@ public class CheckoutRequest {
         private String city;
         private Double latitude;
         private Double longitude;
+        private Integer districtId;
+        private String wardCode;
 
         public String getFullName() { return fullName; }
         public void setFullName(String fullName) { this.fullName = fullName; }
@@ -92,6 +94,10 @@ public class CheckoutRequest {
         public void setLatitude(Double latitude) { this.latitude = latitude; }
         public Double getLongitude() { return longitude; }
         public void setLongitude(Double longitude) { this.longitude = longitude; }
+        public Integer getDistrictId() { return districtId; }
+        public void setDistrictId(Integer districtId) { this.districtId = districtId; }
+        public String getWardCode() { return wardCode; }
+        public void setWardCode(String wardCode) { this.wardCode = wardCode; }
 
         private String toText() {
             return String.join(", ",

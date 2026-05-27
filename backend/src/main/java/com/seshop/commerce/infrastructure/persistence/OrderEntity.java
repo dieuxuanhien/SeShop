@@ -26,6 +26,9 @@ public class OrderEntity {
     @Column(name = "payment_status", nullable = false, length = 20)
     private String paymentStatus = "PENDING";
 
+    @Column(name = "payment_method", nullable = false, length = 20)
+    private String paymentMethod = "COD";
+
     @Column(name = "shipment_status", nullable = false, length = 20)
     private String shipmentStatus = "PENDING";
 
@@ -55,6 +58,12 @@ public class OrderEntity {
 
     @Column(name = "shipping_longitude")
     private Double shippingLongitude;
+
+    @Column(name = "shipping_district_id")
+    private Integer shippingDistrictId;
+
+    @Column(name = "shipping_ward_code", length = 50)
+    private String shippingWardCode;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -101,6 +110,9 @@ public class OrderEntity {
     public String getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
 
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
     public String getShipmentStatus() { return shipmentStatus; }
     public void setShipmentStatus(String shipmentStatus) { this.shipmentStatus = shipmentStatus; }
 
@@ -139,4 +151,10 @@ public class OrderEntity {
 
     public Double getShippingLongitude() { return shippingLongitude; }
     public void setShippingLongitude(Double shippingLongitude) { this.shippingLongitude = shippingLongitude; }
+
+    public Integer getShippingDistrictId() { return shippingDistrictId; }
+    public void setShippingDistrictId(Integer shippingDistrictId) { this.shippingDistrictId = shippingDistrictId; }
+
+    public String getShippingWardCode() { return shippingWardCode; }
+    public void setShippingWardCode(String shippingWardCode) { this.shippingWardCode = shippingWardCode; }
 }

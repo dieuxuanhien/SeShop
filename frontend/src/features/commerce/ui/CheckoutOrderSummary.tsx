@@ -65,10 +65,7 @@ export function CheckoutOrderSummary({
           <span>Shipping (GHN)</span>
           <span>
             {step === 1 ? 'Calculated at next step' : (
-              <>
-                <span className="line-through opacity-50 mr-2">{shippingFee.toLocaleString()} VND</span>
-                <span className="text-success font-medium">Free</span>
-              </>
+              <span className="text-ink/80">{shippingFee.toLocaleString()} VND (Paid on delivery)</span>
             )}
           </span>
         </div>

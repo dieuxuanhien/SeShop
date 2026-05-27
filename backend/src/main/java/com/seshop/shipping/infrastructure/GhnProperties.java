@@ -13,6 +13,7 @@ public class GhnProperties {
     private String shopId;
     private String createOrderPath = "/shiip/public-api/v2/shipping-order/create";
     private String trackPath = "/shiip/public-api/v2/shipping-order/detail";
+    private String createShopPath = "/shiip/public-api/v2/shop/register";
     private int paymentTypeId = 2;
     private int serviceTypeId = 2;
     private int defaultWeightGrams = 500;
@@ -79,6 +80,14 @@ public class GhnProperties {
 
     public void setTrackPath(String trackPath) {
         this.trackPath = trackPath;
+    }
+
+    public String getCreateShopPath() {
+        return createShopPath;
+    }
+
+    public void setCreateShopPath(String createShopPath) {
+        this.createShopPath = createShopPath;
     }
 
     public int getPaymentTypeId() {

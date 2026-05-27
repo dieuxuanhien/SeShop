@@ -8,6 +8,10 @@ public record LocationDto(
         String status,
         Double latitude,
         Double longitude,
-        String addressText
+        String addressText,
+        Integer provinceId,
+        Integer districtId,
+        String wardCode,
+        Integer ghnShopId
 ) {
 }

@@ -12,6 +12,8 @@ export type CheckoutRequest = {
     city: string;
     latitude?: number;
     longitude?: number;
+    districtId?: number;
+    wardCode?: string;
   };
   paymentMethod: 'STRIPE' | 'COD';
   discountCode?: string;
@@ -48,9 +50,12 @@ export async function processCheckout(req: CheckoutRequest): Promise<CheckoutRes
   return response.data.data;
 }
 
-export async function estimateShippingFee(toAddress: string): Promise<ShippingFeeResponse> {
+export async function estimateShippingFee(toAddress: string, toDistrictId?: number, toWardCode?: string, cartId?: number): Promise<ShippingFeeResponse> {
   const response = await apiClient.post<ApiResponse<ShippingFeeResponse>>('/shipping/estimate-fee', {
     toAddress,
+    toDistrictId,
+    toWardCode,
+    cartId
   });
   return response.data.data;
 }

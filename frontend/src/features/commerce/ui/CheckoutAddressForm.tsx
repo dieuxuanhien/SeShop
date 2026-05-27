@@ -10,6 +10,8 @@ export type AddressState = {
   city: string;
   latitude?: number;
   longitude?: number;
+  districtId?: number;
+  wardCode?: string;
 };
 
 type CheckoutAddressFormProps = {

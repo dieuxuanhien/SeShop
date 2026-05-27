@@ -31,6 +31,18 @@ public class LocationEntity {
     @Column(name = "address_text", length = 255)
     private String addressText;
 
+    @Column(name = "province_id")
+    private Integer provinceId;
+
+    @Column(name = "district_id")
+    private Integer districtId;
+
+    @Column(name = "ward_code", length = 20)
+    private String wardCode;
+
+    @Column(name = "ghn_shop_id")
+    private Integer ghnShopId;
+
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -55,4 +67,16 @@ public class LocationEntity {
 
     public String getAddressText() { return addressText; }
     public void setAddressText(String addressText) { this.addressText = addressText; }
+
+    public Integer getProvinceId() { return provinceId; }
+    public void setProvinceId(Integer provinceId) { this.provinceId = provinceId; }
+
+    public Integer getDistrictId() { return districtId; }
+    public void setDistrictId(Integer districtId) { this.districtId = districtId; }
+
+    public String getWardCode() { return wardCode; }
+    public void setWardCode(String wardCode) { this.wardCode = wardCode; }
+
+    public Integer getGhnShopId() { return ghnShopId; }
+    public void setGhnShopId(Integer ghnShopId) { this.ghnShopId = ghnShopId; }
 }

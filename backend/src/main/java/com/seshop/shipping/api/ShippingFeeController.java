@@ -6,6 +6,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import com.seshop.catalog.infrastructure.persistence.ProductVariantEntity;
+import com.seshop.catalog.infrastructure.persistence.ProductVariantRepository;
+import com.seshop.commerce.infrastructure.persistence.CartEntity;
+import com.seshop.commerce.infrastructure.persistence.CartItemEntity;
+import com.seshop.commerce.infrastructure.persistence.CartRepository;
+
 import java.util.Map;
 
 @RestController
@@ -13,9 +19,13 @@ import java.util.Map;
 public class ShippingFeeController {
 
     private final GhnClient ghnClient;
+    private final CartRepository cartRepository;
+    private final ProductVariantRepository variantRepository;
 
-    public ShippingFeeController(GhnClient ghnClient) {
+    public ShippingFeeController(GhnClient ghnClient, CartRepository cartRepository, ProductVariantRepository variantRepository) {
         this.ghnClient = ghnClient;
+        this.cartRepository = cartRepository;
+        this.variantRepository = variantRepository;
     }
 
     /**
@@ -25,9 +35,36 @@ public class ShippingFeeController {
      */
     @PostMapping("/estimate-fee")
     public ResponseEntity<ApiResponse<Map<String, Object>>> estimateFee(
-            @RequestBody Map<String, String> body) {
-        String toAddress = body.getOrDefault("toAddress", "");
-        long fee = ghnClient.estimateShippingFee(toAddress);
+            @RequestBody Map<String, Object> body) {
+        Object toDistrictIdObj = body.get("toDistrictId");
+        Integer toDistrictId = toDistrictIdObj != null ? Integer.valueOf(toDistrictIdObj.toString()) : null;
+        Object toWardCodeObj = body.get("toWardCode");
+        String toWardCode = toWardCodeObj != null ? toWardCodeObj.toString() : null;
+        Object cartIdObj = body.get("cartId");
+        Long cartId = cartIdObj != null ? Long.valueOf(cartIdObj.toString()) : null;
+
+        int totalWeight = 0;
+        if (cartId != null) {
+            CartEntity cart = cartRepository.findById(cartId).orElse(null);
+            if (cart != null) {
+                for (CartItemEntity item : cart.getItems()) {
+                    ProductVariantEntity variant = variantRepository.findById(item.getVariantId()).orElse(null);
+                    if (variant != null) {
+                        Map<String, String> attrs = variant.getAttributes();
+                        int weight = 200;
+                        if (attrs != null && attrs.containsKey("weight_grams")) {
+                            try {
+                                weight = Integer.parseInt(attrs.get("weight_grams"));
+                            } catch (NumberFormatException ignored) {}
+                        }
+                        totalWeight += weight * item.getQty();
+                    }
+                }
+            }
+        }
+        if (totalWeight == 0) totalWeight = 200;
+
+        long fee = ghnClient.estimateShippingFee(toDistrictId, toWardCode, totalWeight);
         return ResponseEntity.ok(ApiResponse.success(Map.of("fee", fee)));
     }
 

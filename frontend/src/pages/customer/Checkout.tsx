@@ -67,6 +67,8 @@ export function Checkout() {
     city: 'Ho Chi Minh City',
     latitude: undefined as number | undefined,
     longitude: undefined as number | undefined,
+    districtId: undefined as number | undefined,
+    wardCode: undefined as string | undefined,
   });
   const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'COD'>('STRIPE');
   const [orderResponse, setOrderResponse] = useState<CheckoutResponse | null>(null);
@@ -116,9 +118,10 @@ export function Checkout() {
     if (selectedDistrictId) {
       getWards(selectedDistrictId).then(setWards).catch(() => {});
       const d = districts.find((x) => x.DistrictID === selectedDistrictId);
-      if (d) setAddress((prev) => ({ ...prev, district: d.DistrictName }));
+      if (d) setAddress((prev) => ({ ...prev, district: d.DistrictName, districtId: selectedDistrictId }));
     } else {
       setWards([]);
+      setAddress((prev) => ({ ...prev, districtId: undefined }));
     }
     setSelectedWardCode('');
   }, [selectedDistrictId, districts]);
@@ -126,7 +129,7 @@ export function Checkout() {
   const handleWardChange = (code: string) => {
     setSelectedWardCode(code);
     const w = wards.find((x) => x.WardCode === code);
-    if (w) setAddress((prev) => ({ ...prev, ward: w.WardName }));
+    if (w) setAddress((prev) => ({ ...prev, ward: w.WardName, wardCode: code }));
   };
 
   // Estimate Stripe processing fee when applicable
@@ -169,12 +172,18 @@ export function Checkout() {
       if (res.valid) {
         // Fetch GHN shipping fee estimate
         try {
-          const feeRes = await estimateShippingFee(`${address.line1}, ${address.ward}, ${address.district}, ${address.city}`);
+          const feeRes = await estimateShippingFee(
+            `${address.line1}, ${address.ward}, ${address.district}, ${address.city}`,
+            address.districtId,
+            address.wardCode,
+            cartId ?? undefined
+          );
           setShippingFee(feeRes.fee);
-        } catch (e) {
+          setStep(2);
+        } catch (e: any) {
           console.error('Failed to estimate shipping fee', e);
+          setError(e.message || 'Failed to estimate shipping fee. Service may be unavailable.');
         }
-        setStep(2);
       } else {
         setError(res.message || 'Invalid shipping address. Please check ward, district, and city.');
       }

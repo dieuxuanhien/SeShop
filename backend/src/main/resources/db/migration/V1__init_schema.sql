@@ -105,8 +105,36 @@ CREATE TABLE locations (
   code VARCHAR(40) NOT NULL UNIQUE,
   display_name VARCHAR(120) NOT NULL,
   location_type VARCHAR(20) NOT NULL, -- STORE, STORAGE
-  status VARCHAR(20) NOT NULL
+  status VARCHAR(20) NOT NULL,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  address_text VARCHAR(255),
+  province_id INT,
+  district_id INT,
+  ward_code VARCHAR(20),
+  ghn_shop_id INT
 );
+
+CREATE TABLE staff_location_assignments (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id),
+  location_id BIGINT NOT NULL REFERENCES locations(id),
+  assigned_by BIGINT REFERENCES users(id),
+  assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  revoked_at TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX ux_staff_location_assignments_active
+  ON staff_location_assignments (user_id, location_id)
+  WHERE revoked_at IS NULL;
+
+CREATE INDEX idx_staff_location_assignments_user_active
+  ON staff_location_assignments (user_id)
+  WHERE revoked_at IS NULL;
+
+CREATE INDEX idx_staff_location_assignments_location_active
+  ON staff_location_assignments (location_id)
+  WHERE revoked_at IS NULL;
 
 CREATE TABLE inventory_balances (
   id BIGSERIAL PRIMARY KEY,
@@ -115,6 +143,7 @@ CREATE TABLE inventory_balances (
   on_hand_qty INT NOT NULL DEFAULT 0,
   reserved_qty INT NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  version BIGINT NOT NULL DEFAULT 0,
   UNIQUE (variant_id, location_id)
 );
 
@@ -219,9 +248,10 @@ CREATE TABLE cart_items (
   cart_id BIGINT NOT NULL REFERENCES carts(id),
   variant_id BIGINT NOT NULL REFERENCES product_variants(id),
   qty INT NOT NULL,
-  unit_price NUMERIC(12,2) NOT NULL,
+  unit_price NUMERIC(12,2) NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (cart_id, variant_id)
 );
 
@@ -230,12 +260,22 @@ CREATE TABLE orders (
   order_number VARCHAR(60) NOT NULL UNIQUE,
   customer_user_id BIGINT NOT NULL REFERENCES users(id),
   status VARCHAR(20) NOT NULL,
-  payment_status VARCHAR(20) NOT NULL,
-  shipment_status VARCHAR(20) NOT NULL,
+  payment_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  shipment_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
   total_amount NUMERIC(12,2) NOT NULL,
-  currency CHAR(3) NOT NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'VND',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  subtotal_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+  discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+  tax_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+  shipping_address TEXT,
+  billing_address TEXT,
+  shipping_latitude DOUBLE PRECISION,
+  shipping_longitude DOUBLE PRECISION,
+  shipping_district_id INT,
+  shipping_ward_code VARCHAR(20),
+  payment_method VARCHAR(20) NOT NULL DEFAULT 'COD'
 );
 
 CREATE TABLE order_items (
@@ -244,7 +284,10 @@ CREATE TABLE order_items (
   variant_id BIGINT NOT NULL REFERENCES product_variants(id),
   qty INT NOT NULL,
   unit_price NUMERIC(12,2) NOT NULL,
-  discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0
+  discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+  product_name VARCHAR(200) NOT NULL DEFAULT '',
+  sku VARCHAR(50) NOT NULL DEFAULT '',
+  total_price NUMERIC(12,2) NOT NULL DEFAULT 0
 );
 
 CREATE TABLE order_allocations (
@@ -256,6 +299,20 @@ CREATE TABLE order_allocations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE pick_tasks (
+  id BIGSERIAL PRIMARY KEY,
+  allocation_id BIGINT NOT NULL REFERENCES order_allocations(id) ON DELETE CASCADE,
+  status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+  assigned_to BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  picked_qty INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_pick_tasks_allocation_id ON pick_tasks(allocation_id);
+CREATE INDEX idx_pick_tasks_status ON pick_tasks(status);
+CREATE INDEX idx_pick_tasks_assigned_to ON pick_tasks(assigned_to);
+
 CREATE TABLE shipments (
   id BIGSERIAL PRIMARY KEY,
   order_id BIGINT NOT NULL REFERENCES orders(id),
@@ -264,6 +321,8 @@ CREATE TABLE shipments (
   status VARCHAR(20) NOT NULL,
   shipped_at TIMESTAMPTZ,
   delivered_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (carrier, tracking_number)
 );
 
@@ -271,11 +330,12 @@ CREATE TABLE payments (
   id BIGSERIAL PRIMARY KEY,
   order_id BIGINT NOT NULL REFERENCES orders(id),
   provider VARCHAR(50) NOT NULL,
-  method VARCHAR(30) NOT NULL,
+  method VARCHAR(30) NOT NULL DEFAULT 'UNSPECIFIED',
   status VARCHAR(20) NOT NULL,
   amount NUMERIC(12,2) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  transaction_id VARCHAR(100)
 );
 
 CREATE TABLE discount_codes (
@@ -365,6 +425,29 @@ CREATE TABLE pos_receipt_items (
   qty INT NOT NULL,
   unit_price NUMERIC(12,2) NOT NULL
 );
+
+CREATE TABLE pos_returns (
+  id BIGSERIAL PRIMARY KEY,
+  original_order_id BIGINT REFERENCES orders(id),
+  processed_by BIGINT NOT NULL REFERENCES users(id),
+  refund_amount NUMERIC(12,2) NOT NULL,
+  reason VARCHAR(255),
+  processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  original_receipt_id BIGINT REFERENCES pos_receipts(id)
+);
+
+CREATE TABLE pos_return_items (
+  id BIGSERIAL PRIMARY KEY,
+  pos_return_id BIGINT NOT NULL REFERENCES pos_returns(id),
+  variant_id BIGINT NOT NULL REFERENCES product_variants(id),
+  qty INT NOT NULL,
+  disposition VARCHAR(20) NOT NULL,
+  refund_amount NUMERIC(12,2) NOT NULL
+);
+
+CREATE INDEX idx_pos_returns_original_receipt_id ON pos_returns (original_receipt_id);
+CREATE INDEX idx_pos_return_items_return_id ON pos_return_items (pos_return_id);
+CREATE INDEX idx_pos_return_items_variant_id ON pos_return_items (variant_id);
 
 CREATE TABLE cash_reconciliations (
   id BIGSERIAL PRIMARY KEY,

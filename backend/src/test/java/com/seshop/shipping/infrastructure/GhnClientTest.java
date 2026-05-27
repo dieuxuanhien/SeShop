@@ -72,7 +72,7 @@ class GhnClientTest {
         });
 
         GhnClient.GhnShipmentResult result = client.createShippingOrder(
-                "ORD-TEST001", null, null, null, "Nguyen Van A", "+84901000001", "123 Le Loi, Quan 1, HCM"
+                "ORD-TEST001", null, null, null, "Nguyen Van A", "+84901000001", "123 Le Loi, Quan 1, HCM", null, null, null, 200, 0
         );
 
         assertThat(result.trackingNumber()).isEqualTo("GHN-ABC123");
@@ -98,7 +98,7 @@ class GhnClientTest {
         });
 
         assertThatThrownBy(() -> client.createShippingOrder(
-                "ORD-TEST002", null, null, null, "Test User", "+84900000000", "Test Address"
+                "ORD-TEST002", null, null, null, "Test User", "+84900000000", "Test Address", null, null, null, 200, 0
         ))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("tracking number");
@@ -109,7 +109,7 @@ class GhnClientTest {
         properties.setEnabled(false);
 
         assertThatThrownBy(() -> client.createShippingOrder(
-                "ORD-TEST003", null, null, null, "Test", "+84900000000", "Addr"
+                "ORD-TEST003", null, null, null, "Test", "+84900000000", "Addr", null, null, null, 200, 0
         ))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("disabled");

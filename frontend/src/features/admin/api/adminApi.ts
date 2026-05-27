@@ -164,6 +164,10 @@ export type AdminLocation = {
   latitude?: number;
   longitude?: number;
   addressText?: string;
+  provinceId?: number;
+  districtId?: number;
+  wardCode?: string;
+  ghnShopId?: number;
 };
 
 type LocationsResponse = {
@@ -183,6 +187,9 @@ export type LocationMutationRequest = {
   latitude?: number;
   longitude?: number;
   addressText?: string;
+  provinceId?: number;
+  districtId?: number;
+  wardCode?: string;
 };
 
 export async function createLocation(request: LocationMutationRequest): Promise<AdminLocation> {
