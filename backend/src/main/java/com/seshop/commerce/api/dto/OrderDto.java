@@ -13,6 +13,7 @@ public class OrderDto {
     private String currency;
     private String shippingAddress;
     private String trackingNumber;
+    private List<String> allocatedLocations;
     private List<OrderItemDto> items;
 
     public static class OrderItemDto {
@@ -74,6 +75,9 @@ public class OrderDto {
 
     public String getTrackingNumber() { return trackingNumber; }
     public void setTrackingNumber(String trackingNumber) { this.trackingNumber = trackingNumber; }
+
+    public List<String> getAllocatedLocations() { return allocatedLocations; }
+    public void setAllocatedLocations(List<String> allocatedLocations) { this.allocatedLocations = allocatedLocations; }
 
     public List<OrderItemDto> getItems() { return items; }
     public void setItems(List<OrderItemDto> items) { this.items = items; }

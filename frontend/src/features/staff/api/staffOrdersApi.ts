@@ -10,6 +10,7 @@ export type StaffOrder = {
   totalAmount: number;
   currency: string;
   shippingAddress: string;
+  allocatedLocations?: string[];
 };
 
 export async function getStaffOrders(page = 1, size = 20): Promise<PageResponse<StaffOrder>> {

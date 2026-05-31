@@ -164,6 +164,7 @@ export function OrdersManagement() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Order</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Customer</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Total</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Location</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Payment</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-ink/50">Status</th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-ink/50">Action</th>
@@ -179,6 +180,11 @@ export function OrdersManagement() {
                   <td className="max-w-xs truncate px-6 py-4 whitespace-nowrap text-sm text-ink/60">{order.shippingAddress || 'Demo Customer'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/60">
                     {order.totalAmount.toLocaleString()} {order.currency ?? 'VND'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-ink/80">
+                    {order.allocatedLocations && order.allocatedLocations.length > 0 
+                      ? order.allocatedLocations.join(', ') 
+                      : <span className="text-ink/40">Unassigned</span>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <Badge variant={order.paymentStatus === 'PAID' ? 'success' : order.paymentStatus === 'FAILED' ? 'danger' : 'warning'}>

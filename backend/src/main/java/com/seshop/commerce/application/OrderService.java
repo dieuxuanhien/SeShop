@@ -737,6 +737,11 @@ public class OrderService {
         shipmentRepository.findByOrderId(entity.getId()).ifPresent(shipment -> {
             dto.setTrackingNumber(shipment.getTrackingNumber());
         });
+        java.util.List<String> locations = allocationRepository.findByOrderId(entity.getId()).stream()
+                .map(a -> a.getLocation().getDisplayName() != null ? a.getLocation().getDisplayName() : a.getLocation().getName())
+                .distinct()
+                .toList();
+        dto.setAllocatedLocations(locations);
         dto.setItems(entity.getItems().stream().map(item -> {
             OrderDto.OrderItemDto itemDto = new OrderDto.OrderItemDto();
             itemDto.setId(item.getId());

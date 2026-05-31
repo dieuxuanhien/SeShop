@@ -45,7 +45,7 @@ public class ShippingFeeController {
 
         int totalWeight = 0;
         if (cartId != null) {
-            CartEntity cart = cartRepository.findById(cartId).orElse(null);
+            CartEntity cart = cartRepository.findWithItemsById(cartId).orElse(null);
             if (cart != null) {
                 for (CartItemEntity item : cart.getItems()) {
                     ProductVariantEntity variant = variantRepository.findById(item.getVariantId()).orElse(null);

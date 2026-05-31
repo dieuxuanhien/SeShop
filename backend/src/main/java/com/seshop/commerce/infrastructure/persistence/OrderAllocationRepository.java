@@ -25,4 +25,10 @@ public interface OrderAllocationRepository extends JpaRepository<OrderAllocation
     boolean existsByOrderIdAndLocationIds(
             @Param("orderId") Long orderId,
             @Param("locationIds") Collection<Long> locationIds);
+
+    @Query("SELECT a FROM OrderAllocationEntity a " +
+            "JOIN FETCH a.orderItem oi " +
+            "JOIN FETCH a.location " +
+            "WHERE oi.order.id = :orderId")
+    List<OrderAllocationEntity> findByOrderId(@Param("orderId") Long orderId);
 }
