@@ -108,16 +108,16 @@ public class RoleController {
                                                   @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
                                                   @Valid @RequestBody AssignLocationRequest request) {
         permissionValidator.require(STAFF_LOCATION_ASSIGN);
-        Long assignedByUserId = authenticatedUser == null ? null : authenticatedUser.userId();
-        roleService.assignLocationToUser(userId, request.locationId(), assignedByUserId);
+        roleService.assignLocationToUser(userId, request.locationId(), authenticatedUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(Map.of("success", true)));
     }
 
     @DeleteMapping("/users/{userId}/locations/{assignmentId}")
     public ResponseEntity<?> revokeLocationFromUser(@PathVariable Long userId,
-                                                    @PathVariable Long assignmentId) {
+                                                    @PathVariable Long assignmentId,
+                                                    @AuthenticationPrincipal AuthenticatedUser authenticatedUser) {
         permissionValidator.require(STAFF_LOCATION_ASSIGN);
-        roleService.revokeLocationFromUser(userId, assignmentId);
+        roleService.revokeLocationFromUser(userId, assignmentId, authenticatedUser);
         return ResponseEntity.noContent().build();
     }
 

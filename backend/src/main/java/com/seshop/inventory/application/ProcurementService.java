@@ -11,6 +11,8 @@ import com.seshop.shared.util.DateTimeUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.seshop.shared.security.LocationScope;
+
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -131,8 +133,11 @@ public class ProcurementService {
     }
 
     @Transactional(readOnly = true)
-    public org.springframework.data.domain.Page<PurchaseOrderResponse> listPurchaseOrders(int page, int size) {
-        return purchaseOrderRepository.findAll(org.springframework.data.domain.PageRequest.of(page, size))
+    public org.springframework.data.domain.Page<PurchaseOrderResponse> listPurchaseOrders(int page, int size, LocationScope locationScope) {
+        org.springframework.data.domain.PageRequest pageRequest = org.springframework.data.domain.PageRequest.of(page, size);
+        return (locationScope.allLocations()
+                ? purchaseOrderRepository.findAll(pageRequest)
+                : purchaseOrderRepository.findByDestinationLocationIdIn(locationScope.locationIds(), pageRequest))
                 .map(this::mapToResponse);
     }
 

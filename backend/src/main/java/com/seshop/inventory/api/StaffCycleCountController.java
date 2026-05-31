@@ -33,7 +33,7 @@ public class StaffCycleCountController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @Valid @RequestBody CreateCycleCountRequest request) {
         permissionValidator.require(INVENTORY_CYCLE_COUNT);
-        Long cycleCountId = cycleCountService.createCycleCount(request, user.userId());
+        Long cycleCountId = cycleCountService.createCycleCount(request, user);
 
         Map<String, Object> data = new HashMap<>();
         data.put("cycleCountId", cycleCountId);
@@ -46,10 +46,11 @@ public class StaffCycleCountController {
 
     @PostMapping("/{cycleCountId}/items")
     public ResponseEntity<Void> submitItems(
+            @AuthenticationPrincipal AuthenticatedUser user,
             @PathVariable Long cycleCountId,
             @Valid @RequestBody CycleCountItemsRequest request) {
         permissionValidator.require(INVENTORY_CYCLE_COUNT);
-        cycleCountService.submitItems(cycleCountId, request);
+        cycleCountService.submitItems(cycleCountId, request, user);
         return ResponseEntity.ok().build();
     }
 
@@ -58,7 +59,7 @@ public class StaffCycleCountController {
             @AuthenticationPrincipal AuthenticatedUser user,
             @PathVariable Long cycleCountId) {
         permissionValidator.require(INVENTORY_CYCLE_COUNT);
-        cycleCountService.approveCycleCount(cycleCountId, user.userId());
+        cycleCountService.approveCycleCount(cycleCountId, user);
         return ResponseEntity.ok().build();
     }
 }

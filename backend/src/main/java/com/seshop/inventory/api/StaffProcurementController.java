@@ -60,7 +60,7 @@ public class StaffProcurementController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         permissionValidator.require(INVENTORY_TRANSFER);
-        var orders = procurementService.listPurchaseOrders(page, size);
+        var orders = procurementService.listPurchaseOrders(page, size, locationAccessService.scopeFor(user));
         return ApiResponse.success(java.util.Map.of(
                 "items", orders.getContent(),
                 "page", orders.getNumber(),

@@ -28,6 +28,8 @@ import com.seshop.identity.infrastructure.persistence.UserRoleEntity;
 import com.seshop.identity.infrastructure.persistence.UserRoleRepository;
 import com.seshop.inventory.infrastructure.persistence.LocationRepository;
 import com.seshop.shared.exception.DuplicateResourceException;
+import com.seshop.shared.security.AuthenticatedUser;
+import com.seshop.shared.security.LocationAccessService;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -50,6 +52,7 @@ public class RoleService {
     private final LocationRepository locationRepository;
     private final AuditService auditService;
     private final PasswordEncoder passwordEncoder;
+    private final LocationAccessService locationAccessService;
 
     public RoleService(RoleRepository roleRepository,
                        PermissionRepository permissionRepository,
@@ -59,7 +62,8 @@ public class RoleService {
                            StaffLocationAssignmentRepository staffLocationAssignmentRepository,
                            LocationRepository locationRepository,
 	                       AuditService auditService,
-	                       PasswordEncoder passwordEncoder) {
+	                       PasswordEncoder passwordEncoder,
+                           LocationAccessService locationAccessService) {
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
         this.rolePermissionRepository = rolePermissionRepository;
@@ -69,6 +73,7 @@ public class RoleService {
         this.locationRepository = locationRepository;
         this.auditService = auditService;
         this.passwordEncoder = passwordEncoder;
+        this.locationAccessService = locationAccessService;
     }
 
     @Transactional
@@ -236,7 +241,9 @@ public class RoleService {
     }
 
     @Transactional
-    public void assignLocationToUser(Long userId, Long locationId, Long assignedByUserId) {
+    public void assignLocationToUser(Long userId, Long locationId, AuthenticatedUser authenticatedUser) {
+        locationAccessService.requireLocationAccess(authenticatedUser, locationId);
+
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (user.getStatus() != UserStatus.ACTIVE) {
@@ -253,6 +260,7 @@ public class RoleService {
             throw new IllegalArgumentException("Location already assigned to user");
         }
 
+        Long assignedByUserId = authenticatedUser == null ? null : authenticatedUser.userId();
         UserEntity assignedBy = assignedByUserId != null ? userRepository.findById(assignedByUserId).orElse(null) : null;
         StaffLocationAssignmentEntity assignment = new StaffLocationAssignmentEntity();
         assignment.setUser(user);
@@ -267,9 +275,10 @@ public class RoleService {
     }
 
     @Transactional
-    public void revokeLocationFromUser(Long userId, Long assignmentId) {
+    public void revokeLocationFromUser(Long userId, Long assignmentId, AuthenticatedUser authenticatedUser) {
         StaffLocationAssignmentEntity assignment = staffLocationAssignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Staff location assignment not found"));
+        locationAccessService.requireLocationAccess(authenticatedUser, assignment.getLocationId());
         if (!assignment.getUser().getId().equals(userId)) {
             throw new IllegalArgumentException("Staff location assignment does not belong to user");
         }

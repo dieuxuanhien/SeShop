@@ -59,6 +59,8 @@ class RoleServiceTest {
     private AuditService auditService;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private com.seshop.shared.security.LocationAccessService locationAccessService;
 
     private RoleService roleService;
 
@@ -73,7 +75,8 @@ class RoleServiceTest {
                 staffLocationAssignmentRepository,
                 locationRepository,
                 auditService,
-                passwordEncoder
+                passwordEncoder,
+                locationAccessService
         );
     }
 

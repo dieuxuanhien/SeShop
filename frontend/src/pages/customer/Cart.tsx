@@ -35,23 +35,31 @@ export function Cart() {
 
   const handleRemove = async (itemId: number | undefined, variantId: number) => {
     if (!itemId) return;
-    await removeCartItem(itemId);
-    removeItem(variantId);
+    try {
+      await removeCartItem(itemId);
+      removeItem(variantId);
+    } catch (err) {
+      setError('Failed to remove item. Please try again.');
+    }
   };
 
   const handleQtyChange = async (itemId: number | undefined, qty: number) => {
     if (!itemId || qty < 1) return;
-    const cart = await updateCartItem(itemId, qty);
-    setItems(cart.items.map((item) => ({
-      id: item.id,
-      variantId: item.variantId,
-      skuCode: item.skuCode,
-      name: item.name,
-      attributes: item.attributes,
-      imageUrl: item.imageUrl,
-      qty: item.qty,
-      unitPrice: Number(item.unitPrice),
-    })));
+    try {
+      const cart = await updateCartItem(itemId, qty);
+      setItems(cart.items.map((item) => ({
+        id: item.id,
+        variantId: item.variantId,
+        skuCode: item.skuCode,
+        name: item.name,
+        attributes: item.attributes,
+        imageUrl: item.imageUrl,
+        qty: item.qty,
+        unitPrice: Number(item.unitPrice),
+      })));
+    } catch (err) {
+      setError('Failed to update quantity. Please try again.');
+    }
   };
 
   return (
