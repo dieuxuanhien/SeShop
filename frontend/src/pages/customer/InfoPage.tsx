@@ -1,4 +1,4 @@
-import { Mail, RotateCcw, Truck } from 'lucide-react';
+import { HelpCircle, Mail, Truck } from 'lucide-react';
 import { Card } from '@/shared/ui/Card';
 
 const pageContent = {
@@ -22,7 +22,7 @@ const pageContent = {
   },
   faq: {
     title: 'FAQ',
-    icon: RotateCcw,
+    icon: HelpCircle,
     sections: [
       ['Are pieces authentic?', 'Each vintage item is inspected before publishing.'],
       ['Can I reserve an item?', 'Carted pieces are not reserved until checkout is complete.'],

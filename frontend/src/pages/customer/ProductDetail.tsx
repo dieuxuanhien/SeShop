@@ -79,6 +79,8 @@ export function ProductDetail() {
         variantId: item.variantId,
         skuCode: item.skuCode,
         name: item.name,
+        attributes: item.attributes,
+        imageUrl: item.imageUrl,
         qty: item.qty,
         unitPrice: Number(item.unitPrice),
       })));

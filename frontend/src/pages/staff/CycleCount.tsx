@@ -3,6 +3,7 @@ import { CheckCircle2, ClipboardList, PackageSearch, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { createCycleCount, submitCycleCountItems, approveCycleCount, type CountedItem } from '@/features/staff/api/staffCycleCountApi';
 import { getInventoryBalances, type InventoryBalance } from '@/features/staff/api/staffInventoryApi';
+import { useStaffLocation } from '@/shared/context/LocationContext';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -15,6 +16,7 @@ type CountRow = InventoryBalance & { countedQty: number; reasonCode: string };
 
 export function CycleCount() {
   const { t } = useTranslation();
+  const { locations, activeLocationId } = useStaffLocation();
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -27,16 +29,20 @@ export function CycleCount() {
 
   useEffect(() => {
     getInventoryBalances(1, 500)
-      .then((page) => { setBalances(page.items); if (page.items[0]) setLocationId(page.items[0].locationId); })
+      .then((page) => { setBalances(page.items); })
       .catch(() => setBalances([]))
       .finally(() => setIsLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (activeLocationId && !locationId) {
+      setLocationId(activeLocationId);
+    }
+  }, [activeLocationId, locationId]);
+
   const locationOptions = useMemo(() => {
-    const m = new Map<number, string>();
-    balances.forEach((b) => m.set(b.locationId, b.locationName));
-    return [...m.entries()].map(([id, name]) => ({ label: name, value: String(id) }));
-  }, [balances]);
+    return locations.map((loc) => ({ label: loc.displayName, value: String(loc.id) }));
+  }, [locations]);
 
   const locationBalances = useMemo(() => balances.filter((b) => b.locationId === locationId), [balances, locationId]);
 

@@ -558,29 +558,33 @@ SELECT DISTINCT pv.product_id,
 FROM seed_thrifted_products s
   JOIN product_variants pv ON pv.sku_code = 'THR-' || s.source_sku
   JOIN categories c ON c.name = 'New Arrivals' ON CONFLICT (product_id, category_id) DO NOTHING;
-INSERT INTO locations (code, display_name, location_type, status)
+INSERT INTO locations (code, display_name, location_type, status, ghn_shop_id)
 VALUES (
     'ONLINE-HCM',
     'Online Fulfillment - Ho Chi Minh',
     'STORAGE',
-    'ACTIVE'
+    'ACTIVE',
+    200231
   ),
   (
     'STORE-D1',
     'District 1 Vintage Store',
     'STORE',
-    'ACTIVE'
+    'ACTIVE',
+    200231
   ),
   (
     'STORAGE-Q7',
     'District 7 Back Stock',
     'STORAGE',
-    'ACTIVE'
+    'ACTIVE',
+    200231
   ) ON CONFLICT (code) DO
 UPDATE
 SET display_name = EXCLUDED.display_name,
   location_type = EXCLUDED.location_type,
-  status = EXCLUDED.status;
+  status = EXCLUDED.status,
+  ghn_shop_id = EXCLUDED.ghn_shop_id;
 WITH seeded_variants AS (
   SELECT pv.id AS variant_id,
     ROW_NUMBER() OVER (

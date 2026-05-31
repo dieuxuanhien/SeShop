@@ -749,6 +749,9 @@ public class OrderService {
             productVariantRepository.findById(item.getVariantId()).ifPresent(variant -> {
                 itemDto.setSkuCode(variant.getSkuCode());
                 itemDto.setAttributes(variant.getAttributes());
+                if (itemDto.getProductName() == null && variant.getProduct() != null) {
+                    itemDto.setProductName(variant.getProduct().getName());
+                }
                 // Pick first product image
                 if (variant.getProduct() != null && variant.getProduct().getImages() != null) {
                     variant.getProduct().getImages().stream()

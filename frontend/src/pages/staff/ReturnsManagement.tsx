@@ -55,8 +55,8 @@ export function ReturnsManagement() {
           getStaffOrders(1, 100),
           getReceiptHistory(0, 100)
         ]);
-        setOrders(ordersRes.items);
-        setReceipts(receiptsRes.items);
+        setOrders(ordersRes?.items || []);
+        setReceipts(receiptsRes?.items || []);
       } catch (err) {
         console.error('Failed to load initial data', err);
       } finally {
@@ -75,8 +75,8 @@ export function ReturnsManagement() {
         getOrderPayments(id)
       ]);
       setOrderDetails(details);
-      setReturns(rets);
-      setPayments(pays);
+      setReturns(rets || []);
+      setPayments(pays || []);
     } catch (err) {
       console.error('Failed to load order related data', err);
     }
@@ -101,7 +101,7 @@ export function ReturnsManagement() {
 
   // Set default orderItemId when details load
   useEffect(() => {
-    if (orderDetails && orderDetails.items.length > 0 && !orderItemId) {
+    if (orderDetails && (orderDetails.items || []).length > 0 && !orderItemId) {
       setOrderItemId(String(orderDetails.items[0].id));
     }
   }, [orderDetails, orderItemId]);
@@ -115,7 +115,10 @@ export function ReturnsManagement() {
       try {
         const details = await getReceiptDetails(Number(posReturn.originalReceiptId));
         setReceiptDetails(details);
-        if (details.items.length > 0) setPosReturn(p => ({ ...p, variantId: String(details.items[0].variantId) }));
+        if ((details.items || []).length > 0) {
+          const firstItem = details.items[0];
+          setPosReturn(p => ({ ...p, variantId: String(firstItem.variantId), refundAmount: String(firstItem.unitPrice) }));
+        }
       } catch (err) {
         console.error('Failed to load receipt details', err);
       }
@@ -138,9 +141,11 @@ export function ReturnsManagement() {
       await refreshOrderData(Number(orderId));
       setApproveId(String(created.returnId));
       setRefund((current) => ({ ...current, returnRequestId: String(created.returnId) }));
-      setMessage(`Return ${created.returnId} created.`);
-    } catch {
-      setMessage('Return request could not be created.');
+      setMessage(`Successfully created return request #${created.returnId}`);
+      setReason('');
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || 'Return request could not be created.';
+      setMessage(errorMsg);
     } finally {
       setIsSaving(false);
     }
@@ -152,12 +157,12 @@ export function ReturnsManagement() {
     setIsSaving(true);
     setMessage('');
     try {
-      const approved = await approveReturn(Number(approveId));
-      setReturnResult(approved);
-      if (orderId) await refreshOrderData(Number(orderId));
-      setMessage(`Return ${approved.returnId} approved.`);
-    } catch {
-      setMessage('Return could not be approved.');
+      await approveReturn(Number(approveId));
+      await refreshOrderData(Number(orderId));
+      setApproveId('');
+      setMessage(`Successfully approved return.`);
+    } catch (err: any) {
+      setMessage(err?.response?.data?.message || 'Approve Return failed.');
     } finally {
       setIsSaving(false);
     }
@@ -173,12 +178,12 @@ export function ReturnsManagement() {
         orderId: Number(orderId),
         paymentId: Number(refund.paymentId),
         returnRequestId: Number(refund.returnRequestId),
-        amount: Number(refund.amount)
+        amount: Number(refund.amount),
       });
       setRefundResult(created);
-      setMessage(`Refund ${created.refundId} created.`);
-    } catch {
-      setMessage('Refund could not be created.');
+      setMessage(`Successfully processed refund.`);
+    } catch (err: any) {
+      setMessage(err?.response?.data?.message || 'Refund could not be created.');
     } finally {
       setIsSaving(false);
     }
@@ -191,7 +196,7 @@ export function ReturnsManagement() {
     setMessage('');
     try {
       const created = await processPosReturn({
-        originalOrderId: receiptDetails?.transactionId || 0, // Using transactionId as originalOrderId since receipts map to POS transactions
+        originalOrderId: receiptDetails?.id || 0,
         refundAmount: Number(posReturn.refundAmount),
         reason: posReturn.reason,
         items: [
@@ -241,8 +246,8 @@ export function ReturnsManagement() {
                 label="Select Order Item"
                 value={orderItemId}
                 onChange={(e) => setOrderItemId(e.target.value)}
-                options={orderDetails?.items.map(i => ({ value: String(i.id), label: `${i.productName} (x${i.qty})` })) || []}
-                disabled={!orderDetails || orderDetails.items.length === 0}
+                options={(orderDetails?.items || []).map(i => ({ value: String(i.id), label: `${i.productName || 'Unknown Product'} (x${i.qty})` }))}
+                disabled={!orderDetails || (orderDetails.items || []).length === 0}
                 required
               />
               <Input label="Quantity" type="number" min={1} value={qty} onChange={(event) => setQty(event.target.value)} required />
@@ -290,6 +295,7 @@ export function ReturnsManagement() {
                 }}
               />
             )}
+            {message && <p className={`mt-3 text-sm ${message.includes('could not') ? 'text-danger' : 'text-success'}`}>{message}</p>}
             <Button type="submit" isLoading={isSaving} className="mt-2" disabled={!orderId || !orderItemId}>
               Create Return
             </Button>
@@ -318,6 +324,7 @@ export function ReturnsManagement() {
                 disabled={!orderId || returns.filter(r => r.status === 'PENDING').length === 0}
                 required
               />
+              {message && message.includes('Approve') && <p className="mt-2 text-sm text-danger">{message}</p>}
               <Button type="submit" variant="secondary" icon={<CheckCircle2 size={16} />} isLoading={isSaving} disabled={!approveId}>
                 Approve
               </Button>
@@ -348,6 +355,7 @@ export function ReturnsManagement() {
               />
 
               <Input label="Amount (VND)" type="number" min={1} value={refund.amount} onChange={(event) => setRefund((current) => ({ ...current, amount: event.target.value }))} disabled={!orderId} required />
+              {message && message.includes('Refund') && <p className="mt-2 text-sm text-danger">{message}</p>}
               <Button type="submit" variant="secondary" icon={<WalletCards size={16} />} isLoading={isSaving} disabled={!orderId || !refund.paymentId || !refund.returnRequestId}>
                 Create Refund
               </Button>
@@ -379,24 +387,51 @@ export function ReturnsManagement() {
                 <Select
                   label="Select Variant"
                   value={posReturn.variantId}
-                  onChange={(e) => setPosReturn((current) => ({ ...current, variantId: e.target.value }))}
-                  options={receiptDetails?.items.map(i => ({ value: String(i.variantId), label: `${i.name} (${i.skuCode})` })) || []}
-                  disabled={!receiptDetails || receiptDetails.items.length === 0}
+                  onChange={(e) => {
+                    const newVariantId = e.target.value;
+                    const item = receiptDetails?.items.find(i => String(i.variantId) === newVariantId);
+                    setPosReturn((current) => ({ 
+                      ...current, 
+                      variantId: newVariantId,
+                      refundAmount: item ? String(item.unitPrice * Number(current.qty)) : current.refundAmount
+                    }));
+                  }}
+                  options={(receiptDetails?.items || []).map(i => ({ value: String(i.variantId), label: `${i.name || 'Unknown'} (${i.skuCode || 'No SKU'})` }))}
+                  disabled={!receiptDetails || (receiptDetails.items || []).length === 0}
                   required
                 />
                 
-                <Input label="Quantity" type="number" min={1} value={posReturn.qty} onChange={(event) => setPosReturn((current) => ({ ...current, qty: event.target.value }))} disabled={!posReturn.originalReceiptId} required />
-                <Select
-                  label="Disposition"
-                  value={posReturn.disposition}
-                  onChange={(event) => setPosReturn((current) => ({ ...current, disposition: event.target.value as PosReturnDisposition }))}
-                  options={[
-                    { label: 'Restock', value: 'RESTOCK' },
-                    { label: 'Refurbish', value: 'REFURBISH' },
-                    { label: 'Dispose', value: 'DISPOSE' },
-                  ]}
-                  disabled={!posReturn.originalReceiptId}
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <Input 
+                    label="Quantity" 
+                    type="number" 
+                    min={1} 
+                    value={posReturn.qty} 
+                    onChange={(e) => {
+                      const newQty = e.target.value;
+                      const item = receiptDetails?.items.find(i => String(i.variantId) === posReturn.variantId);
+                      setPosReturn((current) => ({ 
+                        ...current, 
+                        qty: newQty,
+                        refundAmount: item ? String(item.unitPrice * Number(newQty)) : current.refundAmount
+                      }));
+                    }} 
+                    disabled={!posReturn.originalReceiptId}
+                    required 
+                  />
+                  <Select
+                    label="Disposition"
+                    value={posReturn.disposition}
+                    onChange={(event) => setPosReturn((current) => ({ ...current, disposition: event.target.value as any }))}
+                    options={[
+                      { label: 'Restock', value: 'RESTOCK' },
+                      { label: 'Refurbish', value: 'REFURBISH' },
+                      { label: 'Dispose', value: 'DISPOSE' },
+                    ]}
+                    disabled={!posReturn.originalReceiptId}
+                    required
+                  />
+                </div>
                 <Input label="Refund Amount (VND)" type="number" min={0.01} step="0.01" value={posReturn.refundAmount} onChange={(event) => setPosReturn((current) => ({ ...current, refundAmount: event.target.value }))} disabled={!posReturn.originalReceiptId} required />
                 <Input label="Reason" value={posReturn.reason} onChange={(event) => setPosReturn((current) => ({ ...current, reason: event.target.value }))} disabled={!posReturn.originalReceiptId} required />
               </div>

@@ -1,4 +1,4 @@
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import { Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useCartStore } from '@/features/cart/model/cartStore';
@@ -64,7 +64,16 @@ export function Cart() {
         {isLoading ? (
           <p className="text-sm text-ink/70">Loading cart...</p>
         ) : error ? (
-          <EmptyState title="Cart unavailable" description={error} />
+          <div className="flex flex-col items-center justify-center rounded-card border border-dashed border-primary/40 bg-surface p-12 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-6">
+              <ShoppingBag className="h-8 w-8 text-primary" strokeWidth={1.5} />
+            </div>
+            <h2 className="font-display text-lg font-medium text-ink">Cart unavailable</h2>
+            <p className="mt-2 text-sm text-ink/70 max-w-sm">{error}</p>
+            <NavLink to="/auth/login" className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-primaryStrong">
+              Sign in
+            </NavLink>
+          </div>
         ) : items.length === 0 ? (
           <EmptyState title="Cart is empty" description="Add a piece from the collection to begin checkout." />
         ) : (

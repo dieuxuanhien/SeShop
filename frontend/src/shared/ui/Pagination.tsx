@@ -16,7 +16,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage <= 1}
-        className="rounded-md border border-primary/20 p-2 text-surface/70 transition hover:bg-primary/10 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="rounded-md border border-primary/20 p-2 opacity-70 hover:opacity-100 transition hover:bg-primary/10 disabled:opacity-30 disabled:cursor-not-allowed"
         aria-label="Previous page"
       >
         <ChevronLeft size={16} />
@@ -24,7 +24,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
 
       {pages.map((page, idx) =>
         page === '...' ? (
-          <span key={`ellipsis-${idx}`} className="px-2 text-surface/40">
+          <span key={`ellipsis-${idx}`} className="px-2 opacity-40">
             ...
           </span>
         ) : (
@@ -34,7 +34,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
             className={`min-w-[36px] rounded-md border px-3 py-2 text-sm font-medium transition ${
               page === currentPage
                 ? 'border-primary bg-primary/15 text-primary'
-                : 'border-primary/20 text-surface/70 hover:bg-primary/10'
+                : 'border-primary/20 opacity-70 hover:opacity-100 hover:bg-primary/10'
             }`}
             aria-current={page === currentPage ? 'page' : undefined}
           >
@@ -46,7 +46,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage >= totalPages}
-        className="rounded-md border border-primary/20 p-2 text-surface/70 transition hover:bg-primary/10 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="rounded-md border border-primary/20 p-2 opacity-70 hover:opacity-100 transition hover:bg-primary/10 disabled:opacity-30 disabled:cursor-not-allowed"
         aria-label="Next page"
       >
         <ChevronRight size={16} />

@@ -92,7 +92,7 @@ export function CheckoutAddressForm({
       ) : (
         <>
           <div className="flex flex-col gap-1">
-            <label htmlFor="checkout-province" className="text-xs font-medium text-surface">Province / City</label>
+            <label htmlFor="checkout-province" className="text-xs font-semibold text-ink/80">Province / City</label>
             <select
               id="checkout-province"
               value={selectedProvinceId ?? ''}
@@ -108,7 +108,7 @@ export function CheckoutAddressForm({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label htmlFor="checkout-district" className="text-xs font-medium text-surface">District</label>
+            <label htmlFor="checkout-district" className="text-xs font-semibold text-ink/80">District</label>
             <select
               id="checkout-district"
               value={selectedDistrictId ?? ''}
@@ -125,7 +125,7 @@ export function CheckoutAddressForm({
           </div>
 
           <div className="flex flex-col gap-1 md:col-span-2">
-            <label htmlFor="checkout-ward" className="text-xs font-medium text-surface">Ward / Commune</label>
+            <label htmlFor="checkout-ward" className="text-xs font-semibold text-ink/80">Ward / Commune</label>
             <select
               id="checkout-ward"
               value={selectedWardCode}
@@ -144,7 +144,7 @@ export function CheckoutAddressForm({
       )}
 
       <div className="md:col-span-2 mt-4">
-        <label className="text-sm font-medium text-surface mb-2 block">Pin Location on Map (Required for Nearest Store)</label>
+        <label className="text-sm font-semibold text-ink/80 mb-2 block">Pin Location on Map (Required for Nearest Store)</label>
         <MapPicker
           lat={address.latitude}
           lng={address.longitude}

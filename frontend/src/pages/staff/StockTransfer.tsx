@@ -54,7 +54,7 @@ export function StockTransfer() {
     }
   }, [sourceLocationId]);
 
-  const locationOptions = locations.map((l: any) => ({ label: l.name, value: String(l.id) }));
+  const locationOptions = locations.map((l: any) => ({ label: l.displayName, value: String(l.id) }));
 
   const variantOptions = useMemo(() => {
     const variants = new Map<number, string>();

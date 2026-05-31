@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ClipboardCheck, PackagePlus, ReceiptText } from 'lucide-react';
 import { getInventoryBalances, type InventoryBalance } from '@/features/staff/api/staffInventoryApi';
+import { useStaffLocation } from '@/shared/context/LocationContext';
 import {
   createGoodsReceipt,
   createPurchaseOrder,
@@ -18,6 +19,7 @@ import { Select } from '@/shared/ui/Select';
 import { Pagination } from '@/shared/ui/Pagination';
 
 export function PurchaseOrders() {
+  const { locations } = useStaffLocation();
   const [balances, setBalances] = useState<InventoryBalance[]>([]);
   const [supplierId, setSupplierId] = useState(1);
   const [destinationLocationId, setDestinationLocationId] = useState(1);
@@ -51,18 +53,36 @@ export function PurchaseOrders() {
         setBalances(pageData.items);
         const first = pageData.items[0];
         if (first) {
-          setDestinationLocationId(first.locationId);
           setVariantId(first.variantId);
         }
       })
       .catch(() => setBalances([]));
   }, []);
 
+  useEffect(() => {
+    if (locations.length > 0 && !destinationLocationId) {
+      setDestinationLocationId(locations[0].id);
+    }
+  }, [locations, destinationLocationId]);
+
+  const supplierOptions = [
+    { label: 'Thrifted Vintage Wholesale', value: '1' },
+    { label: 'Circular Supply Co.', value: '2' },
+  ];
+
+  const getSupplierName = (supId: number) => {
+    const option = supplierOptions.find(o => o.value === String(supId));
+    return option ? option.label : `Supplier #${supId}`;
+  };
+
+  const getDestinationName = (locId: number) => {
+    const loc = locations.find(l => l.id === locId);
+    return loc ? loc.displayName : `LOC-${locId}`;
+  };
+
   const locationOptions = useMemo(() => {
-    const locations = new Map<number, string>();
-    balances.forEach((balance) => locations.set(balance.locationId, balance.locationName));
-    return [...locations.entries()].map(([id, name]) => ({ label: name, value: String(id) }));
-  }, [balances]);
+    return locations.map((loc) => ({ label: loc.displayName, value: String(loc.id) }));
+  }, [locations]);
 
   const variantOptions = useMemo(() => {
     const variants = new Map<number, string>();
@@ -130,12 +150,11 @@ export function PurchaseOrders() {
 
           <form onSubmit={handleCreatePurchaseOrder} className="mt-5 grid gap-4">
             <div className="grid gap-4 md:grid-cols-2">
-              <Input
-                label="Supplier ID"
-                type="number"
-                min={1}
-                value={supplierId}
+              <Select
+                label="Supplier"
+                value={String(supplierId)}
                 onChange={(event) => setSupplierId(Number(event.target.value))}
+                options={supplierOptions}
                 required
               />
               <Select
@@ -199,12 +218,16 @@ export function PurchaseOrders() {
                   <span className="font-semibold text-ink">{purchaseOrder.poNumber}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span>Supplier</span>
+                  <span className="font-semibold text-ink">{getSupplierName(purchaseOrder.supplierId)}</span>
+                </div>
+                <div className="flex justify-between">
                   <span>Created</span>
                   <span className="font-semibold text-ink">{new Date(purchaseOrder.createdAt).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Destination</span>
-                  <span className="font-semibold text-ink">LOC-{purchaseOrder.destinationLocationId}</span>
+                  <span className="font-semibold text-ink">{getDestinationName(purchaseOrder.destinationLocationId)}</span>
                 </div>
               </div>
             ) : (
@@ -215,7 +238,7 @@ export function PurchaseOrders() {
           <Card className="border-primary/20 bg-surface/95 p-5">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Goods Receipt</h2>
             <form onSubmit={handleCreateReceipt} className="mt-4 grid gap-4">
-              <Input label="Purchase Order ID" value={purchaseOrder?.id ?? ''} readOnly />
+              <Input label="Purchase Order Number" value={purchaseOrder?.poNumber ?? ''} readOnly />
               <Input
                 label="Received Qty"
                 type="number"
@@ -240,7 +263,7 @@ export function PurchaseOrders() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-ink/70">Receiving Result</h2>
             {receipt ? (
               <div className="mt-4 flex items-center justify-between rounded-md border border-primary/15 bg-ink/[0.03] p-3 text-sm text-ink/70">
-                <span>Receipt {receipt.id}</span>
+                <span>Receipt for {purchaseOrder?.poNumber}</span>
                 <Badge variant="success">{receipt.status}</Badge>
               </div>
             ) : (
@@ -264,6 +287,7 @@ export function PurchaseOrders() {
               <thead className="bg-primary/5 text-ink/90">
                 <tr>
                   <th className="px-4 py-3 font-medium">PO Number</th>
+                  <th className="px-4 py-3 font-medium">Supplier</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Date Created</th>
                   <th className="px-4 py-3 font-medium">Destination</th>
@@ -273,11 +297,12 @@ export function PurchaseOrders() {
                 {history.map((po) => (
                   <tr key={po.id} className="hover:bg-primary/5 cursor-pointer transition-colors" onClick={() => setPurchaseOrder(po)}>
                     <td className="px-4 py-3 font-medium text-ink">{po.poNumber}</td>
+                    <td className="px-4 py-3">{getSupplierName(po.supplierId)}</td>
                     <td className="px-4 py-3">
                       <Badge variant={po.status === 'RECEIVED' ? 'success' : 'info'}>{po.status}</Badge>
                     </td>
                     <td className="px-4 py-3">{new Date(po.createdAt).toLocaleString()}</td>
-                    <td className="px-4 py-3">LOC-{po.destinationLocationId}</td>
+                    <td className="px-4 py-3">{getDestinationName(po.destinationLocationId)}</td>
                   </tr>
                 ))}
                 {history.length === 0 && (

@@ -74,7 +74,7 @@ export function SalesReport() {
           <select 
             value={selectedLocationId}
             onChange={(e) => setSelectedLocationId(e.target.value)}
-            className="rounded-md border border-primary/20 bg-surface px-3 py-1.5 text-sm font-medium shadow-sm focus:border-primary focus:outline-none"
+            className="rounded-md border border-primary/20 bg-surface px-3 py-1.5 text-sm text-ink font-medium shadow-sm focus:border-primary focus:outline-none"
           >
             <option value="ALL">All Locations (POS)</option>
             {locations.map(loc => (

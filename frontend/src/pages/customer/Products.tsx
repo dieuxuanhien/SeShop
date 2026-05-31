@@ -150,12 +150,12 @@ export function Products() {
           )}
           {params.minPrice && (
             <button onClick={() => updateParam('minPrice', null)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 px-3 py-1 text-xs text-surface/80 hover:border-danger/40 hover:text-danger transition">
-              Min ${params.minPrice} <X size={12} />
+              Min {params.minPrice?.toLocaleString()}₫ <X size={12} />
             </button>
           )}
           {params.maxPrice && (
             <button onClick={() => updateParam('maxPrice', null)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 px-3 py-1 text-xs text-surface/80 hover:border-danger/40 hover:text-danger transition">
-              Max ${params.maxPrice} <X size={12} />
+              Max {params.maxPrice?.toLocaleString()}₫ <X size={12} />
             </button>
           )}
           {params.productSize && (
@@ -233,7 +233,7 @@ export function Products() {
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-surface/60 mb-4">Price Range</h3>
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface/40 text-xs">$</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface/40 text-xs">₫</span>
                     <input
                       type="number"
                       placeholder="Min"
@@ -249,7 +249,7 @@ export function Products() {
                   </div>
                   <span className="text-surface/40">-</span>
                   <div className="relative flex-1">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface/40 text-xs">$</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-surface/40 text-xs">₫</span>
                     <input
                       type="number"
                       placeholder="Max"

@@ -185,7 +185,7 @@ export function InventoryAdjustment() {
               setNotes('');
               setIsNewModalOpen(true);
             }}
-            className="shadow-md font-bold text-surface"
+            className="shadow-md font-bold"
           >
             + Import / Adjust New Product
           </Button>
@@ -217,7 +217,7 @@ export function InventoryAdjustment() {
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
-                    <span className="inline-flex items-center rounded-md bg-highlight/10 px-2 py-1 text-xs font-semibold text-highlight ring-1 ring-inset ring-highlight/20">
+                    <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primaryStrong ring-1 ring-inset ring-primary/20">
                       {balance.skuCode}
                     </span>
                   </td>
@@ -246,7 +246,7 @@ export function InventoryAdjustment() {
                       variant="primary" 
                       size="sm" 
                       onClick={() => handleAdjustClick(balance)} 
-                      className="shadow-md hover:shadow-lg hover:-translate-y-0.5 text-surface font-semibold"
+                      className="shadow-md hover:shadow-lg hover:-translate-y-0.5 font-semibold"
                     >
                       Adjust
                     </Button>
@@ -310,7 +310,7 @@ export function InventoryAdjustment() {
                 <div>
                   <h3 className="text-lg font-bold text-ink">{selectedBalance.productName}</h3>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="inline-flex items-center rounded-md bg-highlight/10 px-2 py-1 text-xs font-semibold text-highlight">
+                    <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primaryStrong">
                       {selectedBalance.skuCode}
                     </span>
                     <span className="inline-flex items-center rounded-md bg-surface/10 px-2 py-1 text-xs font-semibold text-ink/70">
@@ -396,7 +396,7 @@ export function InventoryAdjustment() {
               <div className="rounded-xl border border-primary/10 bg-primary/5 p-5 shadow-inner">
                 <h3 className="text-lg font-bold text-ink">{lookupResult.productName}</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center rounded-md bg-highlight/10 px-2 py-1 text-xs font-semibold text-highlight">
+                  <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primaryStrong">
                     {lookupResult.skuCode}
                   </span>
                 </div>
@@ -444,7 +444,7 @@ export function InventoryAdjustment() {
                 <Button type="button" variant="secondary" onClick={() => setIsNewModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" isLoading={isSubmitting} className="shadow-lg shadow-primary/20 text-surface">
+                <Button type="submit" isLoading={isSubmitting} className="shadow-lg shadow-primary/20">
                   Confirm Import
                 </Button>
               </div>

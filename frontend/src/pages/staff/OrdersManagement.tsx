@@ -126,7 +126,7 @@ export function OrdersManagement() {
           <div className="w-48">
             <label className="block text-sm font-medium text-ink/70 mb-1">Order Status</label>
             <select 
-              className="w-full rounded-md border border-ink/20 bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-md border border-ink/20 bg-surface px-3 py-2 text-sm text-ink"
               value={statusFilter} 
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -142,7 +142,7 @@ export function OrdersManagement() {
           <div className="w-48">
             <label className="block text-sm font-medium text-ink/70 mb-1">Payment Status</label>
             <select 
-              className="w-full rounded-md border border-ink/20 bg-surface px-3 py-2 text-sm"
+              className="w-full rounded-md border border-ink/20 bg-surface px-3 py-2 text-sm text-ink"
               value={paymentFilter} 
               onChange={(e) => setPaymentFilter(e.target.value)}
             >

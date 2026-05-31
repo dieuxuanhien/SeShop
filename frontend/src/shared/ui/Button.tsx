@@ -8,7 +8,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variants = {
-  primary: 'bg-gradient-to-r from-primary to-primaryStrong text-surface font-semibold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 border-none',
+  primary: 'bg-gradient-to-r from-primary to-primaryStrong text-ink font-semibold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 border-none',
   secondary: 'border border-primary/20 bg-surface/50 backdrop-blur-sm text-ink font-medium hover:bg-primary/5 hover:border-primary/40 shadow-sm hover:shadow-md hover:-translate-y-0.5',
   danger: 'bg-gradient-to-r from-danger to-red-800 text-surface font-semibold shadow-md shadow-danger/20 hover:shadow-lg hover:shadow-danger/30 hover:-translate-y-0.5 border-none',
   outline: 'border-2 border-primary/20 bg-transparent text-primary font-medium hover:border-primary/50 hover:bg-primary/5 hover:-translate-y-0.5',

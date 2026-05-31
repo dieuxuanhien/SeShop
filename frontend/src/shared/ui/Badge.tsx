@@ -1,12 +1,12 @@
 type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'sale' | 'info';
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: 'bg-surface/10 text-surface/80',
+  default: 'bg-current/10 text-current',
   success: 'bg-success/15 text-success',
   warning: 'bg-warning/15 text-warning',
   danger: 'bg-danger/15 text-danger',
   sale: 'bg-primary/15 text-primary',
-  info: 'bg-surface/10 text-surface/80',
+  info: 'bg-current/10 text-current',
 };
 
 type BadgeProps = {

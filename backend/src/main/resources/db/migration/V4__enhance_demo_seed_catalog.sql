@@ -276,47 +276,54 @@ WHERE NOT EXISTS (
       AND ur.role_id = r.id
       AND ur.revoked_at IS NULL
   );
-INSERT INTO locations (code, display_name, location_type, status)
+INSERT INTO locations (code, display_name, location_type, status, ghn_shop_id)
 VALUES (
     'ONLINE-HN',
     'Online Fulfillment - Hanoi',
     'STORAGE',
-    'ACTIVE'
+    'ACTIVE',
+    200231
   ),
   (
     'STORE-D3',
     'District 3 Curated Accessories Studio',
     'STORE',
-    'ACTIVE'
+    'ACTIVE',
+    200231
   ),
   (
     'STORE-THAO-DIEN',
     'Thao Dien Designer Vintage Store',
     'STORE',
-    'ACTIVE'
+    'ACTIVE',
+    200231
   ),
   (
     'STORE-HN-OLD',
     'Hanoi Old Quarter Vintage Store',
     'STORE',
-    'ACTIVE'
+    'ACTIVE',
+    200231
   ),
   (
     'STORAGE-BT',
     'Binh Thanh Returns and Repair Hub',
     'STORAGE',
-    'ACTIVE'
+    'ACTIVE',
+    200231
   ),
   (
     'STORAGE-DN',
     'Da Nang Regional Stockroom',
     'STORAGE',
-    'ACTIVE'
+    'ACTIVE',
+    200231
   ) ON CONFLICT (code) DO
 UPDATE
 SET display_name = EXCLUDED.display_name,
   location_type = EXCLUDED.location_type,
-  status = EXCLUDED.status;
+  status = EXCLUDED.status,
+  ghn_shop_id = EXCLUDED.ghn_shop_id;
 INSERT INTO staff_location_assignments (user_id, location_id, assigned_by)
 SELECT staff.id,
   location.id,
