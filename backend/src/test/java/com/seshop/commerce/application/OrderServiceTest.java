@@ -125,7 +125,8 @@ class OrderServiceTest {
             return order;
         });
         given(allocationRepository.findByOrderIdAndStatus(1001L, "ALLOCATED")).willReturn(List.of());
-        given(balanceRepository.findForUpdateByVariantIdOrderById(7001L)).willReturn(List.of(balance));
+        given(balanceRepository.findByVariantId(7001L)).willReturn(List.of(balance));
+        given(balanceRepository.findForUpdateByVariantIdAndLocationId(7001L, 11L)).willReturn(Optional.of(balance));
         given(allocationRepository.save(any(OrderAllocationEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -170,7 +171,8 @@ class OrderServiceTest {
         given(discountService.redeemDiscount("SAVE100", 42L, 1001L, new BigDecimal("1180000.00")))
                 .willReturn(discount);
         given(allocationRepository.findByOrderIdAndStatus(1001L, "ALLOCATED")).willReturn(List.of());
-        given(balanceRepository.findForUpdateByVariantIdOrderById(7001L)).willReturn(List.of(balance));
+        given(balanceRepository.findByVariantId(7001L)).willReturn(List.of(balance));
+        given(balanceRepository.findForUpdateByVariantIdAndLocationId(7001L, 11L)).willReturn(Optional.of(balance));
         given(allocationRepository.save(any(OrderAllocationEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(paymentRepository.save(any(PaymentEntity.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -232,11 +234,11 @@ class OrderServiceTest {
             return order;
         });
         given(allocationRepository.findByOrderIdAndStatus(1001L, "ALLOCATED")).willReturn(List.of());
-        given(balanceRepository.findForUpdateByVariantIdOrderById(7001L)).willReturn(List.of(balance));
+        given(balanceRepository.findByVariantId(7001L)).willReturn(List.of(balance));
 
         assertThatThrownBy(() -> service.checkout(42L, checkoutRequest(301L, "COD")))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("Insufficient available stock");
+                .hasMessageContaining("Insufficient stock at any single location to fulfill the entire order");
 
         assertThat(balance.getReservedQty()).isEqualTo(1);
         assertThat(cart.getStatus()).isEqualTo("ACTIVE");
@@ -246,15 +248,27 @@ class OrderServiceTest {
     }
 
     @Test
-    void allocateOrderPersistsSplitAllocationsAndReservesAvailableStock() {
+    void allocateOrderAllocatesToSingleNearestLocation() {
         OrderEntity order = order(1001L, "CONFIRMED", item(5001L, 7001L, 3));
-        InventoryBalanceEntity firstBalance = balance(9001L, 7001L, location(11L), 2, 0);
-        InventoryBalanceEntity secondBalance = balance(9002L, 7001L, location(12L), 5, 1);
+        order.setShippingLatitude(10.0);
+        order.setShippingLongitude(106.0);
+        
+        LocationEntity loc1 = location(11L);
+        loc1.setLatitude(10.1);
+        loc1.setLongitude(106.1);
+        InventoryBalanceEntity firstBalance = balance(9001L, 7001L, loc1, 2, 0);
+        
+        LocationEntity loc2 = location(12L);
+        loc2.setLatitude(11.0);
+        loc2.setLongitude(107.0);
+        InventoryBalanceEntity secondBalance = balance(9002L, 7001L, loc2, 5, 1);
 
         given(orderRepository.findById(1001L)).willReturn(Optional.of(order));
         given(allocationRepository.findByOrderIdAndStatus(1001L, "ALLOCATED")).willReturn(List.of());
-        given(balanceRepository.findForUpdateByVariantIdOrderById(7001L))
+        given(balanceRepository.findByVariantId(7001L))
                 .willReturn(List.of(firstBalance, secondBalance));
+        given(balanceRepository.findForUpdateByVariantIdAndLocationId(7001L, 12L))
+                .willReturn(Optional.of(secondBalance));
         given(allocationRepository.save(any(OrderAllocationEntity.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
         given(orderRepository.save(order)).willReturn(order);
@@ -262,15 +276,16 @@ class OrderServiceTest {
         service.allocateOrder(1001L);
 
         assertThat(order.getStatus()).isEqualTo("ALLOCATED");
-        assertThat(firstBalance.getReservedQty()).isEqualTo(2);
-        assertThat(secondBalance.getReservedQty()).isEqualTo(2);
+        assertThat(firstBalance.getReservedQty()).isEqualTo(0);
+        assertThat(secondBalance.getReservedQty()).isEqualTo(4);
 
         ArgumentCaptor<OrderAllocationEntity> allocationCaptor =
                 ArgumentCaptor.forClass(OrderAllocationEntity.class);
-        then(allocationRepository).should(times(2)).save(allocationCaptor.capture());
+        then(allocationRepository).should(times(1)).save(allocationCaptor.capture());
         assertThat(allocationCaptor.getAllValues())
                 .extracting(OrderAllocationEntity::getAllocatedQty)
-                .containsExactly(2, 1);
+                .containsExactly(3);
+        assertThat(allocationCaptor.getValue().getLocation().getId()).isEqualTo(12L);
     }
 
     @Test
@@ -280,11 +295,11 @@ class OrderServiceTest {
 
         given(orderRepository.findById(1001L)).willReturn(Optional.of(order));
         given(allocationRepository.findByOrderIdAndStatus(1001L, "ALLOCATED")).willReturn(List.of());
-        given(balanceRepository.findForUpdateByVariantIdOrderById(7001L)).willReturn(List.of(balance));
+        given(balanceRepository.findByVariantId(7001L)).willReturn(List.of(balance));
 
         assertThatThrownBy(() -> service.allocateOrder(1001L))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("Insufficient available stock");
+                .hasMessageContaining("Insufficient stock at any single location to fulfill the entire order");
 
         assertThat(balance.getReservedQty()).isEqualTo(1);
         then(balanceRepository).should(never()).save(any());

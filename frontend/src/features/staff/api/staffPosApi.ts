@@ -84,11 +84,13 @@ export async function processPosSale(items: PosItem[], paymentMethod: 'CASH' | '
   return response.data.data;
 }
 
-export async function closeShift(shiftId: number, expectedCash: number, actualCash: number): Promise<void> {
+export async function closeShift(shiftId: number, expectedCash: number, actualCash: number, approverId: number, reason?: string): Promise<void> {
   await apiClient.post(`/pos/shifts/${shiftId}/close`, {
     endingCash: actualCash,
     actualCash,
     expectedCash,
+    approverId,
+    reason,
   });
 }
 

@@ -5,7 +5,7 @@ import { PosHistory } from '@/features/staff/ui/PosHistory';
 import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { useStaffLocation } from '@/shared/context/LocationContext';
-import { processPosSale, lookupProductBySku, getReceiptHistory, type PosItem, type ProcessPosSaleResponse, type ReceiptDto } from '@/features/staff/api/staffPosApi';
+import { processPosSale, lookupProductBySku, getReceiptHistory, getCurrentShift, type PosItem, type ProcessPosSaleResponse, type ReceiptDto, type ShiftData } from '@/features/staff/api/staffPosApi';
 
 export function POS() {
   const [items, setItems] = useState<PosItem[]>([]);
@@ -15,6 +15,10 @@ export function POS() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [receipt, setReceipt] = useState<ProcessPosSaleResponse | null>(null);
   const [skuError, setSkuError] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
+
+  const [activeShift, setActiveShift] = useState<ShiftData | null>(null);
+  const [shiftLoading, setShiftLoading] = useState(true);
 
   const [recentSales, setRecentSales] = useState<ReceiptDto[]>([]);
   const [recentSalesLoading, setRecentSalesLoading] = useState(false);
@@ -38,6 +42,20 @@ export function POS() {
 
   useEffect(() => {
     fetchRecentSales();
+  }, []);
+
+  useEffect(() => {
+    const fetchShift = async () => {
+      try {
+        const shift = await getCurrentShift();
+        setActiveShift(shift);
+      } catch (e) {
+        // Failed to get current shift, meaning none is open
+      } finally {
+        setShiftLoading(false);
+      }
+    };
+    fetchShift();
   }, []);
 
   // Barcode scanner support (GAP-20)
@@ -137,13 +155,15 @@ export function POS() {
   const handleCheckout = async () => {
     if (items.length === 0) return;
     setIsProcessing(true);
+    setCheckoutError('');
     try {
       const paid = paymentMethod === 'CASH' ? Number(amountPaid) : total;
       const res = await processPosSale(items, paymentMethod, paid);
       setReceipt(res);
       fetchRecentSales();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setCheckoutError(e.response?.data?.message || e.message || 'Checkout failed. Ensure you have an open shift.');
     } finally {
       setIsProcessing(false);
     }
@@ -155,6 +175,7 @@ export function POS() {
     setAmountPaid('');
     setPaymentMethod('CASH');
     setSkuError('');
+    setCheckoutError('');
     fetchRecentSales();
     setTimeout(() => barcodeInputRef.current?.focus(), 100);
   };
@@ -165,6 +186,31 @@ export function POS() {
         <div className="flex flex-col items-center gap-4 text-ink/50">
           <Store size={48} className="opacity-20" />
           <p className="text-lg font-medium">Please select a location from the top navigation to use POS.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shiftLoading) {
+    return (
+      <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 text-ink/50">
+          <Store size={48} className="opacity-20 animate-pulse" />
+          <p className="text-lg font-medium animate-pulse">Loading POS...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeShift) {
+    return (
+      <div className="flex min-h-[calc(100vh-7rem)] flex-col items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 text-ink/50">
+          <Store size={48} className="opacity-20" />
+          <p className="text-lg font-medium">No active shift found. Please open a register shift before using POS.</p>
+          <a href="/staff/pos/shift-close" className="mt-4 rounded-md bg-primary px-4 py-2 font-medium text-ink hover:bg-primary/90 transition-colors">
+            Open Shift
+          </a>
         </div>
       </div>
     );
@@ -394,6 +440,11 @@ export function POS() {
             </div>
 
             <div className="border-t border-primary/15 bg-surface p-4">
+              {checkoutError && (
+                <div className="mb-4 rounded-md bg-danger/10 p-3 text-sm font-medium text-danger">
+                  {checkoutError}
+                </div>
+              )}
               <Button 
                 className="w-full h-14 text-lg" 
                 onClick={handleCheckout}

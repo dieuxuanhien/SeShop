@@ -497,9 +497,63 @@ public class OrderService {
             return activeAllocations;
         }
 
-        List<OrderAllocationEntity> allocations = order.getItems().stream()
-                .flatMap(item -> reserveItemAllocations(item, order).stream())
-                .toList();
+        List<LocationEntity> candidateLocations = null;
+        for (OrderItemEntity item : order.getItems()) {
+            List<InventoryBalanceEntity> balances = balanceRepository.findByVariantId(item.getVariantId());
+            List<LocationEntity> validLocations = balances.stream()
+                    .filter(b -> availableQty(b) >= item.getQty())
+                    .map(InventoryBalanceEntity::getLocation)
+                    .toList();
+
+            if (candidateLocations == null) {
+                candidateLocations = new ArrayList<>(validLocations);
+            } else {
+                List<Long> validLocationIds = validLocations.stream().map(LocationEntity::getId).toList();
+                candidateLocations.removeIf(loc -> !validLocationIds.contains(loc.getId()));
+            }
+
+            if (candidateLocations.isEmpty()) {
+                throw new BusinessException("INV_001", "Insufficient stock at any single location to fulfill the entire order");
+            }
+        }
+
+        LocationEntity selectedLocation = candidateLocations.get(0);
+        if (candidateLocations.size() > 1 && order.getShippingLatitude() != null && order.getShippingLongitude() != null) {
+            selectedLocation = candidateLocations.stream()
+                    .min(java.util.Comparator.comparingDouble(loc ->
+                            calculateDistance(order.getShippingLatitude(), order.getShippingLongitude(), loc.getLatitude(), loc.getLongitude())))
+                    .orElse(candidateLocations.get(0));
+        }
+
+        List<OrderAllocationEntity> allocations = new ArrayList<>();
+        List<OrderItemEntity> sortedItems = new ArrayList<>(order.getItems());
+        sortedItems.sort(java.util.Comparator.comparing(OrderItemEntity::getVariantId));
+
+        for (OrderItemEntity item : sortedItems) {
+            InventoryBalanceEntity balance = balanceRepository.findForUpdateByVariantIdAndLocationId(item.getVariantId(), selectedLocation.getId())
+                    .orElseThrow(() -> new BusinessException("INV_001", "Stock balance not found at selected location"));
+
+            if (availableQty(balance) < item.getQty()) {
+                throw new BusinessException("INV_001", "Concurrent modification: Insufficient stock at selected location");
+            }
+
+            balance.setReservedQty(balance.getReservedQty() + item.getQty());
+            balanceRepository.save(balance);
+
+            OrderAllocationEntity allocation = new OrderAllocationEntity();
+            allocation.setOrderItem(item);
+            allocation.setLocation(selectedLocation);
+            allocation.setAllocatedQty(item.getQty());
+            allocation.setStatus(STATUS_ALLOCATED);
+            OrderAllocationEntity savedAllocation = allocationRepository.save(allocation);
+            allocations.add(savedAllocation);
+
+            PickTaskEntity pickTask = new PickTaskEntity();
+            pickTask.setAllocation(savedAllocation);
+            pickTask.setStatus("PENDING");
+            pickTaskRepository.save(pickTask);
+        }
+
         order.setStatus(STATUS_ALLOCATED);
         return allocations;
     }
@@ -529,53 +583,7 @@ public class OrderService {
         return null;
     }
 
-    private List<OrderAllocationEntity> reserveItemAllocations(OrderItemEntity item, OrderEntity order) {
-        List<InventoryBalanceEntity> balances =
-                balanceRepository.findForUpdateByVariantIdOrderById(item.getVariantId());
 
-        if (order.getShippingLatitude() != null && order.getShippingLongitude() != null) {
-            balances.sort(java.util.Comparator.comparingDouble(b -> {
-                LocationEntity loc = b.getLocation();
-                return calculateDistance(order.getShippingLatitude(), order.getShippingLongitude(), loc.getLatitude(), loc.getLongitude());
-            }));
-        }
-        int requiredQty = item.getQty();
-        int totalAvailable = balances.stream().mapToInt(this::availableQty).sum();
-        if (totalAvailable < requiredQty) {
-            throw new BusinessException("INV_001", "Insufficient available stock to allocate order");
-        }
-
-        int remainingQty = requiredQty;
-        List<OrderAllocationEntity> allocations = new java.util.ArrayList<>();
-        for (InventoryBalanceEntity balance : balances) {
-            if (remainingQty == 0) {
-                break;
-            }
-            int allocationQty = Math.min(availableQty(balance), remainingQty);
-            if (allocationQty <= 0) {
-                continue;
-            }
-
-            balance.setReservedQty(balance.getReservedQty() + allocationQty);
-            balanceRepository.save(balance);
-
-            OrderAllocationEntity allocation = new OrderAllocationEntity();
-            allocation.setOrderItem(item);
-            allocation.setLocation(balance.getLocation());
-            allocation.setAllocatedQty(allocationQty);
-            allocation.setStatus(STATUS_ALLOCATED);
-            OrderAllocationEntity savedAllocation = allocationRepository.save(allocation);
-            allocations.add(savedAllocation);
-            
-            PickTaskEntity pickTask = new PickTaskEntity();
-            pickTask.setAllocation(savedAllocation);
-            pickTask.setStatus("PENDING");
-            pickTaskRepository.save(pickTask);
-            
-            remainingQty -= allocationQty;
-        }
-        return allocations;
-    }
 
     private void fulfillAllocatedStock(OrderEntity order) {
         if (STATUS_SHIPPED.equals(order.getStatus()) || STATUS_DELIVERED.equals(order.getStatus())) {

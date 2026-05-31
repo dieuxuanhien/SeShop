@@ -12,7 +12,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label ? <span>{label}</span> : null}
         <input
           ref={ref}
-          className={`min-h-11 rounded-xl border border-primary/20 bg-surface/80 px-4 text-sm text-ink outline-none transition-all duration-300 placeholder:text-ink/30 hover:border-primary/40 focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10 shadow-inner ${className}`}
+          className={`w-full min-h-11 rounded-xl border border-primary/20 bg-surface/80 px-4 text-sm text-ink outline-none transition-all duration-300 placeholder:text-ink/30 hover:border-primary/40 focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10 shadow-inner ${className}`}
           {...props}
         />
         {error ? <span className="text-xs font-medium text-danger animate-fade-in">{error}</span> : null}

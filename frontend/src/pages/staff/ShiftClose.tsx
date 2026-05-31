@@ -9,6 +9,8 @@ export function ShiftClose() {
   const navigate = useNavigate();
   const [shift, setShift] = useState<ShiftData | null>(null);
   const [actualCash, setActualCash] = useState<string>('');
+  const [approverId, setApproverId] = useState<string>('');
+  const [reason, setReason] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [shiftLoading, setShiftLoading] = useState(true);
   const [locationId, setLocationId] = useState<string>('1');
@@ -66,12 +68,14 @@ export function ShiftClose() {
 
   const expectedCash = shift.expectedCash;
   const variance = actualCash === '' ? 0 : Number(actualCash) - expectedCash;
+  const isVarianceHigh = Math.abs(variance) > 50000;
 
   const handleCloseShift = async () => {
-    if (actualCash === '') return;
+    if (actualCash === '' || approverId === '') return;
+    if (isVarianceHigh && reason.trim() === '') return;
     setIsLoading(true);
     try {
-      await closeShift(shift.shiftId, expectedCash, Number(actualCash));
+      await closeShift(shift.shiftId, expectedCash, Number(actualCash), Number(approverId), reason);
       navigate('/staff/dashboard');
     } catch (e) {
       console.error(e);
@@ -125,6 +129,27 @@ export function ShiftClose() {
               />
             </div>
 
+            <div className="mt-4">
+              <Input
+                label="Approver Manager ID"
+                type="number"
+                value={approverId}
+                onChange={(e) => setApproverId(e.target.value)}
+                placeholder="Enter manager ID"
+              />
+            </div>
+
+            {isVarianceHigh && (
+              <div className="mt-4">
+                <Input
+                  label="Discrepancy Reason"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Required due to high variance"
+                />
+              </div>
+            )}
+
             {actualCash !== '' && (
               <div className={`mt-4 flex items-center justify-between rounded-md p-4 font-medium ${variance === 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
                 <span>Variance</span>
@@ -138,7 +163,7 @@ export function ShiftClose() {
             <Button 
               onClick={handleCloseShift} 
               isLoading={isLoading}
-              disabled={actualCash === ''}
+              disabled={actualCash === '' || approverId === '' || (isVarianceHigh && reason.trim() === '')}
               variant={variance !== 0 ? 'danger' : 'primary'}
             >
               {variance !== 0 ? 'Close Shift with Variance' : 'Close Shift Successfully'}

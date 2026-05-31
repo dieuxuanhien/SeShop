@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,6 +38,7 @@ public class AiAssistantService {
     private final ProductCatalogBuilder productCatalogBuilder;
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
+    private final TransactionTemplate transactionTemplate;
 
     public AiAssistantService(
             GeminiClient geminiClient,
@@ -44,13 +46,15 @@ public class AiAssistantService {
             InventoryBalanceRepository inventoryBalanceRepository,
             ProductCatalogBuilder productCatalogBuilder,
             OrderRepository orderRepository,
-            CartRepository cartRepository) {
+            CartRepository cartRepository,
+            TransactionTemplate transactionTemplate) {
         this.geminiClient = geminiClient;
         this.productVariantRepository = productVariantRepository;
         this.inventoryBalanceRepository = inventoryBalanceRepository;
         this.productCatalogBuilder = productCatalogBuilder;
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
+        this.transactionTemplate = transactionTemplate;
     }
 
     public AiRecommendationResponse getRecommendations(AiRecommendationRequest request) {
@@ -85,24 +89,26 @@ public class AiAssistantService {
                     .limit(MAX_RECOMMENDATIONS)
                     .collect(Collectors.toList());
 
-            List<ProductVariantEntity> variants = productVariantRepository.findAllById(variantIds);
-            Map<Long, ProductVariantEntity> variantMap = variants.stream()
-                    .collect(Collectors.toMap(ProductVariantEntity::getId, v -> v));
+            List<AiRecommendationResponse.RecommendedItem> items = transactionTemplate.execute(status -> {
+                List<ProductVariantEntity> variants = productVariantRepository.findAllById(variantIds);
+                Map<Long, ProductVariantEntity> variantMap = variants.stream()
+                        .collect(Collectors.toMap(ProductVariantEntity::getId, v -> v));
 
-            // Build reason map from Gemini picks
-            Map<Long, String> reasonMap = result.picks().stream()
-                    .filter(p -> p.variantId() != null && p.reason() != null)
-                    .collect(Collectors.toMap(
-                            GeminiRecommendationResult.ProductPick::variantId,
-                            GeminiRecommendationResult.ProductPick::reason,
-                            (a, b) -> a));
+                // Build reason map from Gemini picks
+                Map<Long, String> reasonMap = result.picks().stream()
+                        .filter(p -> p.variantId() != null && p.reason() != null)
+                        .collect(Collectors.toMap(
+                                GeminiRecommendationResult.ProductPick::variantId,
+                                GeminiRecommendationResult.ProductPick::reason,
+                                (a, b) -> a));
 
-            List<AiRecommendationResponse.RecommendedItem> items = variantIds.stream()
-                    .map(variantMap::get)
-                    .filter(Objects::nonNull)
-                    .map(variant -> buildRecommendedItem(variant,
-                            reasonMap.getOrDefault(variant.getId(), "Recommended for you based on your preferences.")))
-                    .collect(Collectors.toList());
+                return variantIds.stream()
+                        .map(variantMap::get)
+                        .filter(Objects::nonNull)
+                        .map(variant -> buildRecommendedItem(variant,
+                                reasonMap.getOrDefault(variant.getId(), "Recommended for you based on your preferences.")))
+                        .collect(Collectors.toList());
+            });
 
             response.setItems(items);
         } else {
@@ -135,8 +141,8 @@ public class AiAssistantService {
 
         // Inject user context if available
         if (request.getCustomerId() != null) {
-            String userContext = buildUserContext(request.getCustomerId());
-            if (!userContext.isEmpty()) {
+            String userContext = transactionTemplate.execute(status -> buildUserContext(request.getCustomerId()));
+            if (userContext != null && !userContext.isEmpty()) {
                 sb.append("=== CUSTOMER PROFILE ===\n");
                 sb.append(userContext);
                 sb.append("\n=== END PROFILE ===\n\n");
