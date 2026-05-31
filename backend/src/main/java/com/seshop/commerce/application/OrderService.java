@@ -738,7 +738,7 @@ public class OrderService {
             dto.setTrackingNumber(shipment.getTrackingNumber());
         });
         java.util.List<String> locations = allocationRepository.findByOrderId(entity.getId()).stream()
-                .map(a -> a.getLocation().getDisplayName() != null ? a.getLocation().getDisplayName() : a.getLocation().getName())
+                .map(a -> a.getLocation().getDisplayName() != null ? a.getLocation().getDisplayName() : a.getLocation().getCode())
                 .distinct()
                 .toList();
         dto.setAllocatedLocations(locations);
