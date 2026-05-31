@@ -1,0 +1,54 @@
+
+Running 1 test using 1 worker
+
+[WebServer] [2m12:16:17 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+[WebServer] [2m12:16:17 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+[WebServer] [2m12:16:18 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mYou may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
+[WebServer] [2m12:16:18 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mYou may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
+  ✘  1 [chromium] › e2e/seshop-flows.spec.ts:43:1 › customer can complete checkout with a validated discount and COD payment (30.2s)
+
+
+  1) [chromium] › e2e/seshop-flows.spec.ts:43:1 › customer can complete checkout with a validated discount and COD payment 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+    [2m  - waiting for getByRole('button', { name: 'Continue to Payment' })[22m
+    [2m    - locator resolved to <button disabled class="inline-flex items-center justify-center gap-2 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none bg-gradient-to-r from-primary to-primaryStrong text-ink font-semibold shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 border-none min-h-11 px-6 py-2 text-sm rounded-xl ">Continue to Payment</button>[22m
+    [2m  - attempting click action[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is not enabled[22m
+    [2m    - retrying click action[22m
+    [2m    - waiting 20ms[22m
+    [2m    2 × waiting for element to be visible, enabled and stable[22m
+    [2m      - element is not enabled[22m
+    [2m    - retrying click action[22m
+    [2m      - waiting 100ms[22m
+    [2m    56 × waiting for element to be visible, enabled and stable[22m
+    [2m       - element is not enabled[22m
+    [2m     - retrying click action[22m
+    [2m       - waiting 500ms[22m
+
+
+      104 |   await page.getByLabel('Ward').fill('Ben Nghe');
+      105 |   await page.getByLabel('District').fill('District 1');
+    > 106 |   await page.getByRole('button', { name: 'Continue to Payment' }).click();
+          |                                                                   ^
+      107 |   await page.getByLabel('Cash on Delivery').check();
+      108 |
+      109 |   const checkoutRequestPromise = page.waitForRequest(api('/checkout'));
+        at /home/xuanhien/Documents/repo/KTPM/frontend/e2e/seshop-flows.spec.ts:106:67
+
+    Error Context: test-results/e2e/seshop-flows-customer-can--d678b-ed-discount-and-COD-payment-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/e2e/seshop-flows-customer-can--d678b-ed-discount-and-COD-payment-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/e2e/seshop-flows-customer-can--d678b-ed-discount-and-COD-payment-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e/seshop-flows.spec.ts:43:1 › customer can complete checkout with a validated discount and COD payment 

@@ -12,6 +12,13 @@ vi.mock('@/features/staff/api/staffPosApi', () => ({
   processPosSale: vi.fn(),
 }));
 
+vi.mock('@/shared/context/LocationContext', () => ({
+  useStaffLocation: () => ({
+    activeLocationId: 1,
+    locations: [{ id: 1, name: 'Main Store' }],
+  }),
+}));
+
 const mockedLookupProductBySku = vi.mocked(lookupProductBySku);
 const mockedProcessPosSale = vi.mocked(processPosSale);
 

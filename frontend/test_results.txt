@@ -1,0 +1,225 @@
+
+> seshop-frontend@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.5 /home/xuanhien/Documents/repo/KTPM/frontend
+
+ ✓ src/shared/lib/permissions.test.ts (3 tests) 5ms
+Error: useStaffLocation must be used within a LocationProvider
+    at useStaffLocation (/home/xuanhien/Documents/repo/KTPM/frontend/src/shared/context/LocationContext.tsx:59:11)
+    at POS (/home/xuanhien/Documents/repo/KTPM/frontend/src/pages/staff/POS.tsx:24:43)
+    at renderWithHooks (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/jsdom/lib/generated/idl/EventListener.js:26:30)
+    at innerInvokeEventListeners (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:360:16)
+    at invokeEventListeners (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:243:9)
+Error: useStaffLocation must be used within a LocationProvider
+    at useStaffLocation (/home/xuanhien/Documents/repo/KTPM/frontend/src/shared/context/LocationContext.tsx:59:11)
+    at POS (/home/xuanhien/Documents/repo/KTPM/frontend/src/pages/staff/POS.tsx:24:43)
+    at renderWithHooks (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/jsdom/lib/generated/idl/EventListener.js:26:30)
+    at innerInvokeEventListeners (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:360:16)
+    at invokeEventListeners (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:296:3)
+    at HTMLUnknownElementImpl._dispatch (/home/xuanhien/Documents/repo/KTPM/frontend/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:243:9)
+stderr | src/pages/staff/POS.test.tsx > POS > looks up a scanned SKU and completes a cash sale
+The above error occurred in the <POS> component:
+
+    at POS (/home/xuanhien/Documents/repo/KTPM/frontend/src/pages/staff/POS.tsx:22:62)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+ ❯ src/pages/staff/POS.test.tsx (1 test | 1 failed) 19ms
+     × looks up a scanned SKU and completes a cash sale 17ms
+stderr | src/pages/customer/Checkout.test.tsx > Checkout > submits checkout with cart, shipping address, payment method, and valid discount
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ ❯ src/pages/customer/Checkout.test.tsx (1 test | 1 failed) 486ms
+     × submits checkout with cart, shipping address, payment method, and valid discount 484ms
+stderr | src/App.test.tsx > App > renders the customer home page
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ ✓ src/App.test.tsx (1 test) 132ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/customer/Checkout.test.tsx > Checkout > submits checkout with cart, shipping address, payment method, and valid discount
+TestingLibraryElementError: Unable to find a label with the text of: /cash on delivery/i
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"[39m
+    [36m>[39m
+      [36m<h1[39m
+        [33mclass[39m=[32m"font-display mb-8 text-3xl text-highlight"[39m
+      [36m>[39m
+        [0mCheckout[0m
+      [36m</h1>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex flex-col lg:flex-row gap-12"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex-1 space-y-8"[39m
+        [36m>[39m
+          [36m<section[39m
+            [33mclass[39m=[32m"transition-opacity "[39m
+          [36m>[39m
+            [36m<h2[39m
+              [33mclass[39m=[32m"mb-4 text-xl font-medium text-surface"[39m
+            [36m>[39m
+              [0m1. Shipping Address[0m
+            [36m</h2>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid grid-cols-1 gap-4 rounded-md border border-primary/20 bg-surface p-5 md:grid-cols-2"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"grid gap-1.5 text-sm font-semibold text-ink/80"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0mFull Name[0m
+                [36m</span>[39m
+                [36m<input[39m
+                  [33mclass[39m=[32m"min-h-11 rounded-xl border border-primary/20 bg-surface/80 px-4 text-sm text-ink outline-none transition-all duration-300 placeholder:text-ink/30 hover:border-primary/40 focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10 shadow-inner "[39m
+                  [33mrequired[39m=[32m""[39m
+                  [33mvalue[39m=[32m"Linh Nguyen"[39m
+                [36m/>[39m
+              [36m</label>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"grid gap-1.5 text-sm font-semibold text-ink/80"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0mPhone Number[0m
+                [36m</span>[39m
+                [36m<input[39m
+                  [33mclass[39m=[32m"min-h-11 rounded-xl border border-primary/20 bg-surface/80 px-4 text-sm text-ink outline-none transition-all duration-300 placeholder:text-ink/30 hover:border-primary/40 focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10 shadow-inner "[39m
+                  [33mrequired[39m=[32m""[39m
+                  [33mvalue[39m=[32m"0909000000"[39m
+                [36m/>[39m
+              [36m</label>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"md:col-span-2"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"grid gap-1.5 text-sm font-semibold text-ink/80"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mAddress Line 1 (Street, House Number)[0m
+                  [36m</span>[39m
+                  [36m<input[39m
+                    [33mclass[39m=[32m"min-h-11 rounded-xl border border-primary/20 bg-surface/80 px-4 text-sm text-ink outline-none transition-all duration-300 placeholder:text-ink/30 hover:border-primary/40 focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10 shadow-inner "[39m
+                    [33mrequired[39m=[32m""[39m
+                    [33mvalue[39m=[32m"12 Le Loi"[39m
+                  [36m/>[39m
+                [36m</label>[39m
+              [36m</div>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"grid gap-1.5 text-sm font-semibold text-ink/80"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0mProvince / City[0m
+                [36m</span>[39m
+                [36m<input[39m
+                  [33mclass[39m=[32m"min-h-11 rounded-xl border border-primary/20 bg-surface/80 px-4 text-sm text-ink outline-none transition-all duration-300 placeholder:text-ink/30 hover:border-primary/40 focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10 shadow-inner "[39m
+                  [33mrequired[39m=[32m""[39m
+                  [33mvalue[39m=[32m"Ho Chi Minh City"[39m
+                [36m/>[39m
+              [36m</label>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"grid gap-1.5 text-sm font-semibold text-ink/80"[39m
+              [36m>[39m
+                [36m<span>[39m
+                  [0mDistrict[0m
+                [36m</span>[39m
+                [36m<input[39m
+                  [33mclass[39m=[32m"min-h-11 rounded-xl border border-primary/20 bg-surface/80 px-4 text-sm text-ink outline-none transition-all duration-300 placeholder:text-ink/30 hover:border-primary/40 focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10 shadow-inner "[39m
+                  [33mrequired[39m=[32m""[39m
+                  [33mvalue[39m=[32m"District 1"[39m
+                [36m/>[39m
+              [36m</label>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"md:col-span-2"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"grid gap-1.5 text-sm font-semibold text-ink/80"[39m
+                [36m>[39m
+                  [36m<span>[39m
+                    [0mWard / Commune[0m
+                  [36m</span>[39m
+                  [36m<input[39m
+                    [33mclass[39m=[32m"min-h-11 rounded-xl border border-primary/20 bg-surface/80 px-4 text-sm text-ink outline-none transition-all duration-300 placeholder:text-ink/30 hover:border-primary/40 focus:border-primary focus:bg-surface focus:ring-4 focus:ring-primary/10 shadow-inner "[39m
+                    [33mrequired[39m=[32m""[39m
+                    [33mvalue[39m=[32m"Ben Nghe"[39m
+                  [36m/>[39m
+                [36m</label>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"md:col-span-2 mt-4"[39m
+              [36m>[39m
+                [36m<label[39m
+                  [33mclass[39m=[32m"text-sm font-semibold text-ink/80 mb-2 block"[39m
+                [36m>[39m
+                  [0mPin Location on Map (Required for Nearest Store)[0m
+                [36m</label>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"relative h-64 w-full rounded-md border border-primary/20 overflow-hidden"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mclass[39m=[32m"absolute top-2 right-2 z-[400] bg-white text-primary px-3 py-2 rounded shadow-md text-sm font-medium hover:bg-gray-100 flex items-center gap-1 border border-gray-200"[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [36m<svg[39m
+                      [33mclass[39m=[32m"h-4 w-4"[39m
+                      [33mfill[39m=[32m"none"[39m
+                      [33mstroke...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getAllByLabelText node_modules/@testing-library/dom/dist/queries/label-text.js:111:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/pages/customer/Checkout.test.tsx:96:29
+     94|     await user.type(screen.getByLabelText(/district/i), 'District 1');
+     95|     await user.click(screen.getByRole('button', { name: /continue to p…
+     96|     await user.click(screen.getByLabelText(/cash on delivery/i));
+       |                             ^
+     97|     await user.click(screen.getByRole('button', { name: /place order/i…
+     98|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/pages/staff/POS.test.tsx > POS > looks up a scanned SKU and completes a cash sale
+Error: useStaffLocation must be used within a LocationProvider
+ ❯ useStaffLocation src/shared/context/LocationContext.tsx:59:11
+     57|   const context = useContext(LocationContext);
+     58|   if (context === undefined) {
+     59|     throw new Error('useStaffLocation must be used within a LocationPr…
+       |           ^
+     60|   }
+     61|   return context;
+ ❯ POS src/pages/staff/POS.tsx:24:43
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ❯ mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ❯ beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ❯ beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+ ❯ workLoopSync node_modules/react-dom/cjs/react-dom.development.js:26505:5
+ ❯ renderRootSync node_modules/react-dom/cjs/react-dom.development.js:26473:7
+ ❯ recoverFromConcurrentError node_modules/react-dom/cjs/react-dom.development.js:25889:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 2 passed (4)
+      Tests  2 failed | 4 passed (6)
+   Start at  12:12:39
+   Duration  1.69s (transform 760ms, setup 183ms, import 1.68s, tests 642ms, environment 2.11s)
+

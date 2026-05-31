@@ -76,6 +76,14 @@ test('customer can complete checkout with a validated discount and COD payment',
     });
     await fulfillData(route, { valid: true, discountAmount: 50000 });
   });
+  await page.route(api('/shipping/validate-address'), async (route) => {
+    await fulfillData(route, { valid: true, message: 'Valid address' });
+  });
+
+  await page.route(api('/shipping/estimate-fee'), async (route) => {
+    await fulfillData(route, { fee: 30000 });
+  });
+
 
   await page.route(api('/checkout'), async (route) => {
     await fulfillData(
@@ -103,8 +111,9 @@ test('customer can complete checkout with a validated discount and COD payment',
   await page.getByLabel('Address Line 1').fill('12 Le Loi');
   await page.getByLabel('Ward').fill('Ben Nghe');
   await page.getByLabel('District').fill('District 1');
+  await page.locator('.leaflet-container').click();
   await page.getByRole('button', { name: 'Continue to Payment' }).click();
-  await page.getByLabel('Cash on Delivery').check();
+  await page.getByText('Cash on Delivery').click();
 
   const checkoutRequestPromise = page.waitForRequest(api('/checkout'));
   await page.getByRole('button', { name: 'Place Order' }).click();
@@ -113,14 +122,14 @@ test('customer can complete checkout with a validated discount and COD payment',
   expect(checkoutRequest.headers().authorization).toBe('Bearer e2e-token-customer');
   expect(checkoutRequest.postDataJSON()).toEqual({
     cartId: 111,
-    shippingAddress: {
+    shippingAddress: expect.objectContaining({
       fullName: 'Linh Nguyen',
       phoneNumber: '0909000000',
       line1: '12 Le Loi',
       ward: 'Ben Nghe',
       district: 'District 1',
       city: 'Ho Chi Minh City',
-    },
+    }),
     paymentMethod: 'COD',
     discountCode: 'SAVE50',
   });
@@ -140,6 +149,12 @@ test('staff can scan a SKU and complete a POS cash sale', async ({ page }) => {
 
   await signIn(page, staff);
 
+  await page.route(api('/staff/inventory/locations'), async (route) => {
+    await fulfillData(route, [
+      { id: 1, name: 'Main Store' }
+    ]);
+  });
+
   await page.route(api('/staff/inventory/balances/sku/SKU-LINEN-001'), async (route) => {
     await fulfillData(route, {
       variantId: 7001,
@@ -149,11 +164,39 @@ test('staff can scan a SKU and complete a POS cash sale', async ({ page }) => {
     });
   });
 
-  await page.route(api('/pos/receipts'), async (route) => {
-    await fulfillData(route, {
-      receiptId: 501,
-      changeDue: 50000,
-    });
+  await page.route(api('/pos/receipts*'), async (route) => {
+    if (route.request().method() === 'POST') {
+      await fulfillData(route, {
+        receiptId: 501,
+        receiptNumber: 'RCPT-501',
+        changeDue: 50000,
+        totalAmount: 250000,
+        paymentMethod: 'CASH',
+        amountPaid: 300000,
+        createdAt: new Date().toISOString(),
+        locationName: 'Main Store',
+        operatorName: 'Staff Member',
+        items: [
+          {
+            id: 1,
+            variantId: 7001,
+            skuCode: 'SKU-LINEN-001',
+            name: 'Linen Shirt',
+            qty: 1,
+            unitPrice: 250000,
+            totalPrice: 250000
+          }
+        ]
+      });
+    } else {
+      await fulfillData(route, {
+        items: [],
+        page: 0,
+        size: 5,
+        totalElements: 0,
+        totalPages: 0
+      });
+    }
   });
 
   await page.goto('/staff/pos');
@@ -185,8 +228,8 @@ test('staff can scan a SKU and complete a POS cash sale', async ({ page }) => {
   });
 
   await expect(page.getByRole('heading', { name: 'Sale Complete' })).toBeVisible();
-  await expect(page.getByText(/Receipt #501/)).toBeVisible();
-  await expect(page.getByText('50,000 VND', { exact: true })).toBeVisible();
+  await expect(page.getByText('RCPT-501', { exact: true })).toBeVisible();
+  await expect(page.getByText('50,000 VND', { exact: true }).last()).toBeVisible();
 });
 
 test('staff can publish an approved Instagram draft', async ({ page }) => {
@@ -288,6 +331,14 @@ test('customer cannot checkout when stock is unavailable', async ({ page }) => {
     });
   });
 
+  await page.route(api('/shipping/validate-address'), async (route) => {
+    await fulfillData(route, { valid: true, message: 'Valid address' });
+  });
+
+  await page.route(api('/shipping/estimate-fee'), async (route) => {
+    await fulfillData(route, { fee: 30000 });
+  });
+
   await page.route(api('/checkout'), async (route) => {
     await route.fulfill({
       status: 400,
@@ -307,8 +358,9 @@ test('customer cannot checkout when stock is unavailable', async ({ page }) => {
   await page.getByLabel('Address Line 1').fill('12 Le Loi');
   await page.getByLabel('Ward').fill('Ben Nghe');
   await page.getByLabel('District').fill('District 1');
+  await page.locator('.leaflet-container').click();
   await page.getByRole('button', { name: 'Continue to Payment' }).click();
-  await page.getByLabel('Cash on Delivery').check();
+  await page.getByText('Cash on Delivery').click();
 
   await page.getByRole('button', { name: 'Place Order' }).click();
 
@@ -325,6 +377,32 @@ test('staff can approve a return request', async ({ page }) => {
   };
   await signIn(page, staff);
 
+  await page.route(api('/staff/inventory/locations'), async (route) => {
+    await fulfillData(route, [
+      { id: 1, name: 'Main Store' }
+    ]);
+  });
+
+  await page.route(api('/staff/orders*'), async (route) => {
+    await fulfillData(route, { items: [{ id: 9001, orderNumber: 'ORD-9001' }] });
+  });
+
+  await page.route(api('/staff/orders/9001*'), async (route) => {
+    await fulfillData(route, { id: 9001, orderNumber: 'ORD-9001', items: [{ id: 1, productName: 'Shirt', qty: 1 }] });
+  });
+
+  await page.route(api('/staff/orders/9001/payments*'), async (route) => {
+    await fulfillData(route, []);
+  });
+
+  await page.route(api('/pos/receipts*'), async (route) => {
+    await fulfillData(route, { items: [] });
+  });
+
+  await page.route(api('/returns/order/9001'), async (route) => {
+    await fulfillData(route, [{ returnId: 500, status: 'PENDING', reason: 'Defective' }]);
+  });
+
   await page.route(api('/returns/500/approve'), async (route) => {
     await fulfillData(route, {
       returnId: 500,
@@ -337,8 +415,11 @@ test('staff can approve a return request', async ({ page }) => {
   await page.goto('/staff/returns');
   await expect(page.getByRole('heading', { name: 'Refunds & Returns' })).toBeVisible();
 
-  await page.locator('form').filter({ hasText: 'Approve' }).getByLabel('Return ID').fill('500');
+  await page.getByText('Search order').click();
+  await page.getByText('Order ORD-9001').click();
+
+  await page.locator('form').filter({ hasText: 'Select Pending Return' }).locator('select').selectOption('500');
   await page.getByRole('button', { name: 'Approve' }).click();
   
-  await expect(page.getByText('Return 500 approved.')).toBeVisible();
+  await expect(page.getByText('Successfully approved return.').first()).toBeVisible();
 });

@@ -50,7 +50,8 @@ export function MapPicker({ lat, lng, onChange, className = 'h-64 w-full rounded
     if (position) {
       onChange(position.lat, position.lng);
     }
-  }, [position, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position]);
   
   const handleGetLocation = () => {
     if (navigator.geolocation) {

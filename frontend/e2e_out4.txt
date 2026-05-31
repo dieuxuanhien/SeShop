@@ -1,0 +1,52 @@
+
+Running 1 test using 1 worker
+
+[WebServer] [2m12:29:42 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+[WebServer] [2m12:29:42 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22m⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+[WebServer] [2m12:29:42 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mYou may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
+[WebServer] [2m12:29:42 PM[22m [33m[1m[vite][22m[39m [33m[2m(client)[22m[39m [2m[console.warn] [22mYou may test your Stripe.js integration over HTTP. However, live Stripe.js integrations must use HTTPS.
+  ✘  1 [chromium] › e2e/seshop-flows.spec.ts:43:1 › customer can complete checkout with a validated discount and COD payment (1.4s)
+
+
+  1) [chromium] › e2e/seshop-flows.spec.ts:43:1 › customer can complete checkout with a validated discount and COD payment 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  - 0[39m
+    [31m+ Received  + 2[39m
+
+    [33m@@ -4,10 +4,12 @@[39m
+    [2m    "paymentMethod": "COD",[22m
+    [2m    "shippingAddress": Object {[22m
+    [2m      "city": "Ho Chi Minh City",[22m
+    [2m      "district": "District 1",[22m
+    [2m      "fullName": "Linh Nguyen",[22m
+    [31m+     "latitude": 10.823189689473242,[39m
+    [2m      "line1": "12 Le Loi",[22m
+    [31m+     "longitude": 106.629695892334,[39m
+    [2m      "phoneNumber": "0909000000",[22m
+    [2m      "ward": "Ben Nghe",[22m
+    [2m    },[22m
+    [2m  }[22m
+
+      121 |
+      122 |   expect(checkoutRequest.headers().authorization).toBe('Bearer e2e-token-customer');
+    > 123 |   expect(checkoutRequest.postDataJSON()).toEqual({
+          |                                          ^
+      124 |     cartId: 111,
+      125 |     shippingAddress: {
+      126 |       fullName: 'Linh Nguyen',
+        at /home/xuanhien/Documents/repo/KTPM/frontend/e2e/seshop-flows.spec.ts:123:42
+
+    Error Context: test-results/e2e/seshop-flows-customer-can--d678b-ed-discount-and-COD-payment-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/e2e/seshop-flows-customer-can--d678b-ed-discount-and-COD-payment-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/e2e/seshop-flows-customer-can--d678b-ed-discount-and-COD-payment-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › e2e/seshop-flows.spec.ts:43:1 › customer can complete checkout with a validated discount and COD payment 

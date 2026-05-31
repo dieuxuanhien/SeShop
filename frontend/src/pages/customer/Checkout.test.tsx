@@ -22,6 +22,16 @@ vi.mock('@/features/commerce/api/checkoutApi', () => ({
   validateShippingAddress: vi.fn(),
 }));
 
+vi.mock('@/shared/ui/MapPicker', () => ({
+  MapPicker: ({ onChange }: any) => {
+    return (
+      <button type="button" onClick={() => onChange(10.8231, 106.6297)}>
+        Set Map Location
+      </button>
+    );
+  },
+}));
+
 const mockedGetMyCart = vi.mocked(getMyCart);
 const mockedProcessCheckout = vi.mocked(processCheckout);
 const mockedValidateDiscount = vi.mocked(validateDiscount);
@@ -92,6 +102,7 @@ describe('Checkout', () => {
     await user.type(screen.getByLabelText(/address line 1/i), '12 Le Loi');
     await user.type(screen.getByLabelText(/ward/i), 'Ben Nghe');
     await user.type(screen.getByLabelText(/district/i), 'District 1');
+    await user.click(screen.getByRole('button', { name: /set map location/i }));
     await user.click(screen.getByRole('button', { name: /continue to payment/i }));
     await user.click(screen.getByLabelText(/cash on delivery/i));
     await user.click(screen.getByRole('button', { name: /place order/i }));
@@ -106,6 +117,8 @@ describe('Checkout', () => {
           ward: 'Ben Nghe',
           district: 'District 1',
           city: 'Ho Chi Minh City',
+          latitude: 10.8231,
+          longitude: 106.6297,
         },
         paymentMethod: 'COD',
         discountCode: 'SAVE50',
